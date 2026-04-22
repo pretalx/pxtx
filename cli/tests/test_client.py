@@ -178,6 +178,37 @@ def test_request_returns_none_on_204(mocked_responses, client_plain):
     assert result is None
 
 
+def test_actor_header_sent_when_set(mocked_responses):
+    mocked_responses.get(f"{URL}/api/v1/issues/1/", json={"slug": "PX-1", "number": 1})
+    client = Client(URL, "pxtx_test", actor="claude-main")
+
+    client.get_issue(1)
+
+    assert (
+        mocked_responses.calls[0].request.headers.get("X-Pxtx-Actor") == "claude-main"
+    )
+
+
+def test_actor_header_omitted_when_unset(mocked_responses):
+    mocked_responses.get(f"{URL}/api/v1/issues/1/", json={"slug": "PX-1", "number": 1})
+    client = Client(URL, "pxtx_test")
+
+    client.get_issue(1)
+
+    assert "X-Pxtx-Actor" not in mocked_responses.calls[0].request.headers
+
+
+def test_actor_header_sent_on_paginate(mocked_responses):
+    mocked_responses.get(f"{URL}/api/v1/issues/", json={"results": [], "next": None})
+    client = Client(URL, "pxtx_test", actor="claude-main")
+
+    list(client.list_issues())
+
+    assert (
+        mocked_responses.calls[0].request.headers.get("X-Pxtx-Actor") == "claude-main"
+    )
+
+
 def test_client_uses_provided_session():
     # Passing a session lets tests share the responses mock without the client
     # spinning up a fresh one — exercises the ``session=`` branch.

@@ -17,11 +17,13 @@ class Client:
         self,
         url: str,
         token: str,
+        actor: str = "",
         session: requests.Session | None = None,
         timeout: float = DEFAULT_TIMEOUT,
     ):
         self.url = url.rstrip("/")
         self.token = token
+        self.actor = actor
         self.session = session or requests.Session()
         self.timeout = timeout
 
@@ -29,7 +31,10 @@ class Client:
         return f"{self.url}/api/v1{path}"
 
     def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Token {self.token}"}
+        headers = {"Authorization": f"Token {self.token}"}
+        if self.actor:
+            headers["X-Pxtx-Actor"] = self.actor
+        return headers
 
     def _request(self, method, path, *, params=None, json=None):
         response = self.session.request(

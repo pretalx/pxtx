@@ -124,6 +124,66 @@ def test_authenticate_header_advertises_token_scheme():
 
 
 @pytest.mark.django_db
+def test_x_pxtx_actor_header_overrides_token_name_for_comment_author(
+    token_client, api_token
+):
+    issue = IssueFactory()
+    token_client.credentials(
+        HTTP_AUTHORIZATION=f"Token {api_token.plaintext}",
+        HTTP_X_PXTX_ACTOR="claude-feat/x",
+    )
+
+    response = token_client.post(
+        f"/api/v1/issues/{issue.number}/comments/",
+        {"body": "from claude"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["author"] == "claude-feat/x"
+
+
+@pytest.mark.django_db
+def test_x_pxtx_actor_header_overrides_token_name_for_activity_log(
+    token_client, api_token
+):
+    from pxtx.core.models import ActivityLog
+
+    token_client.credentials(
+        HTTP_AUTHORIZATION=f"Token {api_token.plaintext}",
+        HTTP_X_PXTX_ACTOR="claude-main",
+    )
+
+    response = token_client.post("/api/v1/issues/", {"title": "Ahoy"}, format="json")
+
+    assert response.status_code == 201
+    assert (
+        ActivityLog.objects.filter(
+            actor="claude-main", action_type="pxtx.issue.create"
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_blank_x_pxtx_actor_header_falls_back_to_token_name(token_client, api_token):
+    """Whitespace-only headers must not shadow the token name."""
+    issue = IssueFactory()
+    token_client.credentials(
+        HTTP_AUTHORIZATION=f"Token {api_token.plaintext}", HTTP_X_PXTX_ACTOR="   "
+    )
+
+    response = token_client.post(
+        f"/api/v1/issues/{issue.number}/comments/",
+        {"body": "no header actor"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["author"] == api_token.name
+
+
+@pytest.mark.django_db
 def test_token_with_deleted_user_is_rejected():
     """Once a token's owning user is deleted, all requests must fail — even
     though the token row cascades away on delete, this asserts the expected

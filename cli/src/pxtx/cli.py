@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -82,15 +83,24 @@ def _run_git_branch():
     return branch or None
 
 
-def resolve_mine(config, *, branch=False):
-    if not config.actor:
-        raise CliError("--mine requires 'actor' in config (or PXTX_ACTOR env var)")
+def resolve_actor(explicit):
+    """Pick the ``X-Pxtx-Actor`` value sent with every request.
+
+    Inside a claude-code session (``CLAUDECODE=1``) we derive
+    ``claude-<branch>`` automatically so activity log entries identify
+    which agent did what — humans don't have to remember. Outside that
+    context we stay silent and let the server fall back to the token name,
+    so a human poking the CLI doesn't accidentally label their edits
+    ``claude-*``. ``--actor`` overrides both paths.
+    """
+    if explicit:
+        return explicit
+    if os.environ.get("CLAUDECODE") != "1":
+        return ""
+    branch = get_branch()
     if branch:
-        name = get_branch()
-        if not name:
-            raise CliError("--branch: not in a git checkout")
-        return f"{config.actor}/{name}"
-    return config.actor
+        return f"claude-{branch}"
+    return "claude"
 
 
 def print_json(value, out=None):
@@ -127,7 +137,11 @@ def cmd_issue_list(args, client, config):
     if args.milestone:
         filters["milestone"] = args.milestone
     if args.mine:
-        filters["assignee"] = resolve_mine(config, branch=args.branch)
+        if not client.actor:
+            raise CliError(
+                "--mine needs an actor (pass --actor or run inside claude-code)"
+            )
+        filters["assignee"] = client.actor
     elif args.assignee:
         filters["assignee"] = args.assignee
     if args.highlighted:
@@ -152,6 +166,18 @@ def cmd_issue_show(args, client, config):
         print_json(payload)
         return
     print(format_issue_detail(issue, comments))
+
+
+def cmd_issue_take(args, client, config):
+    """Claim an issue: set assignee to the current actor and status to wip."""
+    if not client.actor:
+        raise CliError("take needs an actor (pass --actor or run inside claude-code)")
+    client.update_issue(args.number, {"assignee": client.actor})
+    issue = client.transition_issue(args.number, "wip")
+    if args.json:
+        print_json(issue)
+    else:
+        print(f"{issue['slug']} → {issue['status']} (assignee: {issue['assignee']})")
 
 
 def cmd_issue_close(args, client, config):
@@ -202,6 +228,9 @@ def cmd_activity_log(args, client, config):
 def build_parser():
     parser = argparse.ArgumentParser(prog="pxtx", description="pretalx-tracker CLI")
     parser.add_argument("--json", action="store_true", help="emit raw API JSON")
+    parser.add_argument(
+        "--actor", help="override the X-Pxtx-Actor header (default: claude-<branch>)"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     issue = sub.add_parser("issue", help="manage issues")
@@ -224,8 +253,7 @@ def build_parser():
         help="comma-separated priority labels (want,should,...)",
     )
     lst.add_argument("--milestone")
-    lst.add_argument("--mine", action="store_true")
-    lst.add_argument("--branch", action="store_true", help="with --mine: add branch")
+    lst.add_argument("--mine", action="store_true", help="filter by current actor")
     lst.add_argument("--assignee")
     lst.add_argument("--highlighted", action="store_true")
     lst.add_argument("--search")
@@ -246,6 +274,10 @@ def build_parser():
     comment.add_argument("body", nargs="?")
     comment.add_argument("--stdin", action="store_true")
     comment.set_defaults(func=cmd_issue_comment)
+
+    take = sub.add_parser("take", help="claim an issue (assignee=you, status=wip)")
+    take.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
+    take.set_defaults(func=cmd_issue_take)
 
     milestone = sub.add_parser("milestone", help="manage milestones")
     ms_sub = milestone.add_subparsers(dest="subcommand", required=True)
@@ -270,7 +302,7 @@ def main(argv=None):
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    client = Client(config.url, config.token)
+    client = Client(config.url, config.token, actor=resolve_actor(args.actor))
     try:
         args.func(args, client, config)
     except CliError as exc:

@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 
 TEST_URL = "https://tracker.example.test"
 TEST_TOKEN = "pxtx_test"
-TEST_ACTOR = "claude/test"
 
 
 @pytest.fixture(autouse=True)
@@ -21,16 +20,16 @@ def _clean_pxtx_env(monkeypatch):
     for name in (
         "PXTX_URL",
         "PXTX_TOKEN",
-        "PXTX_ACTOR",
         "PXTX_DEFAULT_REPO",
         "PXTX_CONFIG",
+        "CLAUDECODE",
     ):
         monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture
 def config():
-    return Config(url=TEST_URL, token=TEST_TOKEN, actor=TEST_ACTOR)
+    return Config(url=TEST_URL, token=TEST_TOKEN)
 
 
 @pytest.fixture
@@ -53,7 +52,5 @@ def config_file(tmp_path: Path, monkeypatch):
 
 @pytest.fixture
 def cli_config(config_file, monkeypatch):
-    config_file.write_text(
-        f'url = "{TEST_URL}"\ntoken = "{TEST_TOKEN}"\nactor = "{TEST_ACTOR}"\n'
-    )
+    config_file.write_text(f'url = "{TEST_URL}"\ntoken = "{TEST_TOKEN}"\n')
     return config_file

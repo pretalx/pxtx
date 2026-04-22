@@ -16,7 +16,6 @@ class ConfigError(Exception):
 class Config:
     url: str
     token: str
-    actor: str = ""
     default_repo: str = "pretalx/pretalx"
 
 
@@ -42,7 +41,6 @@ def load_config(path: Path | None = None) -> Config:
     return Config(
         url=url.rstrip("/"),
         token=token,
-        actor=os.environ.get("PXTX_ACTOR") or data.get("actor", ""),
         default_repo=(
             os.environ.get("PXTX_DEFAULT_REPO")
             or data.get("default_repo", "pretalx/pretalx")

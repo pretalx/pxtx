@@ -38,9 +38,18 @@ from pxtx.core.text import render_markdown
 
 
 def _actor(request):
-    """The ``ApiToken.name`` used to label ActivityLog entries and author
-    comments. TokenAuthentication is the only authenticator wired in, so
-    ``request.auth`` is always an ``ApiToken`` here."""
+    """Label for ActivityLog entries and comment authorship.
+
+    Prefers the ``X-Pxtx-Actor`` header (set automatically by the CLI as
+    ``claude-<branch>``) so one shared token can still attribute work to a
+    specific caller. Falls back to ``ApiToken.name`` when the header is
+    missing — e.g. ad-hoc ``curl`` calls or older CLI versions.
+    TokenAuthentication is the only authenticator wired in, so
+    ``request.auth`` is always an ``ApiToken`` here.
+    """
+    header = request.META.get("HTTP_X_PXTX_ACTOR", "").strip()
+    if header:
+        return header
     return request.auth.name
 
 

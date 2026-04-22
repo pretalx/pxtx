@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 import pytest
 
 from pxtx import cli
-from pxtx.config import Config
 
 URL = "https://tracker.example.test"
 
@@ -131,26 +130,37 @@ def test_run_git_branch_handles_non_repo(monkeypatch):
     assert cli._run_git_branch() is None
 
 
-def test_resolve_mine_uses_actor(config):
-    assert cli.resolve_mine(config) == "claude/test"
+def test_resolve_actor_explicit_wins(monkeypatch):
+    monkeypatch.delenv("CLAUDECODE", raising=False)
+
+    assert cli.resolve_actor("tobias") == "tobias"
 
 
-def test_resolve_mine_with_branch(monkeypatch, config):
+def test_resolve_actor_outside_claude_code_is_empty(monkeypatch):
+    monkeypatch.delenv("CLAUDECODE", raising=False)
+
+    assert cli.resolve_actor(None) == ""
+
+
+def test_resolve_actor_wrong_value_does_not_trigger_claude(monkeypatch):
+    """Any value other than ``1`` is treated as 'not claude-code'."""
+    monkeypatch.setenv("CLAUDECODE", "true")
+
+    assert cli.resolve_actor(None) == ""
+
+
+def test_resolve_actor_in_claude_code_uses_branch(monkeypatch):
+    monkeypatch.setenv("CLAUDECODE", "1")
     monkeypatch.setattr(cli, "_run_git_branch", lambda: "feat/x")
 
-    assert cli.resolve_mine(config, branch=True) == "claude/test/feat/x"
+    assert cli.resolve_actor(None) == "claude-feat/x"
 
 
-def test_resolve_mine_branch_missing(monkeypatch, config):
+def test_resolve_actor_in_claude_code_without_branch_falls_back_to_claude(monkeypatch):
+    monkeypatch.setenv("CLAUDECODE", "1")
     monkeypatch.setattr(cli, "_run_git_branch", lambda: None)
 
-    with pytest.raises(cli.CliError, match="branch"):
-        cli.resolve_mine(config, branch=True)
-
-
-def test_resolve_mine_without_actor():
-    with pytest.raises(cli.CliError, match="actor"):
-        cli.resolve_mine(Config(url=URL, token="t"))
+    assert cli.resolve_actor(None) == "claude"
 
 
 def test_print_json_writes_to_provided_stream():
@@ -190,16 +200,6 @@ def test_main_api_error_returns_1(cli_config, mocked_responses, capsys):
 
     assert code == 1
     assert "api error:" in capsys.readouterr().err
-
-
-def test_main_cli_error_returns_2(cli_config, capsys):
-    # `pxtx --mine` without actor configured raises CliError.
-    (cli_config).write_text(f'url = "{URL}"\ntoken = "pxtx_t"\n')
-
-    code = cli.main(["issue", "list", "--mine"])
-
-    assert code == 2
-    assert "error:" in capsys.readouterr().err
 
 
 def test_issue_new_posts_payload(cli_config, mocked_responses, capsys):
@@ -312,14 +312,32 @@ def test_issue_list_applies_filters(cli_config, mocked_responses, capsys):
     assert "search=hay" in url
 
 
-def test_issue_list_mine_with_branch(cli_config, mocked_responses, monkeypatch, capsys):
+def test_issue_list_mine_uses_resolved_actor(cli_config, mocked_responses, monkeypatch):
+    monkeypatch.setenv("CLAUDECODE", "1")
     monkeypatch.setattr(cli, "_run_git_branch", lambda: "feat/x")
     mocked_responses.get(f"{URL}/api/v1/issues/", json={"results": [], "next": None})
 
-    cli.main(["issue", "list", "--mine", "--branch"])
+    cli.main(["issue", "list", "--mine"])
 
     url = mocked_responses.calls[0].request.url
-    assert "assignee=claude%2Ftest%2Ffeat%2Fx" in url
+    assert "assignee=claude-feat%2Fx" in url
+
+
+def test_issue_list_mine_without_actor_errors(cli_config, capsys):
+    code = cli.main(["issue", "list", "--mine"])
+
+    assert code == 2
+    assert "--mine" in capsys.readouterr().err
+
+
+def test_top_level_actor_flag_overrides_resolution(cli_config, mocked_responses):
+    mocked_responses.get(f"{URL}/api/v1/issues/", json={"results": [], "next": None})
+
+    cli.main(["--actor", "tobias", "issue", "list", "--mine"])
+
+    request = mocked_responses.calls[0].request
+    assert "assignee=tobias" in request.url
+    assert request.headers.get("X-Pxtx-Actor") == "tobias"
 
 
 def test_issue_list_json_output(cli_config, mocked_responses, capsys):
@@ -447,6 +465,50 @@ def test_issue_close_json(cli_config, mocked_responses, capsys):
     cli.main(["--json", "issue", "close", "5"])
 
     assert '"status": "completed"' in capsys.readouterr().out
+
+
+def test_take_sets_assignee_and_wips(cli_config, mocked_responses, monkeypatch, capsys):
+    monkeypatch.setenv("CLAUDECODE", "1")
+    monkeypatch.setattr(cli, "_run_git_branch", lambda: "feat/x")
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/", json={"slug": "PX-47", "assignee": "claude-feat/x"}
+    )
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/wip/",
+        json={"slug": "PX-47", "status": "wip", "assignee": "claude-feat/x"},
+    )
+
+    code = cli.main(["take", "47"])
+
+    assert code == 0
+    import json as _json
+
+    patch_body = _json.loads(mocked_responses.calls[0].request.body)
+    assert patch_body == {"assignee": "claude-feat/x"}
+    assert "PX-47 → wip" in capsys.readouterr().out
+
+
+def test_take_without_actor_errors(cli_config, capsys):
+    code = cli.main(["take", "47"])
+
+    assert code == 2
+    assert "actor" in capsys.readouterr().err
+
+
+def test_take_json_output(cli_config, mocked_responses, monkeypatch, capsys):
+    monkeypatch.setenv("CLAUDECODE", "1")
+    monkeypatch.setattr(cli, "_run_git_branch", lambda: "main")
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/", json={"slug": "PX-47", "assignee": "claude-main"}
+    )
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/wip/",
+        json={"slug": "PX-47", "status": "wip", "assignee": "claude-main"},
+    )
+
+    cli.main(["--json", "take", "47"])
+
+    assert '"status": "wip"' in capsys.readouterr().out
 
 
 def test_issue_comment_with_body(cli_config, mocked_responses, capsys):

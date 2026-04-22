@@ -9,17 +9,13 @@ def test_load_config_reads_all_fields(config_file):
     config_file.write_text(
         'url = "https://example.test"\n'
         'token = "pxtx_abc"\n'
-        'actor = "claude/x"\n'
         'default_repo = "acme/widget"\n'
     )
 
     config = load_config()
 
     assert config == Config(
-        url="https://example.test",
-        token="pxtx_abc",
-        actor="claude/x",
-        default_repo="acme/widget",
+        url="https://example.test", token="pxtx_abc", default_repo="acme/widget"
     )
 
 
@@ -78,21 +74,16 @@ def test_load_config_missing_file_without_env_raises(tmp_path):
 
 def test_load_config_env_vars_override(config_file, monkeypatch):
     config_file.write_text(
-        'url = "https://file"\n'
-        'token = "file-token"\n'
-        'actor = "file-actor"\n'
-        'default_repo = "file/repo"\n'
+        'url = "https://file"\ntoken = "file-token"\ndefault_repo = "file/repo"\n'
     )
     monkeypatch.setenv("PXTX_URL", "https://env/")
     monkeypatch.setenv("PXTX_TOKEN", "env-token")
-    monkeypatch.setenv("PXTX_ACTOR", "env-actor")
     monkeypatch.setenv("PXTX_DEFAULT_REPO", "env/repo")
 
     config = load_config()
 
     assert config.url == "https://env"
     assert config.token == "env-token"
-    assert config.actor == "env-actor"
     assert config.default_repo == "env/repo"
 
 
@@ -105,5 +96,4 @@ def test_load_config_from_env_only(monkeypatch, tmp_path):
 
     assert config.url == "https://env.test"
     assert config.token == "env-token"
-    assert config.actor == ""
     assert config.default_repo == "pretalx/pretalx"

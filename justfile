@@ -121,3 +121,44 @@ test *args:
 [positional-arguments]
 test-parallel n="auto" *args:
     shift; just test -n {{ n }} "$@"
+
+# Install the CLI package's dev environment
+[group('cli')]
+[working-directory("cli")]
+cli-install:
+    uv lock --upgrade
+    uv sync --all-extras
+
+# Run the CLI test suite (with coverage)
+[group('cli')]
+[working-directory("cli")]
+[positional-arguments]
+cli-test *args:
+    uv run --extra=dev pytest --cov=src --cov-report=term-missing:skip-covered --cov-config=pyproject.toml "$@"
+
+# Run ruff format + check --fix on the CLI
+[group('cli')]
+[working-directory("cli")]
+cli-fmt:
+    uv run --extra=dev ruff format
+    uv run --extra=dev ruff check --fix
+
+# Ruff check the CLI without applying fixes
+[group('cli')]
+[working-directory("cli")]
+cli-fmt-check:
+    uv run --extra=dev ruff format --check
+    uv run --extra=dev ruff check
+
+# Build the CLI sdist + wheel into cli/dist/
+[group('cli')]
+[working-directory("cli")]
+cli-build:
+    rm -rf dist build
+    uv build
+
+# Publish the CLI to PyPI (uses UV_PUBLISH_TOKEN if set, else prompts)
+[group('cli')]
+[working-directory("cli")]
+cli-publish: cli-build
+    uv publish dist/*

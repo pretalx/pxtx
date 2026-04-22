@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+*.sqlite3
+spur.cfg
+data/
+static.dist/
+.ruff_cache/
+uv.lock

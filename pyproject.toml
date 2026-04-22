@@ -1,0 +1,136 @@
+[project]
+name = "pxtx-server"
+dynamic = ["version"]
+description = "Single-user issue tracker for pretalx development (server)"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+  {name = "Tobias Kunze", email = "r@rixx.de"},
+]
+
+dependencies = [
+  "Django~=6.0.0",
+  "djangorestframework~=3.15.0",
+  "django-filter~=25.1",
+  "markdown~=3.7",
+  "bleach~=6.2",
+  "pygments~=2.19",
+  "gunicorn~=25.3.0",
+  "whitenoise~=6.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "coverage",
+  "factory_boy",
+  "freezegun",
+  "pytest",
+  "pytest-cov",
+  "pytest-django",
+  "pytest-mock",
+  "pytest-sugar",
+  "pytest-xdist",
+  "ruff",
+]
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools", "wheel"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = {attr = "pxtx.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["pxtx*"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "pxtx.test_settings"
+testpaths = "src/tests"
+pythonpath = "src"
+filterwarnings = [
+    "error",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+]
+addopts = "-p no:doctest -p no:pastebin -p no:nose"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests",
+    "slow: Tests that are inherently slow. Skip with -m 'not slow'",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src/pxtx"]
+omit = [
+  "*/__init__.py",
+  "*/manage.py",
+  "*/migrations/*",
+  "*/settings*",
+  "*/test_settings*",
+  "*/urls.py",
+  "*/wsgi.py",
+]
+relative_files = true
+
+[tool.coverage.report]
+fail_under = 100
+exclude_also = [
+  "def __repr__",
+  "def __str__",
+  "if settings.DEBUG",
+  "NotImplementedError",
+]
+
+[tool.ruff]
+extend-exclude = ["scripts"]
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "ANN",     # We do not do annotations
+  "ARG",     # Unused method arguments are often ok
+  "BLE001",  # Blind exceptions are fine in error-handling code
+  "C901",    # We do do complexity
+  "COM812",  # Trailing commas are formatter territory
+  "D",       # We do not enforce docstyles
+  "DJ001",   # We live in a state of sin
+  "E501",    # Long lines are formatter territory
+  "EM",      # Formatting strings is fine, actually
+  "EXE001",  # Shebang without executable bit is fine
+  "FBT",     # Booleans are fine, actually
+  "FIX",     # TODO comments are fine, actually
+  "PLC0415", # Non-top-level imports are intentional (deferred, circular avoidance)
+  "PLR",     # Refactoring: Too many branches, arguments, statements, etc
+  "RET502",  # Just returning is fine, actually
+  "RET503",  # Just not returning is fine, actually
+  "RUF001",  # Ambiguous unicode (en dash) is intentional
+  "RUF012",  # Mutable default in class attribute is just how django rolls
+  "RUF100",  # Unused noqa; problematic when run in isolation
+  "SLF001",  # Private member access is sometimes necessary
+  "TRY003",  # Error messages are fine, actually
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/tests/**.py" = [
+  "DTZ",     # Naive datetimes in tests are fine
+  "RUF",     # Ignore ambiguous characters in tests
+  "S",       # Tests do not need security features
+  "S101",    # assert is fine in tests
+  "SLF001",  # Private access is fine in tests
+  "TRY",     # Exception handling is special in tests
+]
+
+[tool.ruff.lint.flake8-pytest-style]
+parametrize-values-type = "tuple"
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false

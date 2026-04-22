@@ -39,6 +39,23 @@ class Source(models.TextChoices):
 
 
 class Issue(BaseModel):
+    log_action_prefix = "pxtx.issue"
+    log_tracked_fields = (
+        "title",
+        "description",
+        "effort_minutes",
+        "priority",
+        "is_highlighted",
+        "status",
+        "blocked_reason",
+        "source",
+        "milestone",
+        "assignee",
+        "interested_parties",
+        "links",
+        "closed_at",
+    )
+
     number = models.PositiveIntegerField(unique=True, editable=False, db_index=True)
 
     title = models.CharField(max_length=500)
@@ -98,6 +115,23 @@ class Issue(BaseModel):
     @property
     def is_closed(self):
         return self.status in CLOSED_STATUSES
+
+    def _split_change_actions(self, before, after):
+        if "status" not in after:
+            return super()._split_change_actions(before, after)
+        new_status = after["status"]
+        actions = [
+            (
+                f".status.{new_status}",
+                {"status": before["status"]},
+                {"status": new_status},
+            )
+        ]
+        other_after = {key: value for key, value in after.items() if key != "status"}
+        if other_after:
+            other_before = {key: before[key] for key in other_after}
+            actions.append((".update", other_before, other_after))
+        return actions
 
     def save(self, *args, **kwargs):
         if self.is_closed and self.closed_at is None:

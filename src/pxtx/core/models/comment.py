@@ -4,6 +4,9 @@ from pxtx.core.models.base import BaseModel
 
 
 class Comment(BaseModel):
+    log_action_prefix = "pxtx.comment"
+    log_tracked_fields = ("body", "edited_at")
+
     issue = models.ForeignKey(
         "core.Issue", related_name="comments", on_delete=models.CASCADE
     )

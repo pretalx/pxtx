@@ -1,7 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from pxtx.core.models import Comment, GithubRef, Issue, IssueReference, Milestone, User
+from pxtx.core.models import (
+    ActivityLog,
+    Comment,
+    GithubRef,
+    Issue,
+    IssueReference,
+    Milestone,
+    User,
+)
 
 
 @admin.register(User)
@@ -82,3 +90,25 @@ class GithubRefAdmin(admin.ModelAdmin):
 class IssueReferenceAdmin(admin.ModelAdmin):
     list_display = ["from_issue", "to_issue", "created_at"]
     raw_id_fields = ["from_issue", "to_issue"]
+
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    list_display = ["timestamp", "action_type", "actor", "content_type", "object_id"]
+    list_filter = ["action_type", "content_type"]
+    search_fields = ["actor", "action_type"]
+    readonly_fields = [
+        "content_type",
+        "object_id",
+        "action_type",
+        "actor",
+        "timestamp",
+        "data",
+    ]
+    ordering = ["-timestamp"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

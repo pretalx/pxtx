@@ -1,3 +1,4 @@
+from pxtx.core.models.activity_log import ActivityLog
 from pxtx.core.models.base import BaseModel
 from pxtx.core.models.comment import Comment
 from pxtx.core.models.github_ref import GithubRef, GithubRefKind
@@ -15,6 +16,7 @@ from pxtx.core.models.user import User
 
 __all__ = [
     "CLOSED_STATUSES",
+    "ActivityLog",
     "BaseModel",
     "Comment",
     "Effort",

@@ -1,0 +1,5 @@
+{% url 'healthz' as healthz_url %}
+<span class="site-nav-deploying" role="status" aria-live="polite"
+      data-healthz-url="{{ healthz_url }}">
+    Deploying<span class="site-nav-deploying-dots" aria-hidden="true"></span>
+</span>

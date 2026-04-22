@@ -69,6 +69,29 @@ nav.site form.logout button {
     cursor: pointer;
 }
 nav.site form.logout button:hover { color: var(--text); text-decoration: underline; }
+nav.site form.deploy-form { display: inline; margin: 0; }
+nav.site form.deploy-form button.btn-deploy {
+    background: var(--warn);
+    border-color: var(--warn);
+    color: #fff;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+nav.site form.deploy-form button.btn-deploy:hover { filter: brightness(1.05); }
+.site-nav-deploying {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--warn);
+    animation: site-nav-deploying-pulse 1.4s ease-in-out infinite;
+}
+.site-nav-deploying-dots { display: inline-block; width: 1.2em; text-align: left; }
+.site-nav-deploying-dots::after { content: "…"; }
+@keyframes site-nav-deploying-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.55; }
+}
 main { max-width: 1200px; margin: 0 auto; padding: 1.25rem; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
 h1 { font-size: 1.4rem; margin-bottom: 0.75rem; }

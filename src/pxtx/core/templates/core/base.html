@@ -19,6 +19,14 @@
         <a href="{% url 'core:activity' %}" {% if 'activity' in request.path %}class="active"{% endif %}>Activity</a>
         <a href="{% url 'core:issue-new' %}" class="new-issue" title="New issue (c)">+ New</a>
         <span class="right">
+            {% if user.is_superuser and deploy_enabled %}
+            <form method="post" action="{% url 'core:deploy' %}" class="deploy-form"
+                  hx-post="{% url 'core:deploy' %}" hx-target="this" hx-swap="outerHTML"
+                  hx-confirm="Deploy the new version now?">
+                {% csrf_token %}
+                <button type="submit" class="btn-deploy" title="Deploy new version">Deploy</button>
+            </form>
+            {% endif %}
             <button type="button" class="link-button help-toggle" title="Show keyboard shortcuts (?)" data-help-toggle>?</button>
             <span class="meta">{{ user.username }}</span>
             <form class="logout" method="post" action="{% url 'logout' %}">

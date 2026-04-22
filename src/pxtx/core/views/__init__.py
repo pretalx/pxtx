@@ -1,4 +1,5 @@
 from pxtx.core.views.activity import ActivityView
+from pxtx.core.views.deploy import healthz, trigger_deploy
 from pxtx.core.views.issue import (
     CommentCreateView,
     CommentEditView,
@@ -35,5 +36,7 @@ __all__ = [
     "MilestoneListView",
     "blocked_reason_field",
     "dashboard",
+    "healthz",
     "render_markdown_preview",
+    "trigger_deploy",
 ]

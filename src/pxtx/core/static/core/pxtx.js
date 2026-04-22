@@ -116,3 +116,36 @@ document.addEventListener("htmx:afterSwap", (event) => {
     const trigger = document.querySelector('[data-preview-toggle][data-preview-target="#' + target.id + '"]');
     if (trigger) trigger.textContent = "Hide preview";
 });
+
+// Deploy-in-progress: after the /deploy/ POST swaps the form for the
+// "Deploying…" indicator, poll /healthz/ and reload once the server answers
+// 200 a few times in a row (so we don't reload mid-restart).
+function initDeployPollers(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    const nodes = scope.querySelectorAll("[data-healthz-url]:not([data-healthz-init])");
+    nodes.forEach((el) => {
+        el.setAttribute("data-healthz-init", "1");
+        const url = el.dataset.healthzUrl;
+        let ok = 0;
+        const poll = () => {
+            fetch(url, { cache: "no-store" })
+                .then((r) => {
+                    if (r.ok) {
+                        ok += 1;
+                        if (ok >= 3) {
+                            window.location.reload();
+                            return;
+                        }
+                    } else {
+                        ok = 0;
+                    }
+                })
+                .catch(() => { ok = 0; })
+                .finally(() => { setTimeout(poll, 2000); });
+        };
+        setTimeout(poll, 5000);
+    });
+}
+
+document.addEventListener("htmx:afterSwap", () => initDeployPollers(document));
+document.addEventListener("DOMContentLoaded", () => initDeployPollers(document));

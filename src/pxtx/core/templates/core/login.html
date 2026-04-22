@@ -13,9 +13,9 @@
             <label for="id_password">Password</label>
             <input type="password" name="password" id="id_password" required>
         </div>
-        {% if form.errors %}
-            <p class="error">Invalid username or password.</p>
-        {% endif %}
+        {% for error in form.non_field_errors %}
+            <p class="error">{{ error }}</p>
+        {% endfor %}
         <button type="submit">Log in</button>
     </form>
 </div>

@@ -65,7 +65,6 @@ class IssueAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ["issue", "author", "created_at", "edited_at"]
-    list_filter = ["author"]
     search_fields = ["body", "author"]
     raw_id_fields = ["issue"]
     readonly_fields = ["created_at", "edited_at"]
@@ -74,7 +73,7 @@ class CommentAdmin(admin.ModelAdmin):
 @admin.register(GithubRef)
 class GithubRefAdmin(admin.ModelAdmin):
     list_display = ["issue", "kind", "repo", "number", "sha", "state"]
-    list_filter = ["kind", "repo", "state"]
+    list_filter = ["kind", "state"]
     search_fields = ["repo", "title"]
     raw_id_fields = ["issue"]
 

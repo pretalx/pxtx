@@ -22,3 +22,14 @@ def test_root_redirects_authenticated_to_issue_list(client):
 
     assert response.status_code == 302
     assert response.url == "/issues/"
+
+
+@pytest.mark.django_db
+def test_logout_via_post_redirects_to_root(auth_client):
+    response = auth_client.post("/logout/")
+
+    assert response.status_code == 302
+    assert response.url == "/"
+    follow_up = auth_client.get("/issues/")
+    assert follow_up.status_code == 302
+    assert follow_up.url.startswith("/login/")

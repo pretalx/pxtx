@@ -1,16 +1,9 @@
 import pytest
 from django.utils import timezone
 
-from tests.factories import IssueFactory, MilestoneFactory, UserFactory
+from tests.factories import IssueFactory, MilestoneFactory
 
 pytestmark = pytest.mark.integration
-
-
-@pytest.fixture
-def auth_client(client):
-    user = UserFactory()
-    client.force_login(user)
-    return client
 
 
 @pytest.mark.django_db

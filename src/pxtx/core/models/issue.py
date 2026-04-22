@@ -111,15 +111,14 @@ class Issue(BaseModel):
 
         # max()+1; gaps from deletes are fine. Concurrent INSERTs can pick the
         # same number and one will fail the unique constraint — retry in that case.
-        for attempt in range(5):
+        for _ in range(5):
             last = Issue.objects.aggregate(m=models.Max("number"))["m"] or 0
             self.number = last + 1
             try:
                 with transaction.atomic():
                     super().save(*args, **kwargs)
             except IntegrityError:
-                if attempt == 4:
-                    raise
                 self.number = None
             else:
                 return
+        raise IntegrityError("could not assign unique issue number after 5 retries")

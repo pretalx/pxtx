@@ -7,17 +7,9 @@ from tests.factories import (
     IssueFactory,
     IssueReferenceFactory,
     MilestoneFactory,
-    UserFactory,
 )
 
 pytestmark = pytest.mark.integration
-
-
-@pytest.fixture
-def auth_client(client):
-    user = UserFactory()
-    client.force_login(user)
-    return client
 
 
 @pytest.mark.django_db
@@ -50,6 +42,13 @@ def test_issue_list_lists_all_issues_with_constant_query_count(
 
     assert response.status_code == 200
     assert set(response.context["issues"]) == set(issues)
+
+
+@pytest.mark.django_db
+def test_issue_detail_returns_404_for_unknown_number(auth_client):
+    response = auth_client.get("/issues/999999/")
+
+    assert response.status_code == 404
 
 
 @pytest.mark.django_db

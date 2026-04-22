@@ -1,6 +1,7 @@
 import factory
 
 from pxtx.core.models import (
+    ApiToken,
     Comment,
     GithubRef,
     GithubRefKind,
@@ -11,6 +12,7 @@ from pxtx.core.models import (
     Status,
     User,
 )
+from pxtx.core.models.api_token import _hash_token, generate_token
 
 
 class UserFactory(factory.django.DjangoModelFactory):
@@ -84,3 +86,22 @@ class IssueReferenceFactory(factory.django.DjangoModelFactory):
 
     from_issue = factory.SubFactory(IssueFactory)
     to_issue = factory.SubFactory(IssueFactory)
+
+
+class ApiTokenFactory(factory.django.DjangoModelFactory):
+    """Mints an ApiToken and stashes the plaintext on the instance as
+    ``plaintext`` so tests can use it in the Authorization header."""
+
+    class Meta:
+        model = ApiToken
+
+    user = factory.SubFactory(UserFactory)
+    name = factory.Sequence(lambda n: f"token-{n}")
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        plaintext = kwargs.pop("plaintext", None) or generate_token()
+        instance = model_class(*args, token_hash=_hash_token(plaintext), **kwargs)
+        instance.save()
+        instance.plaintext = plaintext
+        return instance

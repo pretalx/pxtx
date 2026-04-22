@@ -122,7 +122,7 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.OrderingFilter",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.CursorPagination",
+    "DEFAULT_PAGINATION_CLASS": "pxtx.core.api.pagination.CreatedAtCursorPagination",
     "PAGE_SIZE": 50,
     "MAX_PAGE_SIZE": 200,
 }

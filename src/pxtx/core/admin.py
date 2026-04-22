@@ -1,8 +1,10 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.utils.html import format_html
 
 from pxtx.core.models import (
     ActivityLog,
+    ApiToken,
     Comment,
     GithubRef,
     Issue,
@@ -90,6 +92,42 @@ class GithubRefAdmin(admin.ModelAdmin):
 class IssueReferenceAdmin(admin.ModelAdmin):
     list_display = ["from_issue", "to_issue", "created_at"]
     raw_id_fields = ["from_issue", "to_issue"]
+
+
+@admin.register(ApiToken)
+class ApiTokenAdmin(admin.ModelAdmin):
+    """Admin is the only place to mint tokens. The generated plaintext is
+    flashed to the admin user exactly once — this is the only copy, the DB
+    only sees the hash.
+    """
+
+    list_display = ["name", "user", "created_at", "last_used_at"]
+    search_fields = ["name", "user__username"]
+    readonly_fields = ["token_hash", "created_at", "last_used_at"]
+
+    def get_fields(self, request, obj=None):
+        if obj is None:
+            return ["name", "user"]
+        return ["name", "user", "token_hash", "created_at", "last_used_at"]
+
+    def save_model(self, request, obj, form, change):
+        if change:
+            super().save_model(request, obj, form, change)
+            return
+        token, plaintext = ApiToken.create(user=obj.user, name=obj.name)
+        # The admin uses ``obj.pk`` for its post-save redirect, so point it
+        # at the newly created row.
+        obj.pk = token.pk
+        obj.token_hash = token.token_hash
+        messages.warning(
+            request,
+            format_html(
+                "API token for {} minted. Copy it now — it will not be shown "
+                "again:<br><code>{}</code>",
+                obj.name,
+                plaintext,
+            ),
+        )
 
 
 @admin.register(ActivityLog)

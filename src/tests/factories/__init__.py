@@ -1,4 +1,5 @@
 from tests.factories.core import (
+    ApiTokenFactory,
     CommentFactory,
     GithubCommitRefFactory,
     GithubIssueRefFactory,
@@ -10,6 +11,7 @@ from tests.factories.core import (
 )
 
 __all__ = [
+    "ApiTokenFactory",
     "CommentFactory",
     "GithubCommitRefFactory",
     "GithubIssueRefFactory",

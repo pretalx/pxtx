@@ -35,12 +35,6 @@ run *args="runserver --skip-checks":
 python *args:
     {{ python }} manage.py shell "$@"
 
-# Mint an API token for a claude-code instance (name used as assignee)
-[group('development')]
-[working-directory("src")]
-mktoken name:
-    {{ python }} manage.py mktoken {{ name }}
-
 # Check for outdated dependencies
 [group('development')]
 [script('python3')]

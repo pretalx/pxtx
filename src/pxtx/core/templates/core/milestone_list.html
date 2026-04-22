@@ -31,7 +31,10 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">No releases yet.</p>
+    <div class="empty">
+        <p>No releases yet.</p>
+        <p class="meta">Add one from the <a href="{% url 'admin:core_milestone_add' %}">Django admin</a>; milestone management is admin-only in v1.</p>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

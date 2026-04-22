@@ -7,6 +7,7 @@ from django.views import View
 from django.views.generic import DetailView, ListView
 
 from pxtx.core.models import Issue, Milestone, Status
+from pxtx.core.views._helpers import request_actor
 
 # Columns on the board, in display order. "done" folds completed + wontfix
 # together; cross-column drops onto it become ``completed`` (wontfix is
@@ -23,10 +24,6 @@ KANBAN_TARGET_STATUSES = {key: statuses[0].value for key, _, statuses in KANBAN_
 KANBAN_VISIBLE_STATUSES = {
     status.value for _, _, statuses in KANBAN_COLUMNS for status in statuses
 }
-
-
-def _actor(request):
-    return f"user/{request.user.username}"
 
 
 def _build_columns(milestone):
@@ -115,7 +112,7 @@ class MilestoneKanbanMoveView(LoginRequiredMixin, View):
         with transaction.atomic():
             if issue.status != target_status:
                 issue.status = target_status
-                issue.save(actor=_actor(request))
+                issue.save(actor=request_actor(request))
 
             # Done reorders across both completed and wontfix since the user
             # sees them as one list. Other columns reorder within their

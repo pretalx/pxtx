@@ -282,6 +282,22 @@ def test_activity_log_changes_property_pivots_before_and_after():
 
 
 @pytest.mark.django_db
+def test_activity_log_is_lifecycle_flags_create_and_delete_only():
+    issue = IssueFactory()
+    issue.title = "renamed"
+    issue.save()
+
+    by_type = {e.action_type: e for e in issue.logged_actions()}
+    assert by_type["pxtx.issue.create"].is_lifecycle is True
+    assert by_type["pxtx.issue.update"].is_lifecycle is False
+
+    ActivityLog.objects.all().delete()
+    issue.delete()
+    delete_entry = ActivityLog.objects.get(action_type="pxtx.issue.delete")
+    assert delete_entry.is_lifecycle is True
+
+
+@pytest.mark.django_db
 def test_activity_log_changes_property_returns_none_when_no_diff_payload():
     issue = IssueFactory()
     ActivityLog.objects.all().delete()

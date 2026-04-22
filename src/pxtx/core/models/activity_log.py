@@ -21,6 +21,12 @@ class ActivityLog(models.Model):
         return f"{self.action_type} by {self.actor or 'unknown'} @ {self.timestamp.isoformat()}"
 
     @property
+    def is_lifecycle(self):
+        """Create and delete entries carry a full snapshot; treat them as
+        events, not field-level diffs."""
+        return self.action_type.endswith((".create", ".delete"))
+
+    @property
     def changes(self):
         """Field-level diff dict, or None if this entry doesn't carry one."""
         before = (self.data or {}).get("before")

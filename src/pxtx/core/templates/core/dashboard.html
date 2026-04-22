@@ -1,0 +1,80 @@
+{% extends "core/base.html" %}
+{% block title %}Dashboard – pxtx{% endblock %}
+{% block content %}
+<div class="dashboard-header">
+    <h1>Dashboard</h1>
+    <div class="dashboard-stats">
+        <a class="stat" href="{% url 'core:issue-list' %}?status=open">
+            <span class="stat-value">{{ counts.open }}</span>
+            <span class="stat-label">Open</span>
+        </a>
+        <a class="stat" href="{% url 'core:issue-list' %}?status=wip">
+            <span class="stat-value">{{ counts.wip }}</span>
+            <span class="stat-label">In progress</span>
+        </a>
+        <a class="stat" href="{% url 'core:issue-list' %}?status=blocked">
+            <span class="stat-value">{{ counts.blocked }}</span>
+            <span class="stat-label">Blocked</span>
+        </a>
+        {% if counts.draft %}
+        <a class="stat draft" href="{% url 'core:issue-list' %}?status=draft">
+            <span class="stat-value">{{ counts.draft }}</span>
+            <span class="stat-label">Drafts</span>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <section class="card dashboard-panel">
+        <h2><span class="star">★</span> Highlighted</h2>
+        {% if highlighted %}
+        <ul class="issue-bullets">
+            {% for issue in highlighted %}{% include "core/_dashboard_issue.html" %}{% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">Nothing starred. Click the ☆ on any issue to pin it here.</p>
+        {% endif %}
+    </section>
+
+    <section class="card dashboard-panel">
+        <h2>🔧 In progress</h2>
+        {% if wip %}
+        <ul class="issue-bullets">
+            {% for issue in wip %}{% include "core/_dashboard_issue.html" %}{% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">Nothing in progress. Pick an issue and move it to <em>wip</em> to start.</p>
+        {% endif %}
+    </section>
+
+    {% if blocked %}
+    <section class="card dashboard-panel">
+        <h2>🚧 Blocked</h2>
+        <ul class="issue-bullets">
+            {% for issue in blocked %}{% include "core/_dashboard_issue.html" %}{% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% if drafts %}
+    <section class="card dashboard-panel">
+        <h2>📥 Draft issues to review</h2>
+        <ul class="issue-bullets">
+            {% for issue in drafts %}{% include "core/_dashboard_issue.html" %}{% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <section class="card dashboard-panel dashboard-wide">
+        <h2>Recently updated</h2>
+        {% if recent %}
+        <ul class="issue-bullets">
+            {% for issue in recent %}{% include "core/_dashboard_issue.html" with show_time=True %}{% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">No issues yet. <a href="{% url 'core:issue-new' %}">Create the first one</a>.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

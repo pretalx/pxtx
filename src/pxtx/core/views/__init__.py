@@ -10,8 +10,8 @@ from pxtx.core.views.issue import (
     IssueReorderView,
     IssueUpdateView,
     blocked_reason_field,
+    dashboard,
     render_markdown_preview,
-    root_redirect,
 )
 from pxtx.core.views.milestone import (
     MilestoneDetailView,
@@ -34,6 +34,6 @@ __all__ = [
     "MilestoneKanbanMoveView",
     "MilestoneListView",
     "blocked_reason_field",
+    "dashboard",
     "render_markdown_preview",
-    "root_redirect",
 ]

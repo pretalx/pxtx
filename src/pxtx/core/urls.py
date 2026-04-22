@@ -5,7 +5,7 @@ from pxtx.core import views
 app_name = "core"
 
 urlpatterns = [
-    path("", views.root_redirect, name="root"),
+    path("", views.dashboard, name="dashboard"),
     path("issues/", views.IssueListView.as_view(), name="issue-list"),
     path("issues/new/", views.IssueCreateView.as_view(), name="issue-new"),
     path(

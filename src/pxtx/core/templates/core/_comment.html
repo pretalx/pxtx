@@ -2,8 +2,8 @@
 <div class="comment" id="comment-{{ comment.pk }}">
     <div class="meta">
         <strong>{{ comment.author }}</strong>
-        · <span title="{{ comment.created_at|date:'Y-m-d H:i' }}">{{ comment.created_at|date:"Y-m-d H:i" }}</span>
-        {% if comment.edited_at %}(edited {{ comment.edited_at|date:"Y-m-d H:i" }}){% endif %}
+        · <span title="{{ comment.created_at|date:'Y-m-d H:i' }}">{{ comment.created_at|timesince }} ago</span>
+        {% if comment.edited_at %}<span title="{{ comment.edited_at|date:'Y-m-d H:i' }}">(edited {{ comment.edited_at|timesince }} ago)</span>{% endif %}
         <button type="button" class="link-button"
                 hx-get="{% url 'core:comment-edit' pk=comment.pk %}"
                 hx-target="#comment-{{ comment.pk }}" hx-swap="outerHTML">edit</button>

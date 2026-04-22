@@ -194,6 +194,26 @@ def test_activity_paginates(auth_client):
     assert not page2.context["page_obj"].has_next()
 
 
+@pytest.mark.django_db
+def test_activity_pagination_links_encode_filter_values(auth_client):
+    """Filter values containing querystring-significant chars must be
+    percent-encoded in pagination hrefs, otherwise an ``&`` in an actor name
+    would break the next page URL."""
+    from pxtx.core.views.activity import PAGE_SIZE
+
+    for _ in range(PAGE_SIZE + 1):
+        issue = IssueFactory()
+        issue.title = "edited"
+        issue.save(actor="a&b=c")
+
+    response = auth_client.get("/activity/?actor=a%26b%3Dc")
+
+    body = response.content.decode()
+    # Raw ``a&b=c`` in an href would parse as two separate params.
+    assert "actor=a%26b%3Dc" in body
+    assert "actor=a&b=c&" not in body
+
+
 # ---- heatmap ---------------------------------------------------------------
 
 
@@ -226,8 +246,8 @@ def test_heatmap_marks_future_cells_as_empty(auth_client):
 @pytest.mark.django_db
 @freeze_time("2026-04-22 12:00:00")
 def test_heatmap_counts_creates_and_closes_on_today(auth_client):
-    opened_a = IssueFactory()
-    opened_b = IssueFactory()
+    IssueFactory()
+    IssueFactory()
     closed = IssueFactory()
     closed.status = Status.COMPLETED
     closed.save(actor="tester")
@@ -248,9 +268,6 @@ def test_heatmap_counts_creates_and_closes_on_today(auth_client):
     assert today_cell["total"] == 6
     assert response.context["heatmap_total_opened"] == 4
     assert response.context["heatmap_total_closed"] == 2
-    # Unused locals silence "created but unused" lint noise while still
-    # anchoring the test to the factory side-effects above.
-    assert {opened_a.pk, opened_b.pk, closed.pk, dropped.pk}
 
 
 @pytest.mark.django_db

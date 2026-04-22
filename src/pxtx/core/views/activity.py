@@ -1,5 +1,7 @@
 import datetime as dt
+from urllib.parse import urlencode
 
+from django.apps import apps
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator
@@ -10,6 +12,7 @@ from django.utils import timezone
 from django.views import View
 
 from pxtx.core.models import ActivityLog, Comment, Issue
+from pxtx.core.views._helpers import is_htmx
 
 # Heatmap configuration: 53 weeks ending today, weeks start on Sunday to
 # match GitHub's contribution graph. Only issue opens and closes are counted
@@ -18,14 +21,19 @@ HEATMAP_WEEKS = 53
 HEATMAP_OPEN_ACTION = "pxtx.issue.create"
 HEATMAP_CLOSE_ACTIONS = ("pxtx.issue.status.completed", "pxtx.issue.status.wontfix")
 
-# Content types we know how to resolve to a human-facing target on the feed.
-KNOWN_CONTENT_TYPES = (("issue", "Issue"), ("comment", "Comment"))
-
 PAGE_SIZE = 50
 
 
-def _htmx(request):
-    return request.headers.get("HX-Request") == "true"
+def _content_type_choices():
+    """Filter-dropdown options derived from every model that emits activity
+    log entries (i.e. has a ``log_action_prefix``). Derived so a new loggable
+    model doesn't silently disappear from the filter."""
+    choices = [
+        (model._meta.model_name, model._meta.verbose_name.title())
+        for model in apps.get_models()
+        if getattr(model, "log_action_prefix", None)
+    ]
+    return tuple(sorted(choices))
 
 
 def _tier(count):
@@ -142,7 +150,7 @@ class ActivityView(LoginRequiredMixin, View):
 
     def get(self, request):
         params = request.GET
-        qs = ActivityLog.objects.select_related("content_type")
+        qs = ActivityLog.objects.all()
 
         actor = params.get("actor", "").strip()
         if actor:
@@ -171,6 +179,20 @@ class ActivityView(LoginRequiredMixin, View):
         entries = list(page_obj.object_list)
         _attach_targets(entries)
 
+        # Properly-encoded querystring for pagination links, so values
+        # containing ``&`` or ``=`` don't break the next URL.
+        filter_params = [
+            (key, value)
+            for key, value in (
+                ("actor", actor),
+                ("action_type", action_type),
+                ("content_type", content_type),
+                ("since", since),
+            )
+            if value
+        ]
+        base_querystring = urlencode(filter_params)
+
         context = {
             "entries": entries,
             "page_obj": page_obj,
@@ -178,10 +200,11 @@ class ActivityView(LoginRequiredMixin, View):
             "action_type_value": action_type,
             "content_type_value": content_type,
             "since_value": since,
-            "content_type_choices": KNOWN_CONTENT_TYPES,
+            "content_type_choices": _content_type_choices(),
+            "base_querystring": base_querystring,
         }
 
-        if _htmx(request):
+        if is_htmx(request):
             return render(request, self.list_template_name, context)
 
         context.update(_build_heatmap())

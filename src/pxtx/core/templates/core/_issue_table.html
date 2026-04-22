@@ -23,11 +23,11 @@
                     <a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.title }}</a>
                 </td>
                 <td><span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span></td>
-                <td>{{ issue.get_priority_display }}</td>
+                <td><span class="prio prio-{{ issue.priority }}">{{ issue.get_priority_display }}</span></td>
                 <td>{% if issue.effort_minutes %}{{ issue.get_effort_minutes_display }}{% else %}—{% endif %}</td>
                 <td>{{ issue.assignee|default:"—" }}</td>
                 <td>{% if issue.milestone %}<a href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% else %}—{% endif %}</td>
-                <td class="meta">{{ issue.updated_at|date:"Y-m-d H:i" }}</td>
+                <td class="meta" title="{{ issue.updated_at|date:'Y-m-d H:i' }}">{{ issue.updated_at|timesince }} ago</td>
                 {% if can_reorder %}
                 <td class="reorder-col">
                     <button type="button" class="reorder-btn" title="Move up"
@@ -45,6 +45,9 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty">No issues match these filters.</p>
+    <div class="empty">
+        <p>No issues match these filters.</p>
+        <p class="meta">Try <a href="{% url 'core:issue-list' %}">clearing filters</a> or <a href="{% url 'core:issue-new' %}">creating an issue</a>.</p>
+    </div>
     {% endif %}
 </div>

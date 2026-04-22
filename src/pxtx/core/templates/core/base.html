@@ -12,12 +12,14 @@
 <body{% if user.is_authenticated %} hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% endif %}>
     {% if user.is_authenticated %}
     <nav class="site">
-        <a class="brand" href="{% url 'core:issue-list' %}">pxtx</a>
+        <a class="brand" href="{% url 'core:dashboard' %}">pxtx</a>
+        <a href="{% url 'core:dashboard' %}" {% if request.path == '/' %}class="active"{% endif %}>Dashboard</a>
         <a href="{% url 'core:issue-list' %}" {% if 'issues' in request.path %}class="active"{% endif %}>Issues</a>
         <a href="{% url 'core:milestone-list' %}" {% if 'milestones' in request.path %}class="active"{% endif %}>Releases</a>
         <a href="{% url 'core:activity' %}" {% if 'activity' in request.path %}class="active"{% endif %}>Activity</a>
-        <a href="{% url 'core:issue-new' %}" class="new-issue">+ New issue</a>
+        <a href="{% url 'core:issue-new' %}" class="new-issue" title="New issue (c)">+ New</a>
         <span class="right">
+            <button type="button" class="link-button help-toggle" title="Show keyboard shortcuts (?)" data-help-toggle>?</button>
             <span class="meta">{{ user.username }}</span>
             <form class="logout" method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
@@ -25,6 +27,22 @@
             </form>
         </span>
     </nav>
+    <dialog id="help-dialog" class="help-dialog">
+        <h2>Keyboard shortcuts</h2>
+        <dl class="kv">
+            <dt><kbd>g</kbd> <kbd>d</kbd></dt><dd>Go to dashboard</dd>
+            <dt><kbd>g</kbd> <kbd>i</kbd></dt><dd>Go to issues</dd>
+            <dt><kbd>g</kbd> <kbd>r</kbd></dt><dd>Go to releases</dd>
+            <dt><kbd>g</kbd> <kbd>a</kbd></dt><dd>Go to activity</dd>
+            <dt><kbd>c</kbd></dt><dd>Create a new issue</dd>
+            <dt><kbd>/</kbd></dt><dd>Focus search on the issue list</dd>
+            <dt><kbd>?</kbd></dt><dd>Show this help</dd>
+            <dt><kbd>Esc</kbd></dt><dd>Close this help</dd>
+        </dl>
+        <form method="dialog" class="form-actions">
+            <button type="submit" class="secondary">Close</button>
+        </form>
+    </dialog>
     {% endif %}
     <main>
         {% block content %}{% endblock %}

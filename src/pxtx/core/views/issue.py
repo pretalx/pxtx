@@ -23,6 +23,7 @@ from pxtx.core.models import (
     Status,
 )
 from pxtx.core.text import render_markdown
+from pxtx.core.views._helpers import is_htmx, request_actor
 
 QUICK_FILTERS = [
     {
@@ -56,14 +57,6 @@ SORT_ORDERS = {
     "created": ("-created_at",),
     "milestone": ("milestone__name", "order_in_milestone"),
 }
-
-
-def _actor(request):
-    return f"user/{request.user.username}"
-
-
-def _htmx(request):
-    return request.headers.get("HX-Request") == "true"
 
 
 def _filtered_issues(params):
@@ -135,8 +128,41 @@ def _issue_list_context(params):
 
 
 @login_required
-def root_redirect(request):
-    return redirect("core:issue-list")
+def dashboard(request):
+    """Landing page: highlighted issues, work in progress, and recently
+    updated issues. Anything closed is filtered out of the first two sections
+    but recent updates include everything so the timeline stays honest."""
+    open_statuses = [Status.OPEN.value, Status.WIP.value, Status.BLOCKED.value]
+    base = Issue.objects.select_related("milestone")
+    highlighted = list(
+        base.filter(is_highlighted=True, status__in=open_statuses).order_by(
+            "priority", "-updated_at"
+        )[:10]
+    )
+    wip = list(base.filter(status=Status.WIP.value).order_by("priority", "-updated_at"))
+    blocked = list(
+        base.filter(status=Status.BLOCKED.value).order_by("priority", "-updated_at")
+    )
+    drafts = list(base.filter(status=Status.DRAFT.value).order_by("-updated_at")[:5])
+    recent = list(base.exclude(status=Status.DRAFT.value).order_by("-updated_at")[:10])
+    counts = {
+        "open": Issue.objects.filter(status=Status.OPEN.value).count(),
+        "wip": len(wip),
+        "blocked": len(blocked),
+        "draft": Issue.objects.filter(status=Status.DRAFT.value).count(),
+    }
+    return render(
+        request,
+        "core/dashboard.html",
+        {
+            "highlighted": highlighted,
+            "wip": wip,
+            "blocked": blocked,
+            "drafts": drafts,
+            "recent": recent,
+            "counts": counts,
+        },
+    )
 
 
 class IssueListView(LoginRequiredMixin, ListView):
@@ -145,7 +171,7 @@ class IssueListView(LoginRequiredMixin, ListView):
     context_object_name = "issues"
 
     def get(self, request, *args, **kwargs):
-        template = "core/_issue_table.html" if _htmx(request) else self.template_name
+        template = "core/_issue_table.html" if is_htmx(request) else self.template_name
         return render(request, template, _issue_list_context(request.GET))
 
 
@@ -195,7 +221,7 @@ class _IssueFormMixin:
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
-        self.object.save(actor=_actor(self.request))
+        self.object.save(actor=request_actor(self.request))
         return redirect(self.object.get_absolute_url())
 
     def get_context_data(self, **kwargs):
@@ -234,8 +260,8 @@ class IssueHighlightToggleView(LoginRequiredMixin, View):
     def post(self, request, number):
         issue = get_object_or_404(Issue, number=number)
         issue.is_highlighted = not issue.is_highlighted
-        issue.save(actor=_actor(request))
-        if _htmx(request):
+        issue.save(actor=request_actor(request))
+        if is_htmx(request):
             return render(request, "core/_highlight_toggle.html", {"issue": issue})
         return redirect(issue.get_absolute_url())
 
@@ -253,7 +279,7 @@ class IssueDescriptionEditView(LoginRequiredMixin, View):
         form = DescriptionForm(request.POST, instance=issue)
         form.is_valid()  # DescriptionForm has no validation errors to surface.
         issue = form.save(commit=False)
-        issue.save(actor=_actor(request))
+        issue.save(actor=request_actor(request))
         return render(request, "core/_description_view.html", {"issue": issue})
 
 
@@ -280,7 +306,7 @@ class IssueReorderView(LoginRequiredMixin, View):
                 for position, sibling in enumerate(siblings):
                     if sibling.order_in_priority != position:
                         sibling.order_in_priority = position
-                        sibling.save(actor=_actor(request), skip_log=True)
+                        sibling.save(actor=request_actor(request), skip_log=True)
         # Respond with the re-rendered table so htmx can swap it in place.
         return render(
             request, "core/_issue_table.html", _issue_list_context(request.GET)
@@ -294,8 +320,8 @@ class CommentCreateView(LoginRequiredMixin, View):
         if form.is_valid():
             comment = form.save(commit=False)
             comment.issue = issue
-            comment.author = _actor(request)
-            comment.save(actor=_actor(request))
+            comment.author = request_actor(request)
+            comment.save(actor=request_actor(request))
             form = CommentForm()
         return render(
             request,
@@ -326,7 +352,7 @@ class CommentEditView(LoginRequiredMixin, View):
             )
         comment = form.save(commit=False)
         comment.edited_at = timezone.now()
-        comment.save(actor=_actor(request))
+        comment.save(actor=request_actor(request))
         return render(request, "core/_comment.html", {"comment": comment})
 
 

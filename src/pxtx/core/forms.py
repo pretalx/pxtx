@@ -19,6 +19,7 @@ class IssueForm(forms.ModelForm):
             "source",
         )
         widgets = {
+            "title": forms.TextInput(attrs={"autofocus": True}),
             "description": forms.Textarea(attrs={"rows": 10}),
             "blocked_reason": forms.Textarea(attrs={"rows": 3}),
         }

@@ -232,7 +232,7 @@ def test_issue_new_posts_payload(cli_config, mocked_responses, capsys):
     assert code == 0
     out = capsys.readouterr().out
     assert "created PX-1" in out
-body = json.loads(mocked_responses.calls[0].request.body)
+    body = json.loads(mocked_responses.calls[0].request.body)
     assert body == {
         "title": "hello",
         "priority": 1,
@@ -497,7 +497,7 @@ def test_take_sets_assignee_and_wips(cli_config, mocked_responses, monkeypatch, 
     code = cli.main(["take", "47"])
 
     assert code == 0
-patch_body = json.loads(mocked_responses.calls[0].request.body)
+    patch_body = json.loads(mocked_responses.calls[0].request.body)
     assert patch_body == {"assignee": "claude-feat/x"}
     assert "PX-47 → wip" in capsys.readouterr().out
 
@@ -566,7 +566,7 @@ def test_pr_link_uses_default_repo(cli_config, mocked_responses, capsys):
     code = cli.main(["pr", "47", "9912"])
 
     assert code == 0
-body = json.loads(mocked_responses.calls[0].request.body)
+    body = json.loads(mocked_responses.calls[0].request.body)
     assert body == {"kind": "pr", "repo": "pretalx/pretalx", "number": 9912}
     assert "PX-47 ↔ pretalx/pretalx!9912" in capsys.readouterr().out
 
@@ -586,7 +586,7 @@ def test_pr_link_with_explicit_repo_and_url(cli_config, mocked_responses):
 
     cli.main(["pr", "47", "https://github.com/acme/widget/pull/7"])
 
-body = json.loads(mocked_responses.calls[0].request.body)
+    body = json.loads(mocked_responses.calls[0].request.body)
     assert body == {"kind": "pr", "repo": "acme/widget", "number": 7}
 
 
@@ -628,7 +628,7 @@ def test_issue_comment_from_stdin(cli_config, mocked_responses, monkeypatch, cap
     code = cli.main(["issue", "comment", "5"])
 
     assert code == 0
-body = json.loads(mocked_responses.calls[0].request.body)
+    body = json.loads(mocked_responses.calls[0].request.body)
     assert body == {"body": "piped body"}
 
 
@@ -660,7 +660,7 @@ def test_issue_comment_forced_stdin_flag(cli_config, mocked_responses, monkeypat
     code = cli.main(["issue", "comment", "5", "arg-body", "--stdin"])
 
     assert code == 0
-body = json.loads(mocked_responses.calls[0].request.body)
+    body = json.loads(mocked_responses.calls[0].request.body)
     assert body == {"body": "piped"}
 
 

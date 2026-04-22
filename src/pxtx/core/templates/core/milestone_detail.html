@@ -1,5 +1,10 @@
 {% extends "core/base.html" %}
+{% load static %}
 {% block title %}{{ milestone.name }} – pxtx{% endblock %}
+{% block extra_head %}
+<script src="{% static 'core/Sortable.min.js' %}" defer></script>
+<script src="{% static 'core/kanban.js' %}" defer></script>
+{% endblock %}
 {% block content %}
 <h1>{{ milestone.name }}
     {% if milestone.released_at %}
@@ -21,36 +26,6 @@
     {% endif %}
 </div>
 
-<div class="card">
-    <h2>Issues</h2>
-    {% if issues %}
-    <table>
-        <thead>
-            <tr>
-                <th>Issue</th>
-                <th>Title</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Assignee</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for issue in issues %}
-            <tr>
-                <td><a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.slug }}</a></td>
-                <td>
-                    {% if issue.is_highlighted %}<span class="star">★</span> {% endif %}
-                    <a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.title }}</a>
-                </td>
-                <td><span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span></td>
-                <td>{{ issue.get_priority_display }}</td>
-                <td>{{ issue.assignee|default:"—" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="empty">No issues in this release.</p>
-    {% endif %}
-</div>
+<h2>Board</h2>
+{% include "core/_kanban_board.html" %}
 {% endblock %}

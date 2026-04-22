@@ -1,0 +1,28 @@
+<div class="kanban"
+     data-move-url="{% url 'core:milestone-kanban-move' slug=milestone.slug %}"
+     data-csrf-token="{{ csrf_token }}">
+    {% for column in columns %}
+    <section class="kanban-col">
+        <h3>
+            <span>{{ column.label }}</span>
+            <span class="count">{{ column.count }}</span>
+        </h3>
+        <div class="kanban-cards" data-column="{{ column.key }}">
+            {% for issue in column.cards %}
+            <article class="kanban-card{% if issue.status == 'wontfix' %} wontfix{% endif %}" data-issue-number="{{ issue.number }}">
+                <div class="head">
+                    {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span>{% endif %}
+                    <span class="px">{{ issue.slug }}</span>
+                    <a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.title }}</a>
+                </div>
+                <div class="card-meta">
+                    <span>{{ issue.get_priority_display }}</span>
+                    {% if issue.effort_minutes %}<span>{{ issue.get_effort_minutes_display }}</span>{% endif %}
+                    {% if issue.assignee %}<span>{{ issue.assignee }}</span>{% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+</div>

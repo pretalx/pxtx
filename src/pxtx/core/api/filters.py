@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django_filters import rest_framework as filters
 
@@ -48,7 +49,23 @@ class ActivityLogFilter(filters.FilterSet):
     object_id = filters.NumberFilter(field_name="object_id")
     actor = filters.CharFilter(field_name="actor", lookup_expr="icontains")
     action_type = filters.CharFilter(field_name="action_type", lookup_expr="icontains")
+    issue = filters.NumberFilter(method="filter_issue")
+    since = filters.IsoDateTimeFilter(field_name="timestamp", lookup_expr="gte")
 
     class Meta:
         model = ActivityLog
         fields = ["content_type", "object_id", "actor", "action_type"]
+
+    def filter_issue(self, queryset, name, value):
+        """Filter by the Issue's public ``number``, not its internal pk.
+
+        The API exposes issues via ``number``; the ActivityLog's ``object_id``
+        stores the pk. Callers pass the bare integer (the CLI strips the
+        ``PX-`` prefix before calling).
+        """
+        try:
+            issue = Issue.objects.get(number=value)
+        except Issue.DoesNotExist:
+            return queryset.none()
+        content_type = ContentType.objects.get_for_model(Issue)
+        return queryset.filter(content_type=content_type, object_id=issue.pk)

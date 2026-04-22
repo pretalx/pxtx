@@ -49,4 +49,9 @@ urlpatterns = [
         views.MilestoneDetailView.as_view(),
         name="milestone-detail",
     ),
+    path(
+        "milestones/<slug:slug>/move/",
+        views.MilestoneKanbanMoveView.as_view(),
+        name="milestone-kanban-move",
+    ),
 ]

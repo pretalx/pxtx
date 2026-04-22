@@ -43,6 +43,66 @@ def test_activity_list_unknown_content_type_returns_empty(token_client):
 
 
 @pytest.mark.django_db
+def test_activity_list_filters_by_issue_number(token_client):
+    """``?issue=<number>`` must translate through Issue.pk so it hits the
+    correct ActivityLog rows even if number/pk diverge."""
+    target = IssueFactory()
+    target.title = "edited"
+    target.save(actor="tester")
+    other = IssueFactory()
+    other.title = "elsewhere"
+    other.save(actor="tester")
+
+    response = token_client.get(f"/api/v1/activity/?issue={target.number}")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {r["object_id"] for r in results} == {target.pk}
+
+
+@pytest.mark.django_db
+def test_activity_list_filters_by_issue_number_unknown_returns_empty(token_client):
+    issue = IssueFactory()
+    issue.title = "edited"
+    issue.save(actor="tester")
+
+    response = token_client.get("/api/v1/activity/?issue=9999")
+
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
+@pytest.mark.django_db
+def test_activity_list_filters_by_since_timestamp(token_client):
+    """Entries older than ``since`` must be excluded; newer ones kept."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from pxtx.core.models import ActivityLog
+
+    old = IssueFactory()
+    old.title = "old"
+    old.save(actor="tester")
+    new = IssueFactory()
+    new.title = "new"
+    new.save(actor="tester")
+
+    cutoff = timezone.now() - timedelta(minutes=5)
+    # Backdate the old entries so the ``since`` filter has something to exclude.
+    ActivityLog.objects.filter(object_id=old.pk).update(
+        timestamp=cutoff - timedelta(hours=1)
+    )
+
+    response = token_client.get("/api/v1/activity/", {"since": cutoff.isoformat()})
+
+    assert response.status_code == 200
+    object_ids = {r["object_id"] for r in response.json()["results"]}
+    assert new.pk in object_ids
+    assert old.pk not in object_ids
+
+
+@pytest.mark.django_db
 def test_activity_list_filters_by_actor(token_client):
     issue_a = IssueFactory()
     issue_a.title = "a"

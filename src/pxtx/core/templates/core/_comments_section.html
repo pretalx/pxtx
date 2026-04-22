@@ -1,0 +1,21 @@
+{% load rich_text %}
+<div id="comments-section">
+    {% if comments %}
+        {% for comment in comments %}
+            {% include "core/_comment.html" %}
+        {% endfor %}
+    {% else %}
+        <p class="empty">No comments.</p>
+    {% endif %}
+
+    <form class="comment-form"
+          hx-post="{% url 'core:comment-create' number=issue.number %}"
+          hx-target="#comments-section" hx-swap="outerHTML">
+        {% csrf_token %}
+        {{ comment_form.body }}
+        {% if comment_form.body.errors %}<p class="error">{{ comment_form.body.errors|join:", " }}</p>{% endif %}
+        <div class="form-actions">
+            <button type="submit">Add comment</button>
+        </div>
+    </form>
+</div>

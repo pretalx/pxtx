@@ -1,0 +1,15 @@
+<form id="description-block" class="description-form"
+      hx-post="{% url 'core:issue-description' number=issue.number %}"
+      hx-swap="outerHTML">
+    {% csrf_token %}
+    {{ form.description }}
+    {% if form.description.errors %}<p class="error">{{ form.description.errors|join:", " }}</p>{% endif %}
+    <div class="form-actions">
+        <button type="submit">Save</button>
+        <button type="button" class="secondary"
+                hx-get="{% url 'core:issue-detail' number=issue.number %}"
+                hx-select="#description-block"
+                hx-target="#description-block"
+                hx-swap="outerHTML">Cancel</button>
+    </div>
+</form>

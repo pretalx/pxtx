@@ -1,4 +1,5 @@
 from django.db import IntegrityError, models, transaction
+from django.urls import reverse
 from django.utils import timezone
 
 from pxtx.core.models.base import BaseModel
@@ -111,6 +112,9 @@ class Issue(BaseModel):
     @property
     def slug(self):
         return f"PX-{self.number}"
+
+    def get_absolute_url(self):
+        return reverse("core:issue-detail", kwargs={"number": self.number})
 
     @property
     def is_closed(self):

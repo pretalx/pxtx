@@ -3,23 +3,43 @@
 {% block title %}{{ issue.slug }} – pxtx{% endblock %}
 {% block content %}
 <h1>
-    {% if issue.is_highlighted %}<span class="star">★</span> {% endif %}
-    <span class="meta">{{ issue.slug }}</span> {{ issue.title }}
+    <button type="button"
+            class="highlight-toggle"
+            title="toggle highlight"
+            hx-post="{% url 'core:issue-highlight' number=issue.number %}"
+            hx-target="this" hx-swap="outerHTML">
+        {% if issue.is_highlighted %}★{% else %}☆{% endif %}
+    </button>
+    <span class="meta">{{ issue.slug }}</span>
+    {{ issue.title }}
     <span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+    <a href="{% url 'core:issue-edit' number=issue.number %}" class="secondary edit-link">Edit</a>
 </h1>
 
+<div class="layout-detail">
+<div class="main-col">
+
 <div class="card">
-    <h2>Description</h2>
-    {% if issue.description %}
-        <div class="prose">{{ issue.description|rich_text }}</div>
-    {% else %}
-        <p class="meta">No description.</p>
-    {% endif %}
+    <div class="description-header">
+        <h2>Description</h2>
+        <button type="button" class="secondary"
+                hx-get="{% url 'core:issue-description' number=issue.number %}"
+                hx-target="#description-block" hx-swap="outerHTML">Edit</button>
+    </div>
+    {% include "core/_description_view.html" %}
     {% if issue.status == "blocked" and issue.blocked_reason %}
     <h2 class="spaced">Blocked</h2>
     <div class="prose">{{ issue.blocked_reason|rich_text }}</div>
     {% endif %}
 </div>
+
+<div class="card">
+    <h2>Comments</h2>
+    {% include "core/_comments_section.html" %}
+</div>
+
+</div>
+<aside class="side-col">
 
 <div class="card">
     <h2>Metadata</h2>
@@ -48,6 +68,28 @@
 </div>
 {% endif %}
 
+{% if issue.links %}
+<div class="card">
+    <h2>Links</h2>
+    <ul>
+        {% for link in issue.links %}
+        <li><a href="{{ link.url }}">{{ link.label }}</a></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if issue.interested_parties %}
+<div class="card">
+    <h2>Interested parties</h2>
+    <ul>
+        {% for party in issue.interested_parties %}
+        <li>{% if party.url %}<a href="{{ party.url }}">{{ party.label }}</a>{% else %}{{ party.label }}{% endif %}{% if party.note %} <span class="meta">{{ party.note }}</span>{% endif %}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 {% if related_issues %}
 <div class="card">
     <h2>Referenced issues</h2>
@@ -63,17 +105,33 @@
 </div>
 {% endif %}
 
+{% if activity %}
 <div class="card">
-    <h2>Comments</h2>
-    {% if comments %}
-        {% for comment in comments %}
-        <div class="comment">
-            <div class="meta"><strong>{{ comment.author }}</strong> · {{ comment.created_at|date:"Y-m-d H:i" }}{% if comment.edited_at %} (edited {{ comment.edited_at|date:"Y-m-d H:i" }}){% endif %}</div>
-            <div class="prose">{{ comment.body|rich_text }}</div>
-        </div>
+    <h2>Activity</h2>
+    <ul class="activity">
+        {% for entry in activity %}
+        <li>
+            <details>
+                <summary>
+                    <span class="meta">{{ entry.timestamp|date:"Y-m-d H:i" }}</span>
+                    <code>{{ entry.action_type }}</code>
+                    {% if entry.actor %}<span class="meta">by {{ entry.actor }}</span>{% endif %}
+                </summary>
+                {% if entry.changes %}
+                <dl class="diff">
+                    {% for key, change in entry.changes.items %}
+                    <dt>{{ key }}</dt>
+                    <dd><del>{{ change.old|default:"∅" }}</del> → <ins>{{ change.new|default:"∅" }}</ins></dd>
+                    {% endfor %}
+                </dl>
+                {% endif %}
+            </details>
+        </li>
         {% endfor %}
-    {% else %}
-        <p class="empty">No comments.</p>
-    {% endif %}
+    </ul>
+</div>
+{% endif %}
+
+</aside>
 </div>
 {% endblock %}

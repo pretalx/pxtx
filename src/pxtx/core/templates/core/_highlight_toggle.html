@@ -1,0 +1,7 @@
+<button type="button"
+        class="highlight-toggle"
+        title="toggle highlight"
+        hx-post="{% url 'core:issue-highlight' number=issue.number %}"
+        hx-target="this" hx-swap="outerHTML">
+    {% if issue.is_highlighted %}★{% else %}☆{% endif %}
+</button>

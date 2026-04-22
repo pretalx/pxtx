@@ -1,10 +1,32 @@
-from pxtx.core.views.issue import IssueDetailView, IssueListView, root_redirect
+from pxtx.core.views.issue import (
+    CommentCreateView,
+    CommentEditView,
+    IssueCreateView,
+    IssueDescriptionEditView,
+    IssueDetailView,
+    IssueHighlightToggleView,
+    IssueListView,
+    IssueReorderView,
+    IssueUpdateView,
+    blocked_reason_field,
+    render_markdown_preview,
+    root_redirect,
+)
 from pxtx.core.views.milestone import MilestoneDetailView, MilestoneListView
 
 __all__ = [
+    "CommentCreateView",
+    "CommentEditView",
+    "IssueCreateView",
+    "IssueDescriptionEditView",
     "IssueDetailView",
+    "IssueHighlightToggleView",
     "IssueListView",
+    "IssueReorderView",
+    "IssueUpdateView",
     "MilestoneDetailView",
     "MilestoneListView",
+    "blocked_reason_field",
+    "render_markdown_preview",
     "root_redirect",
 ]

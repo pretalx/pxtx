@@ -1,0 +1,8 @@
+{% load rich_text %}
+<div id="description-block" class="prose">
+    {% if issue.description %}
+        {{ issue.description|rich_text }}
+    {% else %}
+        <p class="meta">No description.</p>
+    {% endif %}
+</div>

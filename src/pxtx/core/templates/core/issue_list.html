@@ -2,41 +2,81 @@
 {% block title %}Issues – pxtx{% endblock %}
 {% block content %}
 <h1>Issues</h1>
-<div class="card">
-    {% if issues %}
-    <table>
-        <thead>
-            <tr>
-                <th>Issue</th>
-                <th>Title</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Effort</th>
-                <th>Assignee</th>
-                <th>Release</th>
-                <th>Updated</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for issue in issues %}
-            <tr>
-                <td><a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.slug }}</a></td>
-                <td>
-                    {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span> {% endif %}
-                    <a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.title }}</a>
-                </td>
-                <td><span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span></td>
-                <td>{{ issue.get_priority_display }}</td>
-                <td>{% if issue.effort_minutes %}{{ issue.get_effort_minutes_display }}{% else %}—{% endif %}</td>
-                <td>{{ issue.assignee|default:"—" }}</td>
-                <td>{% if issue.milestone %}<a href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% else %}—{% endif %}</td>
-                <td class="meta">{{ issue.updated_at|date:"Y-m-d H:i" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="empty">No issues yet.</p>
-    {% endif %}
+
+{% if quick_filters %}
+<div class="quick-filters">
+    {% for qf in quick_filters %}
+    <a class="quick-filter" href="?{% for key, value in qf.querystring %}{{ key }}={{ value }}{% if not forloop.last %}&{% endif %}{% endfor %}">{{ qf.label }}</a>
+    {% endfor %}
 </div>
+{% endif %}
+
+<form class="issue-filters"
+      hx-get="{% url 'core:issue-list' %}"
+      hx-target="#issue-table"
+      hx-swap="outerHTML"
+      hx-push-url="true"
+      hx-trigger="change, keyup delay:300ms from:input[type=text]">
+    <div class="filter-row">
+        <label>
+            <span>Status</span>
+            <select name="status" multiple size="6">
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if value in selected_statuses %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Priority</span>
+            <select name="priority" multiple size="5">
+                {% for value, label in priority_choices %}
+                <option value="{{ value }}" {% if value|stringformat:"s" in selected_priorities %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Source</span>
+            <select name="source" multiple size="3">
+                {% for value, label in source_choices %}
+                <option value="{{ value }}" {% if value in selected_sources %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Release</span>
+            <select name="milestone">
+                <option value="">— any —</option>
+                <option value="null" {% if selected_milestone == "null" %}selected{% endif %}>— unassigned —</option>
+                {% for milestone in milestones %}
+                <option value="{{ milestone.slug }}" {% if selected_milestone == milestone.slug %}selected{% endif %}>{{ milestone.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Assignee</span>
+            <input type="text" name="assignee" value="{{ assignee_value }}" placeholder="contains…">
+        </label>
+        <label>
+            <span>Sort by</span>
+            <select name="sort">
+                <option value="priority" {% if sort == "priority" %}selected{% endif %}>Priority</option>
+                <option value="updated" {% if sort == "updated" %}selected{% endif %}>Recently updated</option>
+                <option value="created" {% if sort == "created" %}selected{% endif %}>Newest</option>
+                <option value="milestone" {% if sort == "milestone" %}selected{% endif %}>Release</option>
+            </select>
+        </label>
+        <label class="inline">
+            <input type="checkbox" name="is_highlighted" {% if highlighted_only %}checked{% endif %}>
+            <span>Highlighted only</span>
+        </label>
+    </div>
+    <div class="filter-row">
+        <label class="wide">
+            <span>Search</span>
+            <input type="text" name="search" value="{{ search_value }}" placeholder="title, description, comments">
+        </label>
+    </div>
+</form>
+
+{% include "core/_issue_table.html" %}
 {% endblock %}

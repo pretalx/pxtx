@@ -1,0 +1,5 @@
+<div id="blocked-reason-wrap" class="form-field wide {% if not show %}hidden{% endif %}">
+    <label for="{{ field.id_for_label }}">Reason for being blocked</label>
+    {{ field }}
+    {% if field.errors %}<p class="error">{{ field.errors|join:", " }}</p>{% endif %}
+</div>

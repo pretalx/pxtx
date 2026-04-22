@@ -5,14 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}pxtx{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'core/base.css' %}">
+    <script src="{% static 'core/htmx.min.js' %}" defer></script>
+    <script src="{% static 'core/pxtx.js' %}" defer></script>
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body{% if user.is_authenticated %} hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% endif %}>
     {% if user.is_authenticated %}
     <nav class="site">
         <a class="brand" href="{% url 'core:issue-list' %}">pxtx</a>
         <a href="{% url 'core:issue-list' %}" {% if 'issues' in request.path %}class="active"{% endif %}>Issues</a>
         <a href="{% url 'core:milestone-list' %}" {% if 'milestones' in request.path %}class="active"{% endif %}>Releases</a>
+        <a href="{% url 'core:issue-new' %}" class="new-issue">+ New issue</a>
         <span class="right">
             <span class="meta">{{ user.username }}</span>
             <form class="logout" method="post" action="{% url 'logout' %}">

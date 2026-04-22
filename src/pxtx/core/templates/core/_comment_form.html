@@ -1,0 +1,15 @@
+<form class="comment-form" id="comment-{{ comment.pk }}"
+      hx-post="{% url 'core:comment-edit' pk=comment.pk %}"
+      hx-swap="outerHTML">
+    {% csrf_token %}
+    {{ form.body }}
+    {% if form.body.errors %}<p class="error">{{ form.body.errors|join:", " }}</p>{% endif %}
+    <div class="form-actions">
+        <button type="submit">Save</button>
+        <button type="button" class="secondary"
+                hx-get="{% url 'core:issue-detail' number=comment.issue.number %}"
+                hx-select="#comment-{{ comment.pk }}"
+                hx-target="#comment-{{ comment.pk }}"
+                hx-swap="outerHTML">Cancel</button>
+    </div>
+</form>

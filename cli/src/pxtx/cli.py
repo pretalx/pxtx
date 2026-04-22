@@ -271,6 +271,30 @@ def cmd_issue_ref_link(args, client, config):
         print(f"PX-{args.number} ↔ {ref['display']}")
 
 
+def cmd_add_interested(args, client, config):
+    entry = {"label": args.label}
+    if args.url:
+        entry["url"] = args.url
+    if args.note:
+        entry["note"] = args.note
+    result = client.add_interested_party(args.number, entry)
+    if args.json:
+        print_json(result["issue"])
+        return
+    verb = "added interested" if result["created"] else "already interested"
+    print(f"PX-{args.number} {verb}: {args.label}")
+
+
+def cmd_add_link(args, client, config):
+    entry = {"label": args.label, "url": args.url}
+    result = client.add_link(args.number, entry)
+    if args.json:
+        print_json(result["issue"])
+        return
+    verb = "added link" if result["created"] else "already linked"
+    print(f"PX-{args.number} {verb}: {args.label} → {args.url}")
+
+
 def cmd_issue_close(args, client, config):
     action = "wontfix" if args.wontfix else "completed"
     issue = client.transition_issue(args.number, action)
@@ -398,6 +422,21 @@ def build_parser():
         help="GH issue: bare number, owner/repo#N, or github.com/.../issues/N URL",
     )
     issue_ref.set_defaults(func=cmd_issue_ref_link)
+
+    interested = sub.add_parser(
+        "add-interested", help="add an interested party to an issue"
+    )
+    interested.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
+    interested.add_argument("label")
+    interested.add_argument("--url", help="optional link for the party")
+    interested.add_argument("--note", help="optional note (shown after the label)")
+    interested.set_defaults(func=cmd_add_interested)
+
+    link = sub.add_parser("add-link", help="add a link to an issue")
+    link.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
+    link.add_argument("label")
+    link.add_argument("url")
+    link.set_defaults(func=cmd_add_link)
 
     milestone = sub.add_parser("milestone", help="manage milestones")
     ms_sub = milestone.add_subparsers(dest="subcommand", required=True)

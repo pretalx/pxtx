@@ -109,6 +109,27 @@ class Client:
     def add_github_ref(self, number, payload):
         return self._request("POST", f"/issues/{number}/github-refs/", json=payload)
 
+    def _append_json_list(self, number, field, entry, dedupe_keys):
+        # Read-modify-write on an Issue JSON list field. Idempotent on
+        # ``dedupe_keys``: if an existing item matches every key, skip the PATCH
+        # and return the issue untouched — matches github-refs' "add twice is a
+        # no-op" contract that agents rely on.
+        issue = self.get_issue(number)
+        existing = list(issue.get(field) or [])
+        for item in existing:
+            if all(item.get(key) == entry.get(key) for key in dedupe_keys):
+                return {"issue": issue, "created": False}
+        updated = self.update_issue(number, {field: [*existing, entry]})
+        return {"issue": updated, "created": True}
+
+    def add_interested_party(self, number, entry):
+        return self._append_json_list(
+            number, "interested_parties", entry, ("label", "url")
+        )
+
+    def add_link(self, number, entry):
+        return self._append_json_list(number, "links", entry, ("label", "url"))
+
     def list_milestones(self):
         return self.paginate("/milestones/")
 

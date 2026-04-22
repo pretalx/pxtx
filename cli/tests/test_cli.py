@@ -813,6 +813,131 @@ def test_issue_comment_forced_stdin_flag(cli_config, mocked_responses, monkeypat
     assert body == {"body": "piped"}
 
 
+def test_add_interested_appends_with_url_and_note(cli_config, mocked_responses, capsys):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/",
+        json={"slug": "PX-47", "number": 47, "interested_parties": []},
+    )
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "interested_parties": [
+                {"label": "Alice", "url": "mailto:a@x", "note": "reporter"}
+            ],
+        },
+    )
+
+    code = cli.main(
+        ["add-interested", "47", "Alice", "--url", "mailto:a@x", "--note", "reporter"]
+    )
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[1].request.body)
+    assert body == {
+        "interested_parties": [
+            {"label": "Alice", "url": "mailto:a@x", "note": "reporter"}
+        ]
+    }
+    assert "PX-47 added interested: Alice" in capsys.readouterr().out
+
+
+def test_add_interested_duplicate_skips_patch(cli_config, mocked_responses, capsys):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "interested_parties": [{"label": "Alice", "url": None}],
+        },
+    )
+
+    code = cli.main(["add-interested", "47", "Alice"])
+
+    assert code == 0
+    assert len(mocked_responses.calls) == 1
+    assert "PX-47 already interested: Alice" in capsys.readouterr().out
+
+
+def test_add_interested_json_output(cli_config, mocked_responses, capsys):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/",
+        json={"slug": "PX-47", "number": 47, "interested_parties": []},
+    )
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "interested_parties": [{"label": "Alice"}],
+        },
+    )
+
+    cli.main(["--json", "add-interested", "47", "Alice"])
+
+    out = capsys.readouterr().out
+    assert '"slug": "PX-47"' in out
+    assert '"label": "Alice"' in out
+
+
+def test_add_link_appends(cli_config, mocked_responses, capsys):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/", json={"slug": "PX-47", "number": 47, "links": []}
+    )
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "links": [{"label": "spec", "url": "https://x/spec"}],
+        },
+    )
+
+    code = cli.main(["add-link", "47", "spec", "https://x/spec"])
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[1].request.body)
+    assert body == {"links": [{"label": "spec", "url": "https://x/spec"}]}
+    assert "PX-47 added link: spec → https://x/spec" in capsys.readouterr().out
+
+
+def test_add_link_duplicate_skips_patch(cli_config, mocked_responses, capsys):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "links": [{"label": "spec", "url": "https://x/spec"}],
+        },
+    )
+
+    code = cli.main(["add-link", "47", "spec", "https://x/spec"])
+
+    assert code == 0
+    assert len(mocked_responses.calls) == 1
+    assert "PX-47 already linked: spec → https://x/spec" in capsys.readouterr().out
+
+
+def test_add_link_json_output(cli_config, mocked_responses, capsys):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/", json={"slug": "PX-47", "number": 47, "links": []}
+    )
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "links": [{"label": "spec", "url": "https://x/spec"}],
+        },
+    )
+
+    cli.main(["--json", "add-link", "47", "spec", "https://x/spec"])
+
+    out = capsys.readouterr().out
+    assert '"label": "spec"' in out
+
+
 def test_milestone_list(cli_config, mocked_responses, capsys):
     mocked_responses.get(
         f"{URL}/api/v1/milestones/",

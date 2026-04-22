@@ -41,6 +41,8 @@ pxtx issue comment PX-47 "message"        # or: --stdin
 pxtx take PX-47                           # assignee=you, status=wip
 pxtx pr PX-47 <ref>                       # link a GitHub PR
 pxtx issue-ref PX-47 <ref>                # link a GitHub issue
+pxtx add-interested PX-47 "Name" [--url URL] [--note "..."]
+pxtx add-link PX-47 "label" <url>
 pxtx milestone list
 pxtx activity log [PX-47] [--since 1h|2d|1w|<iso>]
 ```
@@ -155,6 +157,21 @@ uvx pxtx issue-ref PX-47 pretalx/pretalx#9912
 
 Like `pxtx pr`, the call is idempotent on `(kind, repo, number)` — a
 re-run with the same ref is a no-op rather than a duplicate row.
+
+**"Record who cares / what to read."** Append to an issue's side metadata
+without a full edit — both commands are idempotent on `(label, url)`, so
+re-running is a no-op:
+
+```
+uvx pxtx add-interested PX-47 "Speaker X" --url mailto:x@example.com \
+                                          --note "reported via email"
+uvx pxtx add-link PX-47 "RFC" https://example.com/rfc
+```
+
+Use `add-interested` for humans/stakeholders (url + note are optional;
+url can be a `mailto:` or anything else) and `add-link` for references
+(spec, doc, related thread). Neither supports edit/remove — drop into
+the Django admin for that.
 
 **"What happened on PX-47 recently?"**
 

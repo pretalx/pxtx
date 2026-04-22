@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from pxtx.client import ApiError, Client
@@ -125,6 +127,120 @@ def test_add_github_ref(mocked_responses, client_plain):
     )
 
     assert result["id"] == 1
+
+
+def test_add_interested_party_appends(mocked_responses, client_plain):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "interested_parties": [{"label": "Alice", "url": None}],
+        },
+    )
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "interested_parties": [
+                {"label": "Alice", "url": None},
+                {"label": "Bob", "url": "mailto:b@x"},
+            ],
+        },
+    )
+
+    result = client_plain.add_interested_party(
+        47, {"label": "Bob", "url": "mailto:b@x"}
+    )
+
+    assert result["created"] is True
+    assert result["issue"]["interested_parties"][-1]["label"] == "Bob"
+    patch_body = mocked_responses.calls[1].request.body
+    assert json.loads(patch_body) == {
+        "interested_parties": [
+            {"label": "Alice", "url": None},
+            {"label": "Bob", "url": "mailto:b@x"},
+        ]
+    }
+
+
+def test_add_interested_party_is_idempotent(mocked_responses, client_plain):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "interested_parties": [{"label": "Alice", "url": "mailto:a@x"}],
+        },
+    )
+
+    result = client_plain.add_interested_party(
+        47, {"label": "Alice", "url": "mailto:a@x", "note": "ignored"}
+    )
+
+    assert result["created"] is False
+    # Only the GET — no PATCH issued.
+    assert len(mocked_responses.calls) == 1
+
+
+def test_add_interested_party_same_label_different_url_appends(
+    mocked_responses, client_plain
+):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "interested_parties": [{"label": "Alice", "url": "mailto:a@x"}],
+        },
+    )
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/", json={"slug": "PX-47", "number": 47}
+    )
+
+    result = client_plain.add_interested_party(
+        47, {"label": "Alice", "url": "mailto:a2@x"}
+    )
+
+    assert result["created"] is True
+
+
+def test_add_link_appends_to_missing_field(mocked_responses, client_plain):
+    # Older or freshly-created issues might not carry the key at all.
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/", json={"slug": "PX-47", "number": 47}
+    )
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "links": [{"label": "spec", "url": "https://x/spec"}],
+        },
+    )
+
+    result = client_plain.add_link(47, {"label": "spec", "url": "https://x/spec"})
+
+    assert result["created"] is True
+    patch_body = json.loads(mocked_responses.calls[1].request.body)
+    assert patch_body == {"links": [{"label": "spec", "url": "https://x/spec"}]}
+
+
+def test_add_link_is_idempotent(mocked_responses, client_plain):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "number": 47,
+            "links": [{"label": "spec", "url": "https://x/spec"}],
+        },
+    )
+
+    result = client_plain.add_link(47, {"label": "spec", "url": "https://x/spec"})
+
+    assert result["created"] is False
+    assert len(mocked_responses.calls) == 1
 
 
 def test_list_milestones(mocked_responses, client_plain):

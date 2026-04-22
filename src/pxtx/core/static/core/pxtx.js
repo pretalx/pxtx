@@ -90,3 +90,29 @@ document.addEventListener("click", (event) => {
     event.preventDefault();
     openHelp();
 });
+
+// Markdown preview toggle. On first click htmx fetches the rendered preview
+// and the `htmx:afterSwap` handler below reveals the pane. Further clicks
+// toggle visibility without refetching, and the button label tracks state.
+document.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-preview-toggle]");
+    if (!trigger) return;
+    const target = document.querySelector(trigger.dataset.previewTarget);
+    if (!target) return;
+    if (!target.hasAttribute("hidden")) {
+        // Preview is visible — hide it and stop htmx from refetching.
+        event.preventDefault();
+        event.stopPropagation();
+        target.setAttribute("hidden", "");
+        trigger.textContent = "Preview";
+    }
+    // Otherwise let htmx run; afterSwap flips the hidden flag.
+});
+
+document.addEventListener("htmx:afterSwap", (event) => {
+    const target = event.target;
+    if (!target || target.id !== "description-preview") return;
+    target.removeAttribute("hidden");
+    const trigger = document.querySelector('[data-preview-toggle][data-preview-target="#' + target.id + '"]');
+    if (trigger) trigger.textContent = "Hide preview";
+});

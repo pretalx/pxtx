@@ -2,19 +2,25 @@
 {% load rich_text %}
 {% block title %}{{ issue.slug }} – pxtx{% endblock %}
 {% block content %}
-<h1>
-    <button type="button"
-            class="highlight-toggle"
-            title="toggle highlight"
-            hx-post="{% url 'core:issue-highlight' number=issue.number %}"
-            hx-target="this" hx-swap="outerHTML">
-        {% if issue.is_highlighted %}★{% else %}☆{% endif %}
-    </button>
-    <span class="meta">{{ issue.slug }}</span>
-    {{ issue.title }}
-    <span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
-    <a href="{% url 'core:issue-edit' number=issue.number %}" class="secondary edit-link">Edit</a>
-</h1>
+<header class="issue-header">
+    <div class="issue-header-top">
+        <span class="px">{{ issue.slug }}</span>
+        <span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+        <span class="prio prio-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
+        {% if issue.milestone %}<a class="chip" href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% endif %}
+        <div class="issue-header-actions">
+            <button type="button"
+                    class="highlight-toggle"
+                    title="toggle highlight"
+                    hx-post="{% url 'core:issue-highlight' number=issue.number %}"
+                    hx-target="this" hx-swap="outerHTML">
+                {% if issue.is_highlighted %}★{% else %}☆{% endif %}
+            </button>
+            <a href="{% url 'core:issue-edit' number=issue.number %}" class="secondary">Edit</a>
+        </div>
+    </div>
+    <h1 class="issue-title">{{ issue.title }}</h1>
+</header>
 
 <div class="layout-detail">
 <div class="main-col">
@@ -114,7 +120,7 @@
             <details>
                 <summary>
                     <span class="meta">{{ entry.timestamp|date:"Y-m-d H:i" }}</span>
-                    <code>{{ entry.action_type }}</code>
+                    <span class="action-label">{{ entry.action_type|humanize_action }}</span>
                     {% if entry.actor %}<span class="meta">by {{ entry.actor }}</span>{% endif %}
                 </summary>
                 {% if entry.changes %}

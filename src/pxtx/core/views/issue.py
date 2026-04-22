@@ -100,8 +100,26 @@ def _filtered_issues(params):
     return qs.order_by(*order)
 
 
+def _quick_filter_active(spec, params):
+    """A quick filter is "active" when every ``(key, value)`` in its query is
+    present in the currently-applied params. Multi-valued params match if the
+    expected value is one of the selected values."""
+    return all(value in params.getlist(key) for key, value in spec["query"])
+
+
 def _issue_list_context(params):
     sort = params.get("sort") or "priority"
+    quick_filters = []
+    for spec in QUICK_FILTERS:
+        if not Issue.objects.filter(**spec["filter"]).exists():
+            continue
+        quick_filters.append(
+            {
+                "label": spec["label"],
+                "querystring": spec["query"],
+                "active": _quick_filter_active(spec, params),
+            }
+        )
     return {
         "issues": _filtered_issues(params),
         "selected_statuses": (
@@ -119,11 +137,7 @@ def _issue_list_context(params):
         "priority_choices": Priority.choices,
         "source_choices": Source.choices,
         "milestones": list(Milestone.objects.order_by("-target_date", "name")),
-        "quick_filters": [
-            {"label": spec["label"], "querystring": spec["query"]}
-            for spec in QUICK_FILTERS
-            if Issue.objects.filter(**spec["filter"]).exists()
-        ],
+        "quick_filters": quick_filters,
     }
 
 
@@ -139,16 +153,18 @@ def dashboard(request):
             "priority", "-updated_at"
         )[:10]
     )
-    wip = list(base.filter(status=Status.WIP.value).order_by("priority", "-updated_at"))
-    blocked = list(
-        base.filter(status=Status.BLOCKED.value).order_by("priority", "-updated_at")
+    wip_qs = base.filter(status=Status.WIP.value).order_by("priority", "-updated_at")
+    blocked_qs = base.filter(status=Status.BLOCKED.value).order_by(
+        "priority", "-updated_at"
     )
+    wip = list(wip_qs[:20])
+    blocked = list(blocked_qs[:20])
     drafts = list(base.filter(status=Status.DRAFT.value).order_by("-updated_at")[:5])
     recent = list(base.exclude(status=Status.DRAFT.value).order_by("-updated_at")[:10])
     counts = {
         "open": Issue.objects.filter(status=Status.OPEN.value).count(),
-        "wip": len(wip),
-        "blocked": len(blocked),
+        "wip": wip_qs.count(),
+        "blocked": blocked_qs.count(),
         "draft": Issue.objects.filter(status=Status.DRAFT.value).count(),
     }
     return render(

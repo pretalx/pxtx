@@ -1,5 +1,5 @@
 {% extends "core/base.html" %}
-{% load static %}
+{% load static rich_text %}
 {% block title %}{{ milestone.name }} – pxtx{% endblock %}
 {% block extra_head %}
 <script src="{% static 'core/Sortable.min.js' %}" defer></script>
@@ -22,7 +22,7 @@
     </dl>
     {% if milestone.description %}
     <h2 class="spaced">Description</h2>
-    <pre class="prose">{{ milestone.description }}</pre>
+    <div class="prose">{{ milestone.description|rich_text }}</div>
     {% endif %}
 </div>
 

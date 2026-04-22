@@ -1,4 +1,5 @@
 <div id="activity-list" class="card">
+{% load rich_text %}
 {% if entries %}
     <ul class="activity">
     {% for entry in entries %}
@@ -6,7 +7,7 @@
             <details>
                 <summary>
                     <span class="meta">{{ entry.timestamp|date:"Y-m-d H:i" }}</span>
-                    <code>{{ entry.action_type }}</code>
+                    <span class="action-label">{{ entry.action_type|humanize_action }}</span>
                     {% if entry.actor %}<span class="meta">by {{ entry.actor }}</span>{% endif %}
                     {% if entry.target_issue %}
                         on <a href="{% url 'core:issue-detail' number=entry.target_issue.number %}">{{ entry.target_issue.slug }}</a>

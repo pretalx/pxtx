@@ -6,7 +6,9 @@
 {% if quick_filters %}
 <div class="quick-filters">
     {% for qf in quick_filters %}
-    <a class="quick-filter" href="?{% for key, value in qf.querystring %}{{ key }}={{ value }}{% if not forloop.last %}&{% endif %}{% endfor %}">{{ qf.label }}</a>
+    <a class="quick-filter{% if qf.active %} active{% endif %}"
+       href="?{% for key, value in qf.querystring %}{{ key }}={{ value }}{% if not forloop.last %}&{% endif %}{% endfor %}"
+       {% if qf.active %}aria-current="true"{% endif %}>{{ qf.label }}</a>
     {% endfor %}
 </div>
 {% endif %}

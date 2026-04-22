@@ -331,3 +331,31 @@ def test_rich_text_filter_handles_empty_input():
     rendered = tpl.render(Context({"body": ""}))
 
     assert rendered == "[]"
+
+
+def _humanize(action_type):
+    tpl = Template("{% load rich_text %}{{ action|humanize_action }}")
+    return tpl.render(Context({"action": action_type}))
+
+
+def test_humanize_action_maps_known_lifecycle_actions():
+    assert _humanize("pxtx.issue.create") == "created"
+    assert _humanize("pxtx.issue.update") == "updated"
+    assert _humanize("pxtx.issue.delete") == "deleted"
+    assert _humanize("pxtx.comment.create") == "commented"
+    assert _humanize("pxtx.comment.update") == "edited comment"
+    assert _humanize("pxtx.comment.delete") == "deleted comment"
+
+
+def test_humanize_action_formats_status_transitions_with_display_label():
+    assert _humanize("pxtx.issue.status.wip") == "status → In progress"
+    assert _humanize("pxtx.issue.status.completed") == "status → Completed"
+
+
+def test_humanize_action_status_keeps_unknown_key_verbatim():
+    assert _humanize("pxtx.issue.status.weird") == "status → weird"
+
+
+def test_humanize_action_falls_back_to_trailing_segment_for_custom_actions():
+    assert _humanize("team.standup_note") == "standup note"
+    assert _humanize("custom") == "custom"

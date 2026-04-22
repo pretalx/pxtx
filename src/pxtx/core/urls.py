@@ -54,4 +54,5 @@ urlpatterns = [
         views.MilestoneKanbanMoveView.as_view(),
         name="milestone-kanban-move",
     ),
+    path("activity/", views.ActivityView.as_view(), name="activity"),
 ]

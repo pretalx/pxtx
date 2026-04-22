@@ -1,0 +1,43 @@
+{% extends "core/base.html" %}
+{% block title %}Activity – pxtx{% endblock %}
+{% block content %}
+<h1>Activity</h1>
+
+<div class="card">
+    <h2>Yearly heatmap</h2>
+    {% include "core/_activity_heatmap.html" %}
+</div>
+
+<form class="issue-filters"
+      hx-get="{% url 'core:activity' %}"
+      hx-target="#activity-list"
+      hx-swap="outerHTML"
+      hx-push-url="true"
+      hx-trigger="change, keyup delay:300ms from:input[type=text]">
+    <div class="filter-row">
+        <label>
+            <span>Actor</span>
+            <input type="text" name="actor" value="{{ actor_value }}" placeholder="contains…">
+        </label>
+        <label>
+            <span>Action type</span>
+            <input type="text" name="action_type" value="{{ action_type_value }}" placeholder="contains…">
+        </label>
+        <label>
+            <span>Content type</span>
+            <select name="content_type">
+                <option value="">— any —</option>
+                {% for value, label in content_type_choices %}
+                <option value="{{ value }}" {% if content_type_value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Since</span>
+            <input type="date" name="since" value="{{ since_value }}">
+        </label>
+    </div>
+</form>
+
+{% include "core/_activity_list.html" %}
+{% endblock %}

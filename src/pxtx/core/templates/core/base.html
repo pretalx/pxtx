@@ -15,6 +15,7 @@
         <a class="brand" href="{% url 'core:issue-list' %}">pxtx</a>
         <a href="{% url 'core:issue-list' %}" {% if 'issues' in request.path %}class="active"{% endif %}>Issues</a>
         <a href="{% url 'core:milestone-list' %}" {% if 'milestones' in request.path %}class="active"{% endif %}>Releases</a>
+        <a href="{% url 'core:activity' %}" {% if 'activity' in request.path %}class="active"{% endif %}>Activity</a>
         <a href="{% url 'core:issue-new' %}" class="new-issue">+ New issue</a>
         <span class="right">
             <span class="meta">{{ user.username }}</span>

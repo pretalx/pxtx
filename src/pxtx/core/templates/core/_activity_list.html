@@ -1,0 +1,43 @@
+<div id="activity-list" class="card">
+{% if entries %}
+    <ul class="activity">
+    {% for entry in entries %}
+        <li>
+            <details>
+                <summary>
+                    <span class="meta">{{ entry.timestamp|date:"Y-m-d H:i" }}</span>
+                    <code>{{ entry.action_type }}</code>
+                    {% if entry.actor %}<span class="meta">by {{ entry.actor }}</span>{% endif %}
+                    {% if entry.target_issue %}
+                        on <a href="{% url 'core:issue-detail' number=entry.target_issue.number %}">{{ entry.target_issue.slug }}</a>
+                        <span class="meta">{{ entry.target_issue.title }}</span>
+                        {% if entry.target_comment %}<span class="meta">(comment)</span>{% endif %}
+                    {% endif %}
+                </summary>
+                {% if entry.changes %}
+                <dl class="diff">
+                    {% for key, change in entry.changes.items %}
+                    <dt>{{ key }}</dt>
+                    <dd><del>{{ change.old|default:"∅" }}</del> → <ins>{{ change.new|default:"∅" }}</ins></dd>
+                    {% endfor %}
+                </dl>
+                {% endif %}
+            </details>
+        </li>
+    {% endfor %}
+    </ul>
+    {% if page_obj.has_other_pages %}
+    <nav class="pagination">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if actor_value %}&actor={{ actor_value }}{% endif %}{% if action_type_value %}&action_type={{ action_type_value }}{% endif %}{% if content_type_value %}&content_type={{ content_type_value }}{% endif %}{% if since_value %}&since={{ since_value }}{% endif %}">← newer</a>
+        {% endif %}
+        <span class="meta">page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if actor_value %}&actor={{ actor_value }}{% endif %}{% if action_type_value %}&action_type={{ action_type_value }}{% endif %}{% if content_type_value %}&content_type={{ content_type_value }}{% endif %}{% if since_value %}&since={{ since_value }}{% endif %}">older →</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+{% else %}
+    <p class="empty">No activity matches these filters.</p>
+{% endif %}
+</div>

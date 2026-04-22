@@ -1,3 +1,4 @@
+from pxtx.core.views.activity import ActivityView
 from pxtx.core.views.issue import (
     CommentCreateView,
     CommentEditView,
@@ -19,6 +20,7 @@ from pxtx.core.views.milestone import (
 )
 
 __all__ = [
+    "ActivityView",
     "CommentCreateView",
     "CommentEditView",
     "IssueCreateView",

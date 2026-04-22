@@ -1,0 +1,17 @@
+<p class="heatmap-summary">
+    <span class="meta">{{ heatmap_start|date:"Y-m-d" }} → {{ heatmap_end|date:"Y-m-d" }}:</span>
+    <strong>{{ heatmap_total_opened }}</strong> opened,
+    <strong>{{ heatmap_total_closed }}</strong> closed
+</p>
+<div class="heatmap" role="img" aria-label="Activity heatmap of the past year">
+{% for cell in heatmap_cells %}{% if cell.empty %}<div class="heat-cell empty"></div>{% else %}<div class="heat-cell tier-{{ cell.tier }}" title="{{ cell.date|date:'Y-m-d' }}: {{ cell.opened }} opened, {{ cell.closed }} closed"></div>{% endif %}{% endfor %}
+</div>
+<div class="heat-legend">
+    <span class="meta">Less</span>
+    <div class="heat-cell tier-0"></div>
+    <div class="heat-cell tier-1"></div>
+    <div class="heat-cell tier-2"></div>
+    <div class="heat-cell tier-3"></div>
+    <div class="heat-cell tier-4"></div>
+    <span class="meta">More</span>
+</div>

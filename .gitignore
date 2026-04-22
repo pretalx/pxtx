@@ -14,3 +14,4 @@ data/
 static.dist/
 .ruff_cache/
 uv.lock
+pxtx.toml

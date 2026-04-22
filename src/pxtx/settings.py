@@ -1,5 +1,6 @@
 import secrets
 import sys
+import tomllib
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent.parent
@@ -161,3 +162,23 @@ LOGGING = {
 
 DEPLOY_FLAG_FILE = str(DATA_DIR / "deploy.flag")
 DEFAULT_GITHUB_REPO = "pretalx/pretalx"
+
+# Operator-facing config. Looked up at /etc/pxtx.toml first (production),
+# falling back to pxtx.toml next to pyproject.toml (dev). Missing file =
+# everything defaults. Schema -- [github].token (optional; bumps rate limit
+# 60 -> 5000) and [github].repos (list polled by `manage.py runperiodic`).
+CONFIG_PATHS = (Path("/etc/pxtx.toml"), BASE_DIR / "pxtx.toml")
+
+
+def _load_config():
+    for path in CONFIG_PATHS:
+        if path.exists():
+            return tomllib.loads(path.read_text())
+    return {}
+
+
+_config = _load_config()
+_github_cfg = _config.get("github", {})
+
+GITHUB_WATCH_REPOS = _github_cfg.get("repos") or [DEFAULT_GITHUB_REPO]
+GITHUB_TOKEN = _github_cfg.get("token", "") or ""

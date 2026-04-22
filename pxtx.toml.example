@@ -1,0 +1,21 @@
+# pxtx server config. Copy to /etc/pxtx.toml (prod) or pxtx.toml next to
+# pyproject.toml (dev), then edit. Every key is optional — missing keys
+# fall back to built-in defaults.
+
+[github]
+# Fine-grained personal access token. Permissions: Contents: Read-only and
+# Issues: Read-only, scoped to the repos under `repos`. Bumps the GitHub
+# API rate limit from 60 to 5000 req/h. Leave commented to stay
+# unauthenticated.
+#token = "github_pat_..."
+
+# Repos polled by `manage.py runperiodic` — one ghost draft issue per open
+# github issue not already linked via a GithubRef. Add pretalx plugin repos
+# here as needed. Comment out or drop the key to default to just the core
+# repo.
+repos = [
+  "pretalx/pretalx",
+  # "pretalx/pretalx-public-voting",
+  # "pretalx/pretalx-pages",
+  # "pretalx/pretalx-downstream",
+]

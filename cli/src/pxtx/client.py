@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import requests
 
+DEFAULT_TIMEOUT = 30.0
+
 
 class ApiError(Exception):
     def __init__(self, message, *, status=None, body=None):
@@ -11,10 +13,17 @@ class ApiError(Exception):
 
 
 class Client:
-    def __init__(self, url: str, token: str, session: requests.Session | None = None):
+    def __init__(
+        self,
+        url: str,
+        token: str,
+        session: requests.Session | None = None,
+        timeout: float = DEFAULT_TIMEOUT,
+    ):
         self.url = url.rstrip("/")
         self.token = token
         self.session = session or requests.Session()
+        self.timeout = timeout
 
     def _endpoint(self, path: str) -> str:
         return f"{self.url}/api/v1{path}"
@@ -29,6 +38,7 @@ class Client:
             headers=self._headers(),
             params=params,
             json=json,
+            timeout=self.timeout,
         )
         if response.status_code >= 400:
             self._raise(method, path, response)
@@ -56,7 +66,10 @@ class Client:
         first = True
         while url:
             response = self.session.get(
-                url, headers=self._headers(), params=params if first else None
+                url,
+                headers=self._headers(),
+                params=params if first else None,
+                timeout=self.timeout,
             )
             first = False
             if response.status_code >= 400:

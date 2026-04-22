@@ -186,3 +186,48 @@ def test_client_uses_provided_session():
     session = requests.Session()
     client = Client(URL, "tok", session=session)
     assert client.session is session
+
+
+class _FakeResponse:
+    status_code = 200
+    content = b'{"results":[],"next":null}'
+
+    def json(self):
+        return {"results": [], "next": None}
+
+
+def test_request_passes_timeout():
+    client = Client(URL, "tok", timeout=7.5)
+    captured = {}
+
+    def fake_request(method, url, **kwargs):
+        captured.update(kwargs)
+        return _FakeResponse()
+
+    client.session.request = fake_request
+
+    client.get_issue(1)
+
+    assert captured["timeout"] == 7.5
+
+
+def test_paginate_passes_timeout():
+    client = Client(URL, "tok", timeout=3.0)
+    captured = {}
+
+    def fake_get(url, **kwargs):
+        captured.update(kwargs)
+        return _FakeResponse()
+
+    client.session.get = fake_get
+
+    list(client.list_issues())
+
+    assert captured["timeout"] == 3.0
+
+
+def test_client_default_timeout_applied():
+    from pxtx.client import DEFAULT_TIMEOUT
+
+    client = Client(URL, "tok")
+    assert client.timeout == DEFAULT_TIMEOUT

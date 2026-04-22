@@ -34,6 +34,20 @@ def parse_issue_id(value):
     return int(match.group(1))
 
 
+def parse_priority_csv(value):
+    """Validate a comma-separated list of priority labels against PRIORITY_MAP."""
+    labels = [p.strip() for p in value.split(",") if p.strip()]
+    if not labels:
+        raise argparse.ArgumentTypeError("priority list is empty")
+    known = list(PRIORITY_MAP)
+    bad = [label for label in labels if label not in PRIORITY_MAP]
+    if bad:
+        raise argparse.ArgumentTypeError(
+            f"unknown priority {bad[0]!r}; choose from: {', '.join(known)}"
+        )
+    return labels
+
+
 def parse_since(value, *, now=None):
     """Accept ``1h``/``30m``/``2d``/``1w`` or an ISO timestamp. Return ISO string."""
     match = re.fullmatch(r"(\d+)([mhdwMHDW])", value)
@@ -109,9 +123,7 @@ def cmd_issue_list(args, client, config):
     if args.status:
         filters["status"] = args.status
     if args.priority:
-        filters["priority"] = ",".join(
-            str(PRIORITY_MAP[p]) for p in args.priority.split(",")
-        )
+        filters["priority"] = ",".join(str(PRIORITY_MAP[p]) for p in args.priority)
     if args.milestone:
         filters["milestone"] = args.milestone
     if args.mine:
@@ -207,7 +219,9 @@ def build_parser():
     lst = issue_sub.add_parser("list", help="list issues")
     lst.add_argument("--status", help="comma-separated statuses")
     lst.add_argument(
-        "--priority", help="comma-separated priority labels (want,should,...)"
+        "--priority",
+        type=parse_priority_csv,
+        help="comma-separated priority labels (want,should,...)",
     )
     lst.add_argument("--milestone")
     lst.add_argument("--mine", action="store_true")

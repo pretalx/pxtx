@@ -29,6 +29,28 @@ def test_parse_issue_id_rejects_garbage():
         cli.parse_issue_id("not-an-id")
 
 
+def test_parse_priority_csv_valid():
+    assert cli.parse_priority_csv("want, should") == ["want", "should"]
+
+
+def test_parse_priority_csv_rejects_unknown():
+    with pytest.raises(argparse.ArgumentTypeError, match="nope"):
+        cli.parse_priority_csv("want,nope")
+
+
+def test_parse_priority_csv_rejects_empty():
+    with pytest.raises(argparse.ArgumentTypeError, match="empty"):
+        cli.parse_priority_csv(" , ")
+
+
+def test_issue_list_priority_unknown_errors_at_parse(cli_config, capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["issue", "list", "--priority", "fooo"])
+
+    assert excinfo.value.code == 2
+    assert "unknown priority" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize(
     ("value", "unit_seconds"),
     (("30m", 30 * 60), ("2h", 2 * 3600), ("3d", 3 * 86400), ("1w", 7 * 86400)),

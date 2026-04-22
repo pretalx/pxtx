@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
 from datetime import UTC, datetime
 
 import pytest
@@ -231,9 +232,7 @@ def test_issue_new_posts_payload(cli_config, mocked_responses, capsys):
     assert code == 0
     out = capsys.readouterr().out
     assert "created PX-1" in out
-    import json as _json
-
-    body = _json.loads(mocked_responses.calls[0].request.body)
+body = json.loads(mocked_responses.calls[0].request.body)
     assert body == {
         "title": "hello",
         "priority": 1,
@@ -331,6 +330,23 @@ def test_issue_list_mine_without_actor_errors(cli_config, capsys):
 
 
 def test_top_level_actor_flag_overrides_resolution(cli_config, mocked_responses):
+    mocked_responses.get(f"{URL}/api/v1/issues/", json={"results": [], "next": None})
+
+    cli.main(["--actor", "tobias", "issue", "list", "--mine"])
+
+    request = mocked_responses.calls[0].request
+    assert "assignee=tobias" in request.url
+    assert request.headers.get("X-Pxtx-Actor") == "tobias"
+
+
+def test_top_level_actor_flag_beats_claude_code_default(
+    cli_config, mocked_responses, monkeypatch
+):
+    """``--actor`` wins over the auto-derived ``claude-<branch>`` inside a
+    claude-code session — that's the precedence users rely on when handing
+    an issue off to a human."""
+    monkeypatch.setenv("CLAUDECODE", "1")
+    monkeypatch.setattr(cli, "_run_git_branch", lambda: "feat/x")
     mocked_responses.get(f"{URL}/api/v1/issues/", json={"results": [], "next": None})
 
     cli.main(["--actor", "tobias", "issue", "list", "--mine"])
@@ -481,9 +497,7 @@ def test_take_sets_assignee_and_wips(cli_config, mocked_responses, monkeypatch, 
     code = cli.main(["take", "47"])
 
     assert code == 0
-    import json as _json
-
-    patch_body = _json.loads(mocked_responses.calls[0].request.body)
+patch_body = json.loads(mocked_responses.calls[0].request.body)
     assert patch_body == {"assignee": "claude-feat/x"}
     assert "PX-47 → wip" in capsys.readouterr().out
 
@@ -511,6 +525,89 @@ def test_take_json_output(cli_config, mocked_responses, monkeypatch, capsys):
     assert '"status": "wip"' in capsys.readouterr().out
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    (
+        ("42", ("pretalx/pretalx", 42)),
+        ("owner/repo#7", ("owner/repo", 7)),
+        ("owner/repo!7", ("owner/repo", 7)),
+        ("https://github.com/owner/repo/pull/99", ("owner/repo", 99)),
+        ("https://github.com/owner/repo/pull/99/files", ("owner/repo", 99)),
+        ("HTTPS://GitHub.com/Owner/Repo/pull/3", ("Owner/Repo", 3)),
+    ),
+)
+def test_parse_pr_ref_accepts_known_forms(value, expected):
+    assert cli.parse_pr_ref(value, default_repo="pretalx/pretalx") == expected
+
+
+def test_parse_pr_ref_bare_number_requires_default_repo():
+    with pytest.raises(cli.CliError, match="default_repo"):
+        cli.parse_pr_ref("42", default_repo="")
+
+
+def test_parse_pr_ref_rejects_garbage():
+    with pytest.raises(cli.CliError, match="not a PR reference"):
+        cli.parse_pr_ref("not-a-ref", default_repo="pretalx/pretalx")
+
+
+def test_pr_link_uses_default_repo(cli_config, mocked_responses, capsys):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/github-refs/",
+        json={
+            "id": 3,
+            "kind": "pr",
+            "repo": "pretalx/pretalx",
+            "number": 9912,
+            "display": "pretalx/pretalx!9912",
+        },
+        status=201,
+    )
+
+    code = cli.main(["pr", "47", "9912"])
+
+    assert code == 0
+body = json.loads(mocked_responses.calls[0].request.body)
+    assert body == {"kind": "pr", "repo": "pretalx/pretalx", "number": 9912}
+    assert "PX-47 ↔ pretalx/pretalx!9912" in capsys.readouterr().out
+
+
+def test_pr_link_with_explicit_repo_and_url(cli_config, mocked_responses):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/github-refs/",
+        json={
+            "id": 4,
+            "kind": "pr",
+            "repo": "acme/widget",
+            "number": 7,
+            "display": "acme/widget!7",
+        },
+        status=201,
+    )
+
+    cli.main(["pr", "47", "https://github.com/acme/widget/pull/7"])
+
+body = json.loads(mocked_responses.calls[0].request.body)
+    assert body == {"kind": "pr", "repo": "acme/widget", "number": 7}
+
+
+def test_pr_link_json_output(cli_config, mocked_responses, capsys):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/github-refs/",
+        json={
+            "id": 5,
+            "kind": "pr",
+            "repo": "pretalx/pretalx",
+            "number": 1,
+            "display": "pretalx/pretalx!1",
+        },
+        status=201,
+    )
+
+    cli.main(["--json", "pr", "47", "1"])
+
+    assert '"display": "pretalx/pretalx!1"' in capsys.readouterr().out
+
+
 def test_issue_comment_with_body(cli_config, mocked_responses, capsys):
     mocked_responses.post(
         f"{URL}/api/v1/issues/5/comments/", json={"id": 99, "body": "hello"}, status=201
@@ -531,9 +628,7 @@ def test_issue_comment_from_stdin(cli_config, mocked_responses, monkeypatch, cap
     code = cli.main(["issue", "comment", "5"])
 
     assert code == 0
-    import json as _json
-
-    body = _json.loads(mocked_responses.calls[0].request.body)
+body = json.loads(mocked_responses.calls[0].request.body)
     assert body == {"body": "piped body"}
 
 
@@ -565,9 +660,7 @@ def test_issue_comment_forced_stdin_flag(cli_config, mocked_responses, monkeypat
     code = cli.main(["issue", "comment", "5", "arg-body", "--stdin"])
 
     assert code == 0
-    import json as _json
-
-    body = _json.loads(mocked_responses.calls[0].request.body)
+body = json.loads(mocked_responses.calls[0].request.body)
     assert body == {"body": "piped"}
 
 

@@ -62,6 +62,67 @@ def test_create_ref_for_missing_issue_returns_404(token_client):
 
 
 @pytest.mark.django_db
+def test_create_duplicate_pr_ref_returns_existing_with_200(token_client):
+    """Re-posting the same PR ref must not duplicate — agents link PRs
+    repeatedly as they push commits, and the API should absorb that."""
+    issue = IssueFactory()
+    first = token_client.post(
+        f"/api/v1/issues/{issue.number}/github-refs/",
+        {"kind": "pr", "repo": "pretalx/pretalx", "number": 77},
+        format="json",
+    )
+    assert first.status_code == 201
+
+    second = token_client.post(
+        f"/api/v1/issues/{issue.number}/github-refs/",
+        {"kind": "pr", "repo": "pretalx/pretalx", "number": 77},
+        format="json",
+    )
+
+    assert second.status_code == 200
+    assert second.json()["id"] == first.json()["id"]
+    assert GithubRef.objects.filter(issue=issue).count() == 1
+
+
+@pytest.mark.django_db
+def test_create_duplicate_commit_ref_dedupes_on_sha(token_client):
+    issue = IssueFactory()
+    payload = {"kind": "commit", "repo": "pretalx/pretalx", "sha": "a" * 40}
+    first = token_client.post(
+        f"/api/v1/issues/{issue.number}/github-refs/", payload, format="json"
+    )
+    assert first.status_code == 201
+
+    second = token_client.post(
+        f"/api/v1/issues/{issue.number}/github-refs/", payload, format="json"
+    )
+
+    assert second.status_code == 200
+    assert GithubRef.objects.filter(issue=issue).count() == 1
+
+
+@pytest.mark.django_db
+def test_same_pr_number_different_repo_is_not_duplicate(token_client):
+    """Dedupe is scoped to (kind, repo, number). Same PR number in a
+    different repo is a different ref."""
+    issue = IssueFactory()
+    token_client.post(
+        f"/api/v1/issues/{issue.number}/github-refs/",
+        {"kind": "pr", "repo": "pretalx/pretalx", "number": 77},
+        format="json",
+    )
+
+    response = token_client.post(
+        f"/api/v1/issues/{issue.number}/github-refs/",
+        {"kind": "pr", "repo": "pretalx/pretalx-plugin", "number": 77},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert GithubRef.objects.filter(issue=issue).count() == 2
+
+
+@pytest.mark.django_db
 def test_delete_github_ref(token_client):
     issue = IssueFactory()
     ref = GithubIssueRefFactory(issue=issue)

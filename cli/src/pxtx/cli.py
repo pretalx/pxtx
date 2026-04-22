@@ -180,6 +180,45 @@ def cmd_issue_take(args, client, config):
         print(f"{issue['slug']} → {issue['status']} (assignee: {issue['assignee']})")
 
 
+PR_URL_PATTERN = re.compile(
+    r"https?://github\.com/([^/]+/[^/]+)/pull/(\d+)(?:[/?#].*)?$", flags=re.IGNORECASE
+)
+PR_SHORT_PATTERN = re.compile(r"([^/\s]+/[^/\s#!]+)[#!](\d+)$")
+
+
+def parse_pr_ref(value, *, default_repo):
+    """Parse a PR reference into ``(repo, number)``.
+
+    Accepted forms:
+    - ``42`` (bare number, uses ``default_repo``)
+    - ``owner/repo#42`` or ``owner/repo!42``
+    - ``https://github.com/owner/repo/pull/42``
+    """
+    value = value.strip()
+    match = PR_URL_PATTERN.match(value)
+    if match:
+        return match.group(1), int(match.group(2))
+    match = PR_SHORT_PATTERN.match(value)
+    if match:
+        return match.group(1), int(match.group(2))
+    if value.isdigit():
+        if not default_repo:
+            raise CliError("bare PR number needs 'default_repo' in config")
+        return default_repo, int(value)
+    raise CliError(f"not a PR reference: {value}")
+
+
+def cmd_pr_link(args, client, config):
+    repo, number = parse_pr_ref(args.ref, default_repo=config.default_repo)
+    ref = client.add_github_ref(
+        args.number, {"kind": "pr", "repo": repo, "number": number}
+    )
+    if args.json:
+        print_json(ref)
+    else:
+        print(f"PX-{args.number} ↔ {ref['display']}")
+
+
 def cmd_issue_close(args, client, config):
     action = "wontfix" if args.wontfix else "completed"
     issue = client.transition_issue(args.number, action)
@@ -229,7 +268,11 @@ def build_parser():
     parser = argparse.ArgumentParser(prog="pxtx", description="pretalx-tracker CLI")
     parser.add_argument("--json", action="store_true", help="emit raw API JSON")
     parser.add_argument(
-        "--actor", help="override the X-Pxtx-Actor header (default: claude-<branch>)"
+        "--actor",
+        help=(
+            "override the X-Pxtx-Actor header "
+            "(default: claude-<branch> inside claude-code, else the token name)"
+        ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -278,6 +321,14 @@ def build_parser():
     take = sub.add_parser("take", help="claim an issue (assignee=you, status=wip)")
     take.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
     take.set_defaults(func=cmd_issue_take)
+
+    pr = sub.add_parser("pr", help="link a github PR to an issue")
+    pr.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
+    pr.add_argument(
+        "ref",
+        help="PR: bare number, owner/repo#N, owner/repo!N, or github.com/.../pull/N URL",
+    )
+    pr.set_defaults(func=cmd_pr_link)
 
     milestone = sub.add_parser("milestone", help="manage milestones")
     ms_sub = milestone.add_subparsers(dest="subcommand", required=True)

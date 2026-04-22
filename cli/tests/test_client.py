@@ -113,6 +113,20 @@ def test_list_issues_drops_none_filters(mocked_responses, client_plain):
     assert "priority" not in call.url
 
 
+def test_add_github_ref(mocked_responses, client_plain):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/github-refs/",
+        json={"id": 1, "kind": "pr", "repo": "acme/widget", "number": 7},
+        status=201,
+    )
+
+    result = client_plain.add_github_ref(
+        47, {"kind": "pr", "repo": "acme/widget", "number": 7}
+    )
+
+    assert result["id"] == 1
+
+
 def test_list_milestones(mocked_responses, client_plain):
     mocked_responses.get(
         f"{URL}/api/v1/milestones/", json={"results": [{"slug": "r1"}], "next": None}

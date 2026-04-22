@@ -106,6 +106,9 @@ class Client:
     def list_comments(self, number):
         return list(self.paginate(f"/issues/{number}/comments/"))
 
+    def add_github_ref(self, number, payload):
+        return self._request("POST", f"/issues/{number}/github-refs/", json=payload)
+
     def list_milestones(self):
         return self.paginate("/milestones/")
 

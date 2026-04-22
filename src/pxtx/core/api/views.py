@@ -29,6 +29,7 @@ from pxtx.core.models import (
     ActivityLog,
     Comment,
     GithubRef,
+    GithubRefKind,
     Issue,
     IssueReference,
     Milestone,
@@ -208,14 +209,37 @@ class CommentEditView(APIView):
 
 
 class IssueGithubRefsView(CreateModelMixin, GenericAPIView):
+    """Attach a GithubRef (issue/pr/commit) to an issue. Idempotent.
+
+    If a ref with the same ``(kind, repo, number-or-sha)`` already exists on
+    this issue we return that row with 200 instead of creating a duplicate —
+    agents call this any time they open a PR, so collisions are expected.
+    """
+
     serializer_class = GithubRefSerializer
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         issue = get_object_or_404(Issue, number=self.kwargs["number"])
+        validated = serializer.validated_data
+        existing_q = GithubRef.objects.filter(
+            issue=issue, kind=validated["kind"], repo=validated.get("repo", "")
+        )
+        if validated["kind"] == GithubRefKind.COMMIT:
+            existing_q = existing_q.filter(sha=validated.get("sha", ""))
+        else:
+            existing_q = existing_q.filter(number=validated["number"])
+        existing = existing_q.first()
+        if existing:
+            return Response(
+                GithubRefSerializer(existing).data, status=http_status.HTTP_200_OK
+            )
         serializer.save(issue=issue)
+        return Response(serializer.data, status=http_status.HTTP_201_CREATED)
 
 
 class IssueGithubRefDeleteView(DestroyModelMixin, GenericAPIView):

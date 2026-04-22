@@ -33,6 +33,7 @@ pxtx issue show PX-47 [--comments]
 pxtx issue close PX-47 [--wontfix]
 pxtx issue comment PX-47 "message"    # or --stdin
 pxtx take PX-47                       # assignee=you, status=wip
+pxtx pr PX-47 <ref>                   # link a GitHub PR (idempotent)
 pxtx milestone list
 pxtx activity log [PX-47] [--since 1h]
 ```

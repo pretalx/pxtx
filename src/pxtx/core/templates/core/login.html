@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% block title %}Login – pxtx{% endblock %}
+{% block content %}
+<div class="card login-card">
+    <h1>Login</h1>
+    <form method="post">
+        {% csrf_token %}
+        <div>
+            <label for="id_username">Username</label>
+            <input type="text" name="username" id="id_username" autofocus required>
+        </div>
+        <div>
+            <label for="id_password">Password</label>
+            <input type="password" name="password" id="id_password" required>
+        </div>
+        {% if form.errors %}
+            <p class="error">Invalid username or password.</p>
+        {% endif %}
+        <button type="submit">Log in</button>
+    </form>
+</div>
+{% endblock %}

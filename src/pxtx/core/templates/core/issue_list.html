@@ -1,0 +1,42 @@
+{% extends "core/base.html" %}
+{% block title %}Issues – pxtx{% endblock %}
+{% block content %}
+<h1>Issues</h1>
+<div class="card">
+    {% if issues %}
+    <table>
+        <thead>
+            <tr>
+                <th>Issue</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Effort</th>
+                <th>Assignee</th>
+                <th>Release</th>
+                <th>Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for issue in issues %}
+            <tr>
+                <td><a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.slug }}</a></td>
+                <td>
+                    {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span> {% endif %}
+                    <a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.title }}</a>
+                </td>
+                <td><span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span></td>
+                <td>{{ issue.get_priority_display }}</td>
+                <td>{% if issue.effort_minutes %}{{ issue.get_effort_minutes_display }}{% else %}—{% endif %}</td>
+                <td>{{ issue.assignee|default:"—" }}</td>
+                <td>{% if issue.milestone %}<a href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% else %}—{% endif %}</td>
+                <td class="meta">{{ issue.updated_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No issues yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "core/base.html" %}
+{% block title %}{{ issue.slug }} – pxtx{% endblock %}
+{% block content %}
+<h1>
+    {% if issue.is_highlighted %}<span class="star">★</span> {% endif %}
+    <span class="meta">{{ issue.slug }}</span> {{ issue.title }}
+    <span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+</h1>
+
+<div class="card">
+    <h2>Description</h2>
+    {% if issue.description %}
+        <pre style="white-space: pre-wrap; font-family: inherit;">{{ issue.description }}</pre>
+    {% else %}
+        <p class="meta">No description.</p>
+    {% endif %}
+    {% if issue.status == "blocked" and issue.blocked_reason %}
+    <h2 style="margin-top: 1rem;">Blocked</h2>
+    <pre style="white-space: pre-wrap; font-family: inherit;">{{ issue.blocked_reason }}</pre>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Metadata</h2>
+    <dl class="kv">
+        <dt>Priority</dt><dd>{{ issue.get_priority_display }}</dd>
+        <dt>Effort</dt><dd>{% if issue.effort_minutes %}{{ issue.get_effort_minutes_display }}{% else %}—{% endif %}</dd>
+        <dt>Assignee</dt><dd>{{ issue.assignee|default:"—" }}</dd>
+        <dt>Release</dt><dd>
+            {% if issue.milestone %}<a href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% else %}—{% endif %}
+        </dd>
+        <dt>Source</dt><dd>{{ issue.get_source_display }}</dd>
+        <dt>Created</dt><dd class="meta">{{ issue.created_at|date:"Y-m-d H:i" }}</dd>
+        <dt>Updated</dt><dd class="meta">{{ issue.updated_at|date:"Y-m-d H:i" }}</dd>
+        {% if issue.closed_at %}<dt>Closed</dt><dd class="meta">{{ issue.closed_at|date:"Y-m-d H:i" }}</dd>{% endif %}
+    </dl>
+</div>
+
+{% if github_refs %}
+<div class="card">
+    <h2>GitHub references</h2>
+    <ul>
+        {% for ref in github_refs %}
+        <li><a href="{{ ref.url }}">{{ ref.display }}</a>{% if ref.title %} — {{ ref.title }}{% endif %}{% if ref.state %} <span class="badge">{{ ref.state }}</span>{% endif %}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if related_issues %}
+<div class="card">
+    <h2>Referenced issues</h2>
+    <ul>
+        {% for other in related_issues %}
+        <li>
+            <a href="{% url 'core:issue-detail' number=other.number %}">{{ other.slug }}</a>
+            <span class="badge status-{{ other.status }}">{{ other.get_status_display }}</span>
+            {{ other.title }}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>Comments</h2>
+    {% if comments %}
+        {% for comment in comments %}
+        <div style="border-bottom: 1px solid var(--border); padding: 0.5rem 0;">
+            <div class="meta"><strong>{{ comment.author }}</strong> · {{ comment.created_at|date:"Y-m-d H:i" }}{% if comment.edited_at %} (edited {{ comment.edited_at|date:"Y-m-d H:i" }}){% endif %}</div>
+            <pre style="white-space: pre-wrap; font-family: inherit; margin-top: 0.25rem;">{{ comment.body }}</pre>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="empty">No comments.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "core/base.html" %}
+{% block title %}{{ milestone.name }} – pxtx{% endblock %}
+{% block content %}
+<h1>{{ milestone.name }}
+    {% if milestone.released_at %}
+        <span class="badge status-completed">released {{ milestone.released_at|date:"Y-m-d" }}</span>
+    {% else %}
+        <span class="badge">unreleased</span>
+    {% endif %}
+</h1>
+
+<div class="card">
+    <dl class="kv">
+        <dt>Slug</dt><dd>{{ milestone.slug }}</dd>
+        <dt>Target date</dt><dd>{{ milestone.target_date|date:"Y-m-d"|default:"—" }}</dd>
+        <dt>Released</dt><dd>{{ milestone.released_at|date:"Y-m-d H:i"|default:"—" }}</dd>
+    </dl>
+    {% if milestone.description %}
+    <h2 style="margin-top: 1rem;">Description</h2>
+    <pre style="white-space: pre-wrap; font-family: inherit;">{{ milestone.description }}</pre>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Issues</h2>
+    {% if issues %}
+    <table>
+        <thead>
+            <tr>
+                <th>Issue</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Assignee</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for issue in issues %}
+            <tr>
+                <td><a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.slug }}</a></td>
+                <td>
+                    {% if issue.is_highlighted %}<span class="star">★</span> {% endif %}
+                    <a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.title }}</a>
+                </td>
+                <td><span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span></td>
+                <td>{{ issue.get_priority_display }}</td>
+                <td>{{ issue.assignee|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No issues in this release.</p>
+    {% endif %}
+</div>
+{% endblock %}

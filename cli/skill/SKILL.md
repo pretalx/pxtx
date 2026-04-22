@@ -30,6 +30,7 @@ pxtx issue new --title "..." [--priority want|should|could|whatev|lol]
                              [--effort <1h|1-2h|2-6h|1d|>1d]
                              [--milestone 25.1] [--description "..."]
                              [--assignee name]
+                             [--github-issue <ref>]
 pxtx issue list [--status open,wip,blocked]
                 [--priority want,should] [--milestone 25.1]
                 [--mine] [--assignee name]
@@ -39,6 +40,7 @@ pxtx issue close PX-47 [--wontfix]
 pxtx issue comment PX-47 "message"        # or: --stdin
 pxtx take PX-47                           # assignee=you, status=wip
 pxtx pr PX-47 <ref>                       # link a GitHub PR
+pxtx issue-ref PX-47 <ref>                # link a GitHub issue
 pxtx milestone list
 pxtx activity log [PX-47] [--since 1h|2d|1w|<iso>]
 ```
@@ -133,6 +135,26 @@ Steps to reproduce
 EOF
 )"
 ```
+
+**"Make a pxtx issue from this GitHub issue."** Create and link in one
+call — the `--github-issue` flag takes the same ref forms as `issue-ref`
+(bare number uses `default_repo`, `owner/repo#N`, or a
+`github.com/.../issues/N` URL):
+
+```
+uvx pxtx issue new --title "..." --priority should \
+    --github-issue pretalx/pretalx#9912
+```
+
+If the ticket already exists, attach the GitHub issue after the fact:
+
+```
+uvx pxtx issue-ref PX-47 pretalx/pretalx#9912
+# or: uvx pxtx issue-ref PX-47 https://github.com/pretalx/pretalx/issues/9912
+```
+
+Like `pxtx pr`, the call is idempotent on `(kind, repo, number)` — a
+re-run with the same ref is a no-op rather than a duplicate row.
 
 **"What happened on PX-47 recently?"**
 

@@ -110,6 +110,15 @@ def print_json(value, out=None):
 
 
 def cmd_issue_new(args, client, config):
+    # Parse the github ref up front so a bad value fails before we create
+    # the issue — otherwise we'd end up with an orphaned PX ticket and a
+    # user-facing error that looks like the create failed.
+    github_ref_payload = None
+    if args.github_issue:
+        repo, number = parse_issue_ref(
+            args.github_issue, default_repo=config.default_repo
+        )
+        github_ref_payload = {"kind": "issue", "repo": repo, "number": number}
     payload = {"title": args.title}
     if args.priority:
         payload["priority"] = PRIORITY_MAP[args.priority]
@@ -122,10 +131,15 @@ def cmd_issue_new(args, client, config):
     if args.assignee:
         payload["assignee"] = args.assignee
     issue = client.create_issue(payload)
+    ref = None
+    if github_ref_payload:
+        ref = client.add_github_ref(issue["number"], github_ref_payload)
     if args.json:
-        print_json(issue)
+        print_json({"issue": issue, "github_ref": ref} if ref else issue)
     else:
         print(f"created {issue['slug']}: {issue['title']}")
+        if ref:
+            print(f"  ↔ {ref['display']}")
 
 
 def cmd_issue_list(args, client, config):
@@ -185,6 +199,11 @@ PR_URL_PATTERN = re.compile(
 )
 PR_SHORT_PATTERN = re.compile(r"([^/\s]+/[^/\s#!]+)[#!](\d+)$")
 
+ISSUE_URL_PATTERN = re.compile(
+    r"https?://github\.com/([^/]+/[^/]+)/issues/(\d+)(?:[/?#].*)?$", flags=re.IGNORECASE
+)
+ISSUE_SHORT_PATTERN = re.compile(r"([^/\s]+/[^/\s#]+)#(\d+)$")
+
 
 def parse_pr_ref(value, *, default_repo):
     """Parse a PR reference into ``(repo, number)``.
@@ -208,10 +227,43 @@ def parse_pr_ref(value, *, default_repo):
     raise CliError(f"not a PR reference: {value}")
 
 
+def parse_issue_ref(value, *, default_repo):
+    """Parse a GitHub issue reference into ``(repo, number)``.
+
+    Accepted forms:
+    - ``42`` (bare number, uses ``default_repo``)
+    - ``owner/repo#42``
+    - ``https://github.com/owner/repo/issues/42``
+    """
+    value = value.strip()
+    match = ISSUE_URL_PATTERN.match(value)
+    if match:
+        return match.group(1), int(match.group(2))
+    match = ISSUE_SHORT_PATTERN.match(value)
+    if match:
+        return match.group(1), int(match.group(2))
+    if value.isdigit():
+        if not default_repo:
+            raise CliError("bare issue number needs 'default_repo' in config")
+        return default_repo, int(value)
+    raise CliError(f"not an issue reference: {value}")
+
+
 def cmd_pr_link(args, client, config):
     repo, number = parse_pr_ref(args.ref, default_repo=config.default_repo)
     ref = client.add_github_ref(
         args.number, {"kind": "pr", "repo": repo, "number": number}
+    )
+    if args.json:
+        print_json(ref)
+    else:
+        print(f"PX-{args.number} ↔ {ref['display']}")
+
+
+def cmd_issue_ref_link(args, client, config):
+    repo, number = parse_issue_ref(args.ref, default_repo=config.default_repo)
+    ref = client.add_github_ref(
+        args.number, {"kind": "issue", "repo": repo, "number": number}
     )
     if args.json:
         print_json(ref)
@@ -286,6 +338,15 @@ def build_parser():
     new.add_argument("--milestone", help="milestone slug")
     new.add_argument("--description")
     new.add_argument("--assignee")
+    new.add_argument(
+        "--github-issue",
+        dest="github_issue",
+        metavar="REF",
+        help=(
+            "link a GitHub issue after creation: bare number, owner/repo#N, "
+            "or github.com/.../issues/N URL"
+        ),
+    )
     new.set_defaults(func=cmd_issue_new)
 
     lst = issue_sub.add_parser("list", help="list issues")
@@ -329,6 +390,14 @@ def build_parser():
         help="PR: bare number, owner/repo#N, owner/repo!N, or github.com/.../pull/N URL",
     )
     pr.set_defaults(func=cmd_pr_link)
+
+    issue_ref = sub.add_parser("issue-ref", help="link a github issue to a pxtx issue")
+    issue_ref.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
+    issue_ref.add_argument(
+        "ref",
+        help="GH issue: bare number, owner/repo#N, or github.com/.../issues/N URL",
+    )
+    issue_ref.set_defaults(func=cmd_issue_ref_link)
 
     milestone = sub.add_parser("milestone", help="manage milestones")
     ms_sub = milestone.add_subparsers(dest="subcommand", required=True)

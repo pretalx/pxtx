@@ -1,0 +1,45 @@
+name: CLI Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cli/**"
+      - ".github/workflows/cli-tests.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "cli/**"
+      - ".github/workflows/cli-tests.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+  test:
+    name: pytest (cli)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v4
+      - name: Install dependencies
+        working-directory: cli
+        run: uv sync --extra dev
+      - name: Run tests with coverage (fails under 100%)
+        run: just cli-test -p no:sugar

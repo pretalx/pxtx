@@ -1,0 +1,43 @@
+name: Publish pxtx CLI to PyPI
+
+# Triggered by pushing a ``vX.Y.Z`` tag. Server and CLI share a version scheme
+# so there's exactly one tag to cut per release.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # trusted publishing to PyPI
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Build sdist + wheel
+        working-directory: cli
+        run: uv build
+
+      - name: Verify version matches tag
+        working-directory: cli
+        run: |
+          PKG_VERSION=$(uv run python -c "import pxtx; print(pxtx.__version__)")
+          TAG_VERSION=${GITHUB_REF_NAME#v}
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "version mismatch: package=$PKG_VERSION tag=$TAG_VERSION" >&2
+            exit 1
+          fi
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: cli/dist

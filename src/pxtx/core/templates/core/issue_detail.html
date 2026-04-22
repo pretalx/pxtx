@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load rich_text %}
 {% block title %}{{ issue.slug }} – pxtx{% endblock %}
 {% block content %}
 <h1>
@@ -10,13 +11,13 @@
 <div class="card">
     <h2>Description</h2>
     {% if issue.description %}
-        <pre style="white-space: pre-wrap; font-family: inherit;">{{ issue.description }}</pre>
+        <div class="prose">{{ issue.description|rich_text }}</div>
     {% else %}
         <p class="meta">No description.</p>
     {% endif %}
     {% if issue.status == "blocked" and issue.blocked_reason %}
-    <h2 style="margin-top: 1rem;">Blocked</h2>
-    <pre style="white-space: pre-wrap; font-family: inherit;">{{ issue.blocked_reason }}</pre>
+    <h2 class="spaced">Blocked</h2>
+    <div class="prose">{{ issue.blocked_reason|rich_text }}</div>
     {% endif %}
 </div>
 
@@ -66,9 +67,9 @@
     <h2>Comments</h2>
     {% if comments %}
         {% for comment in comments %}
-        <div style="border-bottom: 1px solid var(--border); padding: 0.5rem 0;">
+        <div class="comment">
             <div class="meta"><strong>{{ comment.author }}</strong> · {{ comment.created_at|date:"Y-m-d H:i" }}{% if comment.edited_at %} (edited {{ comment.edited_at|date:"Y-m-d H:i" }}){% endif %}</div>
-            <pre style="white-space: pre-wrap; font-family: inherit; margin-top: 0.25rem;">{{ comment.body }}</pre>
+            <div class="prose">{{ comment.body|rich_text }}</div>
         </div>
         {% endfor %}
     {% else %}

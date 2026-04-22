@@ -16,8 +16,8 @@
         <dt>Released</dt><dd>{{ milestone.released_at|date:"Y-m-d H:i"|default:"—" }}</dd>
     </dl>
     {% if milestone.description %}
-    <h2 style="margin-top: 1rem;">Description</h2>
-    <pre style="white-space: pre-wrap; font-family: inherit;">{{ milestone.description }}</pre>
+    <h2 class="spaced">Description</h2>
+    <pre class="prose">{{ milestone.description }}</pre>
     {% endif %}
 </div>
 

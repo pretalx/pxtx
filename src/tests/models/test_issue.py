@@ -1,4 +1,5 @@
 import pytest
+from django.db import IntegrityError
 from django.utils import timezone
 
 from pxtx.core.models import CLOSED_STATUSES, Effort, Issue, Priority, Source, Status
@@ -64,6 +65,38 @@ def test_issue_defaults_match_plan():
 
 
 @pytest.mark.django_db
+def test_issue_save_retries_after_number_collision(monkeypatch):
+    IssueFactory()  # number=1
+
+    real_aggregate = Issue.objects.aggregate
+    calls = {"n": 0}
+
+    def racing_aggregate(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            # stale read: pretends no issues exist, so save picks number=1 and collides
+            return {"m": 0}
+        return real_aggregate(*args, **kwargs)
+
+    monkeypatch.setattr(Issue.objects, "aggregate", racing_aggregate)
+
+    retried = IssueFactory()
+
+    assert calls["n"] == 2
+    assert retried.number == 2
+
+
+@pytest.mark.django_db
+def test_issue_save_raises_after_exhausting_retries(monkeypatch):
+    IssueFactory()  # number=1; every retry will collide on 1
+
+    monkeypatch.setattr(Issue.objects, "aggregate", lambda *args, **kwargs: {"m": 0})
+
+    with pytest.raises(IntegrityError):
+        IssueFactory()
+
+
+@pytest.mark.django_db
 def test_issue_closed_at_set_when_status_becomes_closed():
     issue = IssueFactory()
 
@@ -89,6 +122,17 @@ def test_issue_closed_at_cleared_when_reopened():
 
     assert issue.closed_at is None
     assert issue.is_closed is False
+
+
+@pytest.mark.django_db
+def test_issue_closed_at_stays_none_when_resaving_open_issue():
+    issue = IssueFactory()
+    assert issue.closed_at is None
+
+    issue.title = "updated"
+    issue.save()
+
+    assert issue.closed_at is None
 
 
 @pytest.mark.django_db

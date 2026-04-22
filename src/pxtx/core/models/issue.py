@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
 from pxtx.core.models.base import BaseModel
@@ -100,12 +100,26 @@ class Issue(BaseModel):
         return self.status in CLOSED_STATUSES
 
     def save(self, *args, **kwargs):
-        if self.number is None:
-            # max()+1; gaps from deletes are fine; single-writer so no race to worry about
-            last = Issue.objects.aggregate(m=models.Max("number"))["m"] or 0
-            self.number = last + 1
         if self.is_closed and self.closed_at is None:
             self.closed_at = timezone.now()
         elif not self.is_closed and self.closed_at is not None:
             self.closed_at = None
-        super().save(*args, **kwargs)
+
+        if self.number is not None:
+            super().save(*args, **kwargs)
+            return
+
+        # max()+1; gaps from deletes are fine. Concurrent INSERTs can pick the
+        # same number and one will fail the unique constraint — retry in that case.
+        for attempt in range(5):
+            last = Issue.objects.aggregate(m=models.Max("number"))["m"] or 0
+            self.number = last + 1
+            try:
+                with transaction.atomic():
+                    super().save(*args, **kwargs)
+            except IntegrityError:
+                if attempt == 4:
+                    raise
+                self.number = None
+            else:
+                return

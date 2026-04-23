@@ -162,3 +162,27 @@ cli-build:
 [working-directory("cli")]
 cli-publish: cli-build
     uv publish dist/*
+
+# Bump CLI __version__, commit, tag vX.Y.Z, push branch + tag
+[group('cli')]
+[script('bash')]
+cli-release version:
+    set -euo pipefail
+    version="{{ version }}"
+    if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "error: version must be X.Y.Z (got: $version)" >&2
+        exit 1
+    fi
+    if ! git diff --quiet HEAD --; then
+        echo "error: working tree has uncommitted changes" >&2
+        exit 1
+    fi
+    if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+        echo "error: tag v$version already exists" >&2
+        exit 1
+    fi
+    printf '__version__ = "%s"\n' "$version" > cli/src/pxtx/__init__.py
+    git add cli/src/pxtx/__init__.py
+    git commit -m "Release CLI v$version"
+    git tag "v$version"
+    git push origin HEAD "v$version"

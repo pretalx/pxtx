@@ -5,6 +5,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.decorators.http import require_POST
@@ -15,6 +16,7 @@ from pxtx.core.forms import CommentForm, DescriptionForm, IssueForm
 from pxtx.core.models import (
     ActivityLog,
     Comment,
+    Effort,
     Issue,
     IssueReference,
     Milestone,
@@ -391,6 +393,75 @@ class CommentEditView(LoginRequiredMixin, View):
 def render_markdown_preview(request):
     html = render_markdown(request.POST.get("text", ""))
     return HttpResponse(html)
+
+
+INLINE_CELL_FIELDS = {
+    "status": {"attr": "status", "choices": list(Status.choices), "cast": str},
+    "priority": {"attr": "priority", "choices": list(Priority.choices), "cast": int},
+    "effort": {
+        "attr": "effort_minutes",
+        "choices": [("", "—"), *Effort.choices],
+        # Blank option stores NULL; any other value is a known Effort int.
+        "cast": lambda raw: int(raw) if raw else None,
+    },
+}
+
+
+def _cell_context(issue, field):
+    spec = INLINE_CELL_FIELDS[field]
+    current_raw = getattr(issue, spec["attr"])
+    current = "" if current_raw is None else str(current_raw)
+    return {
+        "issue": issue,
+        "field": field,
+        "choices": [(str(value), label) for value, label in spec["choices"]],
+        "current": current,
+    }
+
+
+class IssueInlineCellView(LoginRequiredMixin, View):
+    """Click-to-edit list cells for status/priority/effort. GET returns a
+    select element in place of the display badge; POSTing a new value saves
+    the field through the normal save path (ActivityLog honored) and returns
+    the re-rendered display cell. Setting ``status=blocked`` without a
+    ``blocked_reason`` mirrors the kanban guard and redirects to the edit
+    form via ``HX-Redirect`` instead of silently bypassing the requirement."""
+
+    def _spec(self, field):
+        return INLINE_CELL_FIELDS.get(field)
+
+    def get(self, request, number, field):
+        if self._spec(field) is None:
+            return HttpResponseBadRequest("unknown field")
+        issue = get_object_or_404(Issue, number=number)
+        ctx = {**_cell_context(issue, field), "editing": True}
+        return render(request, "core/_issue_cell.html", ctx)
+
+    def post(self, request, number, field):
+        spec = self._spec(field)
+        if spec is None:
+            return HttpResponseBadRequest("unknown field")
+        issue = get_object_or_404(Issue, number=number)
+        raw = request.POST.get("value", "")
+        allowed = {str(value) for value, _ in spec["choices"]}
+        if raw not in allowed:
+            return HttpResponseBadRequest("invalid value")
+        value = spec["cast"](raw)
+        if (
+            field == "status"
+            and value == Status.BLOCKED.value
+            and issue.status != Status.BLOCKED.value
+            and not issue.blocked_reason
+        ):
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = reverse(
+                "core:issue-edit", kwargs={"number": issue.number}
+            )
+            return response
+        setattr(issue, spec["attr"], value)
+        issue.save(actor=request_actor(request))
+        ctx = {**_cell_context(issue, field), "editing": False}
+        return render(request, "core/_issue_cell.html", ctx)
 
 
 @login_required

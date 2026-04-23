@@ -282,6 +282,160 @@ def test_reorder_places_highlighted_issues_ahead_of_non_highlighted(auth_client)
     assert plain_a.order_in_priority == 2
 
 
+# ---- inline cell edit -------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_inline_cell_get_returns_select_with_current_selected(auth_client):
+    issue = IssueFactory(priority=Priority.WANT)
+
+    response = auth_client.get(f"/issues/{issue.number}/cell/priority/")
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "<select" in body
+    # The current value is rendered as selected so the user sees their state.
+    assert '<option value="1" selected>' in body
+
+
+@pytest.mark.django_db
+def test_inline_cell_get_rejects_unknown_field(auth_client):
+    issue = IssueFactory()
+
+    response = auth_client.get(f"/issues/{issue.number}/cell/nope/")
+
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_inline_cell_post_updates_priority_and_logs(auth_client):
+    from pxtx.core.models import ActivityLog
+
+    issue = IssueFactory(priority=Priority.COULD)
+    before = ActivityLog.objects.count()
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/cell/priority/", data={"value": "1"}
+    )
+
+    issue.refresh_from_db()
+    assert issue.priority == Priority.WANT
+    assert response.status_code == 200
+    assert 'class="prio prio-1"' in response.content.decode()
+    assert ActivityLog.objects.count() == before + 1
+
+
+@pytest.mark.django_db
+def test_inline_cell_post_updates_status_emits_status_log(auth_client):
+    from pxtx.core.models import ActivityLog, Status
+
+    issue = IssueFactory(status=Status.OPEN)
+
+    auth_client.post(f"/issues/{issue.number}/cell/status/", data={"value": "wip"})
+
+    issue.refresh_from_db()
+    assert issue.status == Status.WIP.value
+    assert ActivityLog.objects.filter(action_type="pxtx.issue.status.wip").exists()
+
+
+@pytest.mark.django_db
+def test_inline_cell_post_sets_effort_to_null(auth_client):
+    from pxtx.core.models import Effort
+
+    issue = IssueFactory(effort_minutes=Effort.SMALL)
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/cell/effort/", data={"value": ""}
+    )
+
+    issue.refresh_from_db()
+    assert issue.effort_minutes is None
+    assert response.status_code == 200
+    # Blank effort renders as an em-dash, not a badge.
+    body = response.content.decode()
+    assert "—" in body
+    assert "badge effort-" not in body
+
+
+@pytest.mark.django_db
+def test_inline_cell_post_rejects_value_not_in_choices(auth_client):
+    issue = IssueFactory(priority=Priority.COULD)
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/cell/priority/", data={"value": "42"}
+    )
+
+    issue.refresh_from_db()
+    assert issue.priority == Priority.COULD
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_inline_cell_post_rejects_unknown_field(auth_client):
+    issue = IssueFactory()
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/cell/nope/", data={"value": "1"}
+    )
+
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_inline_cell_post_blocked_without_reason_redirects_to_edit(auth_client):
+    """Going blocked without a reason is the same guard the kanban enforces —
+    the user is redirected to the edit form (via HX-Redirect) instead of
+    silently persisting an empty ``blocked_reason``."""
+    from pxtx.core.models import Status
+
+    issue = IssueFactory(status=Status.OPEN, blocked_reason="")
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/cell/status/", data={"value": "blocked"}
+    )
+
+    issue.refresh_from_db()
+    assert issue.status == Status.OPEN.value
+    assert response.status_code == 204
+    assert response["HX-Redirect"] == f"/issues/{issue.number}/edit/"
+
+
+@pytest.mark.django_db
+def test_inline_cell_post_blocked_with_existing_reason_is_saved(auth_client):
+    """If the issue already has a reason, setting status=blocked inline is
+    allowed (same semantics as the kanban column drop)."""
+    from pxtx.core.models import Status
+
+    issue = IssueFactory(status=Status.OPEN, blocked_reason="waiting on review")
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/cell/status/", data={"value": "blocked"}
+    )
+
+    issue.refresh_from_db()
+    assert issue.status == Status.BLOCKED.value
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_inline_cell_reordering_within_blocked_does_not_require_new_reason(auth_client):
+    """A blocked issue that already has a reason can be re-saved as blocked
+    inline (a no-op, but it must not trip the blocked-without-reason guard)."""
+    from pxtx.core.models import Status
+
+    issue = IssueFactory(status=Status.BLOCKED, blocked_reason="")
+    # ``blocked_reason`` was emptied post-creation; the guard must only fire
+    # when transitioning *into* blocked, not when the issue is already there.
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/cell/status/", data={"value": "blocked"}
+    )
+
+    issue.refresh_from_db()
+    assert issue.status == Status.BLOCKED.value
+    assert response.status_code == 200
+
+
 # ---- issue detail context ---------------------------------------------------
 
 

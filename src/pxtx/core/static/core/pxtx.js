@@ -149,3 +149,22 @@ function initDeployPollers(root) {
 
 document.addEventListener("htmx:afterSwap", () => initDeployPollers(document));
 document.addEventListener("DOMContentLoaded", () => initDeployPollers(document));
+
+// Inline-editable list cells: once an <select> is in the DOM, a change event
+// POSTs the new value (htmx handles that). If the user opens the select and
+// clicks away without picking anything different, no `change` fires and the
+// cell would stay as a bare <select>. Revert to the display badge on blur.
+document.addEventListener("focusout", (event) => {
+    const select = event.target;
+    if (!select || !select.matches || !select.matches(".edit-cell select")) return;
+    const td = select.closest(".edit-cell");
+    const url = select.dataset.revertUrl;
+    if (!td || !url || !window.htmx) return;
+    // Defer so the `change` POST (if any) runs first. If the cell is still
+    // in edit mode after that, the user bailed — re-fetch the display.
+    setTimeout(() => {
+        if (td.isConnected && td.contains(select)) {
+            window.htmx.ajax("GET", url, { target: td, swap: "outerHTML" });
+        }
+    }, 150);
+});

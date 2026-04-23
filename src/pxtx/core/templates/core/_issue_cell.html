@@ -1,0 +1,30 @@
+{% comment %}Inline-editable status / priority / effort cell.
+
+``editing`` flips the cell between a clickable badge (display) and a
+<select> whose change event POSTs the new value back.{% endcomment %}
+{% if editing %}
+<td class="edit-cell edit-cell-{{ field }} editing">
+    <select name="value" class="inline-edit"
+            hx-post="{% url 'core:issue-cell' number=issue.number field=field %}"
+            hx-trigger="change"
+            hx-target="closest td"
+            hx-swap="outerHTML"
+            data-revert-url="{% url 'core:issue-cell' number=issue.number field=field %}"
+            aria-label="{{ field }}"
+            autofocus>
+        {% for value, label in choices %}
+        <option value="{{ value }}"{% if value == current %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</td>
+{% else %}
+<td class="edit-cell edit-cell-{{ field }}"
+    hx-get="{% url 'core:issue-cell' number=issue.number field=field %}"
+    hx-trigger="click"
+    hx-swap="outerHTML"
+    title="Click to edit {{ field }}">
+    {% if field == "status" %}<span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+    {% elif field == "priority" %}<span class="prio prio-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
+    {% elif field == "effort" %}{% if issue.effort_minutes %}<span class="badge effort-{{ issue.effort_minutes }}">{{ issue.get_effort_minutes_display }}</span>{% else %}—{% endif %}{% endif %}
+</td>
+{% endif %}

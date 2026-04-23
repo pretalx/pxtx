@@ -45,12 +45,29 @@
     .heat-cell.tier-0 { background: #3f3f46; }
     .dashboard-stats .stat.draft .stat-value { color: #c4b5fd; }
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+    :root { scroll-behavior: smooth; }
+}
+
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+iframe { border: 0; }
+summary { cursor: pointer; }
+b, strong { font-weight: bolder; }
+h1, h2, h3, h4, h5, h6, p { overflow-wrap: break-word; }
+table, time { font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+::selection { background: var(--accent); color: #fff; text-shadow: none; }
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
     line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-size-adjust: none;
+    text-decoration-skip-ink: auto;
 }
 nav.site {
     background: var(--surface);
@@ -238,6 +255,18 @@ nav.site a.new-issue { color: var(--accent); }
     opacity: 0.85;
 }
 .choices__list--multiple .choices__item .choices__button:hover { opacity: 1; }
+
+.issue-table .edit-cell { cursor: pointer; }
+.issue-table .edit-cell:hover { background: var(--bg); }
+.issue-table .edit-cell.editing { padding: 0.2rem 0.3rem; cursor: default; }
+.issue-table .edit-cell.editing:hover { background: inherit; }
+.issue-table .edit-cell select.inline-edit {
+    font-size: 0.8rem;
+    padding: 0.15rem 0.3rem;
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--accent);
+}
 
 .issue-table .drag-col {
     width: 1.5rem;

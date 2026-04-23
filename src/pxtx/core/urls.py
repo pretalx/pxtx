@@ -36,6 +36,11 @@ urlpatterns = [
         name="issue-reorder",
     ),
     path(
+        "issues/<int:number>/cell/<str:field>/",
+        views.IssueInlineCellView.as_view(),
+        name="issue-cell",
+    ),
+    path(
         "issues/<int:number>/comments/",
         views.CommentCreateView.as_view(),
         name="comment-create",

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}pxtx{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'core/icon.svg' %}">
     <link rel="stylesheet" href="{% static 'core/vendored/choices/choices.min.css' %}">
     <link rel="stylesheet" href="{% static 'core/base.css' %}">
     <script src="{% static 'core/htmx.min.js' %}" defer></script>
@@ -15,7 +16,10 @@
 <body{% if user.is_authenticated %} hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% endif %}>
     {% if user.is_authenticated %}
     <nav class="site">
-        <a class="brand" href="{% url 'core:dashboard' %}">pxtx</a>
+        <a class="brand" href="{% url 'core:dashboard' %}">
+            <img src="{% static 'core/icon.svg' %}" alt="" class="brand-logo">
+            pxtx
+        </a>
         <a href="{% url 'core:dashboard' %}" {% if request.path == '/' %}class="active"{% endif %}>Dashboard</a>
         <a href="{% url 'core:issue-list' %}" {% if 'issues' in request.path %}class="active"{% endif %}>Issues</a>
         <a href="{% url 'core:milestone-list' %}" {% if 'milestones' in request.path %}class="active"{% endif %}>Releases</a>

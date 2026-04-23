@@ -4,7 +4,6 @@
 // shortcuts never clobber typing.
 
 const NAV_TARGETS = {
-    d: "/dashboard/",
     i: "/issues/",
     r: "/milestones/",
     a: "/activity/",

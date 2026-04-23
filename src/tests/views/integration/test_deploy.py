@@ -44,7 +44,7 @@ def test_deploy_writes_flag_file(superuser_client, tmp_path, settings):
 
 
 @pytest.mark.django_db
-def test_deploy_without_configured_flag_redirects_to_dashboard(
+def test_deploy_without_configured_flag_redirects_to_issue_list(
     superuser_client, settings
 ):
     settings.DEPLOY_FLAG_FILE = ""
@@ -52,11 +52,11 @@ def test_deploy_without_configured_flag_redirects_to_dashboard(
     response = superuser_client.post(reverse("core:deploy"))
 
     assert response.status_code == 302
-    assert response.url == reverse("core:dashboard")
+    assert response.url == reverse("core:issue-list")
 
 
 @pytest.mark.django_db
-def test_deploy_falls_back_to_dashboard_without_referer(
+def test_deploy_falls_back_to_issue_list_without_referer(
     superuser_client, tmp_path, settings
 ):
     flag = tmp_path / "nested" / "deploy.flag"
@@ -65,7 +65,7 @@ def test_deploy_falls_back_to_dashboard_without_referer(
     response = superuser_client.post(reverse("core:deploy"))
 
     assert response.status_code == 302
-    assert response.url == reverse("core:dashboard")
+    assert response.url == reverse("core:issue-list")
     assert flag.exists()
 
 
@@ -92,14 +92,14 @@ def test_deploy_htmx_without_configured_flag_redirects_via_header(
     response = superuser_client.post(reverse("core:deploy"), HTTP_HX_REQUEST="true")
 
     assert response.status_code == 204
-    assert response["HX-Redirect"] == reverse("core:dashboard")
+    assert response["HX-Redirect"] == reverse("core:issue-list")
 
 
 @pytest.mark.django_db
 def test_deploy_button_visible_for_superuser(superuser_client, tmp_path, settings):
     settings.DEPLOY_FLAG_FILE = str(tmp_path / "deploy.flag")
 
-    response = superuser_client.get(reverse("core:dashboard"))
+    response = superuser_client.get(reverse("core:issue-list"))
 
     assert b"btn-deploy" in response.content
 
@@ -108,7 +108,7 @@ def test_deploy_button_visible_for_superuser(superuser_client, tmp_path, setting
 def test_deploy_button_hidden_for_regular_user(auth_client, tmp_path, settings):
     settings.DEPLOY_FLAG_FILE = str(tmp_path / "deploy.flag")
 
-    response = auth_client.get(reverse("core:dashboard"))
+    response = auth_client.get(reverse("core:issue-list"))
 
     assert b"btn-deploy" not in response.content
 
@@ -117,7 +117,7 @@ def test_deploy_button_hidden_for_regular_user(auth_client, tmp_path, settings):
 def test_deploy_button_hidden_when_not_configured(superuser_client, settings):
     settings.DEPLOY_FLAG_FILE = ""
 
-    response = superuser_client.get(reverse("core:dashboard"))
+    response = superuser_client.get(reverse("core:issue-list"))
 
     assert b"btn-deploy" not in response.content
 

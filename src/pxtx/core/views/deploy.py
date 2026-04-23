@@ -23,9 +23,9 @@ def trigger_deploy(request):
     if not flag_path:
         if is_htmx(request):
             return HttpResponse(
-                status=204, headers={"HX-Redirect": reverse("core:dashboard")}
+                status=204, headers={"HX-Redirect": reverse("core:issue-list")}
             )
-        return redirect("core:dashboard")
+        return redirect("core:issue-list")
 
     target = Path(flag_path)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -34,7 +34,7 @@ def trigger_deploy(request):
     if is_htmx(request):
         return render(request, "core/_deploying.html")
 
-    return redirect(request.META.get("HTTP_REFERER") or reverse("core:dashboard"))
+    return redirect(request.META.get("HTTP_REFERER") or reverse("core:issue-list"))
 
 
 def healthz(request):

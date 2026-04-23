@@ -138,6 +138,8 @@ EOF
 )"
 ```
 
+Report the resulting issue number to the user.
+
 **"Make a pxtx issue from this GitHub issue."** Create and link in one
 call — the `--github-issue` flag takes the same ref forms as `issue-ref`
 (bare number uses `default_repo`, `owner/repo#N`, or a

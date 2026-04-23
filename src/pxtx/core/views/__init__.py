@@ -14,7 +14,6 @@ from pxtx.core.views.issue import (
     IssueReorderView,
     IssueUpdateView,
     blocked_reason_field,
-    dashboard,
 )
 from pxtx.core.views.milestone import (
     MilestoneCreateView,
@@ -46,7 +45,6 @@ __all__ = [
     "MilestoneReleaseToggleView",
     "MilestoneUpdateView",
     "blocked_reason_field",
-    "dashboard",
     "healthz",
     "trigger_deploy",
 ]

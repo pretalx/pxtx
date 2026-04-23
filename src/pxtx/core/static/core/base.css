@@ -44,7 +44,6 @@
     .activity del { background: #7f1d1d; color: #fecaca; }
     .activity ins { background: #14532d; color: #bbf7d0; }
     .heat-cell.tier-0 { background: #3f3f46; }
-    .dashboard-stats .stat.draft .stat-value { color: #c4b5fd; }
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -467,27 +466,6 @@ button.secondary {
 
 .pagination { display: flex; gap: 1rem; align-items: center; margin-top: 0.75rem; }
 
-.dashboard-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
-.dashboard-stats { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.dashboard-stats .stat {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 0.4rem 0.9rem; border: 1px solid var(--border); border-radius: 6px;
-    background: var(--surface); color: var(--text); text-decoration: none;
-    min-width: 4.5rem;
-}
-.dashboard-stats .stat:hover { border-color: var(--accent); text-decoration: none; }
-.dashboard-stats .stat-value { font-size: 1.25rem; font-weight: 600; line-height: 1.1; }
-.dashboard-stats .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
-.dashboard-stats .stat.draft .stat-value { color: #5b21b6; }
-.dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
-@media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
-.dashboard-panel h2 { margin-bottom: 0.5rem; }
-.dashboard-wide { grid-column: 1 / -1; }
-.issue-bullets { list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
-.issue-bullets li { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; font-size: 0.9rem; }
-.issue-bullets .px { font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; color: var(--text-muted); }
-.issue-bullets .title { color: var(--text); }
-.issue-bullets .title:hover { color: var(--accent); }
 .chip { font-size: 0.7rem; padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); }
 
 .prio { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }

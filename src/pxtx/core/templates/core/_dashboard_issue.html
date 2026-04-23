@@ -1,9 +1,0 @@
-<li>
-    <span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
-    <a class="px" href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.slug }}</a>
-    <a class="title" href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.title }}</a>
-    {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span>{% endif %}
-    {% if issue.milestone %}<span class="chip" title="release">{{ issue.milestone.name }}</span>{% endif %}
-    {% if issue.assignee %}<span class="chip" title="assignee">{{ issue.assignee }}</span>{% endif %}
-    {% if show_time %}<span class="meta" title="{{ issue.updated_at|date:'Y-m-d H:i' }}">{{ issue.updated_at|timesince }} ago</span>{% endif %}
-</li>

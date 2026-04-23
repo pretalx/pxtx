@@ -7,7 +7,6 @@ app_name = "core"
 
 urlpatterns = [
     path("", RedirectView.as_view(pattern_name="core:issue-list", permanent=False)),
-    path("dashboard/", views.dashboard, name="dashboard"),
     path("issues/", views.IssueListView.as_view(), name="issue-list"),
     path("issues/new/", views.IssueCreateView.as_view(), name="issue-new"),
     path(

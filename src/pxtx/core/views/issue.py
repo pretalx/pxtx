@@ -234,46 +234,6 @@ def _issue_list_context(params):
     }
 
 
-@login_required
-def dashboard(request):
-    """Landing page: highlighted issues, work in progress, and recently
-    updated issues. Anything closed is filtered out of the first two sections
-    but recent updates include everything so the timeline stays honest."""
-    open_statuses = [Status.OPEN.value, Status.WIP.value, Status.BLOCKED.value]
-    base = Issue.objects.select_related("milestone")
-    highlighted = list(
-        base.filter(is_highlighted=True, status__in=open_statuses).order_by(
-            "priority", "-updated_at"
-        )[:10]
-    )
-    wip_qs = base.filter(status=Status.WIP.value).order_by("priority", "-updated_at")
-    blocked_qs = base.filter(status=Status.BLOCKED.value).order_by(
-        "priority", "-updated_at"
-    )
-    wip = list(wip_qs[:20])
-    blocked = list(blocked_qs[:20])
-    drafts = list(base.filter(status=Status.DRAFT.value).order_by("-updated_at")[:5])
-    recent = list(base.exclude(status=Status.DRAFT.value).order_by("-updated_at")[:10])
-    counts = {
-        "open": Issue.objects.filter(status=Status.OPEN.value).count(),
-        "wip": wip_qs.count(),
-        "blocked": blocked_qs.count(),
-        "draft": Issue.objects.filter(status=Status.DRAFT.value).count(),
-    }
-    return render(
-        request,
-        "core/dashboard.html",
-        {
-            "highlighted": highlighted,
-            "wip": wip,
-            "blocked": blocked,
-            "drafts": drafts,
-            "recent": recent,
-            "counts": counts,
-        },
-    )
-
-
 class IssueListView(LoginRequiredMixin, ListView):
     model = Issue
     template_name = "core/issue_list.html"

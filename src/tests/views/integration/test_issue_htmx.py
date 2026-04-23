@@ -469,6 +469,66 @@ def test_modal_edit_get_returns_form_fragment_without_chrome(auth_client):
 
 
 @pytest.mark.django_db
+def test_modal_edit_renders_title_and_description_in_read_only_view(auth_client):
+    """The title and description sections start in view mode — the form input
+    is in the DOM (for submission) but the rendered view is what the user
+    sees first. Markdown in the description is rendered to HTML."""
+    issue = IssueFactory(title="shiny title", description="hello **world**")
+
+    response = auth_client.get(f"/issues/{issue.number}/modal-edit/")
+
+    body = response.content.decode()
+    # Title is rendered as a heading in the view, not just as an input value.
+    assert ">shiny title</h2>" in body
+    # Description is rendered from markdown, so the ** is processed.
+    assert "<strong>world</strong>" in body
+    # The view containers are marked up for the click-to-edit JS to find.
+    assert "inline-edit-title" in body
+    assert "inline-edit-description" in body
+    # Neither section starts in editing mode for a freshly-loaded issue.
+    assert "inline-edit-title editing" not in body
+    assert "inline-edit-description editing" not in body
+
+
+@pytest.mark.django_db
+def test_modal_edit_placeholder_when_description_is_empty(auth_client):
+    issue = IssueFactory(description="")
+
+    response = auth_client.get(f"/issues/{issue.number}/modal-edit/")
+
+    body = response.content.decode()
+    assert "No description. Click to add one." in body
+
+
+@pytest.mark.django_db
+def test_modal_edit_opens_title_editing_on_validation_error(auth_client):
+    """Title is required. When the server re-renders the fragment with a
+    title error, the title wrapper must carry the ``editing`` class so the
+    user lands directly on the input without having to click first."""
+    issue = IssueFactory(title="present", description="desc")
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/modal-edit/",
+        data={
+            "title": "",  # blank → required error on title
+            "description": "desc",
+            "priority": issue.priority,
+            "status": issue.status,
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "",
+            "source": issue.source,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "inline-edit-title editing" in body
+    # Sanity: the error message is visible too.
+    assert "This field is required" in body
+
+
+@pytest.mark.django_db
 def test_modal_edit_get_renders_blocked_reason_field_when_blocked(auth_client):
     from pxtx.core.models import Status
 

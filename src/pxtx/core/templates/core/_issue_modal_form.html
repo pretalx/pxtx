@@ -1,8 +1,12 @@
+{% load rich_text %}
 <div class="modal-shell">
     <header class="modal-head">
         <div class="modal-title">
             <span class="px">{{ issue.slug }}</span>
-            <span class="meta">Edit</span>
+            <span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+            <span class="prio prio-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
+            {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span>{% endif %}
+            {% if issue.milestone %}<a class="chip" href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% endif %}
         </div>
         <div class="modal-head-actions">
             <a href="{{ issue.get_absolute_url }}" class="secondary">Open full page</a>
@@ -14,9 +18,83 @@
           hx-post="{% url 'core:issue-modal-edit' number=issue.number %}"
           hx-target="#issue-modal"
           hx-swap="innerHTML">
-        {% include "core/_issue_form_body.html" %}
+        {% csrf_token %}
+        {% if form.non_field_errors %}<p class="error">{{ form.non_field_errors }}</p>{% endif %}
 
-        <div class="form-actions">
+        <div class="inline-edit inline-edit-title{% if form.title.errors %} editing{% endif %}"
+             data-inline-edit>
+            <h2 class="inline-edit-view issue-title" data-inline-edit-view
+                title="Click to edit">{{ form.title.value|default:"(no title)" }}</h2>
+            <div class="inline-edit-field">
+                <label for="{{ form.title.id_for_label }}" class="meta">Title</label>
+                {{ form.title }}
+                {% if form.title.errors %}<p class="error">{{ form.title.errors|join:", " }}</p>{% endif %}
+            </div>
+        </div>
+
+        <div class="modal-meta">
+            <div class="form-field">
+                <label for="{{ form.status.id_for_label }}">Status</label>
+                <select name="status" id="{{ form.status.id_for_label }}"
+                        hx-get="{% url 'core:issue-blocked-reason' %}"
+                        hx-target="#blocked-reason-wrap" hx-swap="outerHTML"
+                        hx-trigger="change">
+                    {% for value, label in form.status.field.choices %}
+                    <option value="{{ value }}" {% if form.status.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="{{ form.priority.id_for_label }}">Priority</label>
+                {{ form.priority }}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.effort_minutes.id_for_label }}">Effort</label>
+                {{ form.effort_minutes }}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.milestone.id_for_label }}">Release</label>
+                {{ form.milestone }}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.assignee.id_for_label }}">Assignee</label>
+                {{ form.assignee }}
+            </div>
+            <div class="form-field">
+                <label for="{{ form.source.id_for_label }}">Source</label>
+                {{ form.source }}
+            </div>
+            <div class="form-field inline modal-meta-highlight">
+                <label class="inline">
+                    {{ form.is_highlighted }}
+                    <span>Highlighted</span>
+                </label>
+            </div>
+        </div>
+
+        {% include "core/_blocked_reason.html" with field=form.blocked_reason show=blocked_reason_visible %}
+
+        <div class="inline-edit inline-edit-description{% if form.description.errors %} editing{% endif %}"
+             data-inline-edit>
+            <div class="inline-edit-head">
+                <label for="{{ form.description.id_for_label }}" class="meta">Description (markdown)</label>
+                <span class="meta inline-edit-hint">Click to edit</span>
+            </div>
+            <div class="inline-edit-view prose" data-inline-edit-view
+                 title="Click to edit">
+                {% if form.description.value %}
+                    {{ form.description.value|rich_text }}
+                {% else %}
+                    <p class="meta">No description. Click to add one.</p>
+                {% endif %}
+            </div>
+            <div class="inline-edit-field">
+                {{ form.description }}
+                {% if form.description.errors %}<p class="error">{{ form.description.errors|join:", " }}</p>{% endif %}
+            </div>
+        </div>
+
+        <div class="form-actions modal-actions">
             <button type="submit">Save changes</button>
             <button type="button" class="secondary" data-modal-close>Cancel</button>
         </div>

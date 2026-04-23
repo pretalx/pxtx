@@ -527,7 +527,45 @@ kbd {
     cursor: pointer;
 }
 .issue-modal .modal-head-actions .secondary:hover { border-color: var(--accent); color: var(--accent); }
-.issue-modal .modal-form { padding: 1rem; overflow-y: auto; }
+.issue-modal .modal-form { padding: 1rem; overflow-y: auto; display: grid; gap: 1rem; }
+.issue-modal .modal-title { flex-wrap: wrap; align-items: center; }
+.issue-modal .modal-title .star { font-size: 1rem; }
+.issue-modal .issue-title { font-size: 1.35rem; line-height: 1.3; margin: 0; }
+.issue-modal .modal-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.6rem 0.9rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+.issue-modal .modal-meta .form-field { margin-bottom: 0; flex: none; }
+.issue-modal .modal-meta .modal-meta-highlight { align-self: end; }
+.issue-modal .modal-actions { margin-top: 0.25rem; }
+
+.inline-edit .inline-edit-field { display: none; }
+.inline-edit.editing .inline-edit-view { display: none; }
+.inline-edit.editing .inline-edit-field { display: block; }
+.inline-edit [data-inline-edit-view] {
+    cursor: text;
+    padding: 0.4rem 0.55rem;
+    border: 1px dashed transparent;
+    border-radius: 4px;
+    transition: background-color 0.12s, border-color 0.12s;
+}
+.inline-edit [data-inline-edit-view]:hover {
+    border-color: var(--border);
+    background: var(--bg);
+}
+.inline-edit-title [data-inline-edit-view] { margin: 0 -0.55rem; }
+.inline-edit-description { display: flex; flex-direction: column; gap: 0.25rem; }
+.inline-edit-description .prose { min-height: 2rem; }
+.inline-edit-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.inline-edit-hint { font-size: 0.75rem; opacity: 0; transition: opacity 0.12s; }
+.inline-edit:hover .inline-edit-hint { opacity: 0.8; }
+.inline-edit.editing .inline-edit-hint { opacity: 0; }
+.inline-edit-field label.meta { display: block; margin-bottom: 0.2rem; }
 body[data-g-prefix]::after {
     content: "g…";
     position: fixed; bottom: 1rem; right: 1rem;

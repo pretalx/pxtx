@@ -195,6 +195,30 @@ document.addEventListener("pxtx:issue-saved", () => {
     }
 });
 
+// Click-to-edit text fields inside the issue modal: the read-only view is
+// swapped for the underlying input on click. We bail when the click lands on
+// a link/control inside the view (e.g. a PX-### reference in the rendered
+// description), so navigating cross-references still works without tipping
+// the field into edit mode.
+document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!target || !target.closest) return;
+    if (target.closest("a, button, input, textarea, select, label")) return;
+    const view = target.closest("[data-inline-edit-view]");
+    if (!view) return;
+    const wrap = view.closest("[data-inline-edit]");
+    if (!wrap || wrap.classList.contains("editing")) return;
+    event.preventDefault();
+    wrap.classList.add("editing");
+    const input = wrap.querySelector(".inline-edit-field input, .inline-edit-field textarea");
+    if (!input) return;
+    input.focus();
+    if (typeof input.setSelectionRange === "function") {
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+    }
+});
+
 // Inline-editable list cells: once a <select> is in the DOM, a change event
 // POSTs the new value (htmx handles that). If the user opens the widget and
 // clicks away without picking anything different, no `change` fires and the

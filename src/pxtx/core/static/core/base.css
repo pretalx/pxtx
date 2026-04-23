@@ -115,7 +115,14 @@ nav.site form.deploy-form button.btn-deploy:hover { filter: brightness(1.05); }
     0%, 100% { opacity: 1; }
     50%      { opacity: 0.55; }
 }
-main { max-width: 1350px; margin: 0 auto; padding: 1.25rem; }
+main { max-width: none; margin: 0; padding: 1.25rem 1.5rem; min-width: 0; }
+.app-body { display: block; }
+.app-body:has(.issue-sidebar:not(:empty)) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) min(40rem, 42vw);
+    align-items: start;
+}
+.app-body:has(.issue-sidebar:not(:empty)) > main { padding-right: 0; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
 h1 { font-size: 1.4rem; margin-bottom: 0.75rem; }
 h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
@@ -546,6 +553,23 @@ kbd {
 .issue-modal .modal-meta .form-field { margin-bottom: 0; flex: none; }
 .issue-modal .modal-meta .modal-meta-highlight { align-self: end; }
 .issue-modal .modal-actions { margin-top: 0.25rem; }
+
+.issue-sidebar {
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    position: sticky;
+    top: 0;
+    align-self: stretch;
+    max-height: 100dvh;
+    overflow-y: auto;
+    min-width: 0;
+}
+.issue-sidebar:empty { display: none; }
+.issue-sidebar .modal-shell { max-height: none; min-height: 100%; }
+.issue-sidebar .modal-head { position: sticky; top: 0; z-index: 1; }
+.issue-sidebar .modal-form { padding: 1rem 1.25rem; }
+.issue-sidebar .modal-meta { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
 
 .inline-edit .inline-edit-field { display: none; }
 .inline-edit.editing .inline-edit-view { display: none; }

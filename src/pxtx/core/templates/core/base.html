@@ -59,9 +59,14 @@
         </form>
     </dialog>
     {% endif %}
-    <main>
-        {% block content %}{% endblock %}
-    </main>
-    {% if user.is_authenticated %}<dialog id="issue-modal" class="issue-modal"></dialog>{% endif %}
+    <div class="app-body">
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+        {% block side_panel %}{% endblock %}
+    </div>
+    {% if user.is_authenticated %}{% block issue_modal %}
+    <dialog id="issue-modal" class="issue-modal"></dialog>
+    {% endblock %}{% endif %}
 </body>
 </html>

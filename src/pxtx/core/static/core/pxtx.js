@@ -138,7 +138,7 @@ function getIssueModal() {
 function closeIssueModal() {
     const modal = getIssueModal();
     if (!modal) return;
-    if (modal.open) modal.close();
+    if (typeof modal.close === "function" && modal.open) modal.close();
     modal.innerHTML = "";
 }
 
@@ -146,6 +146,7 @@ document.addEventListener("htmx:afterSwap", (event) => {
     const target = event.target;
     if (!target || target.id !== "issue-modal") return;
     if (!target.innerHTML.trim()) return;
+    // Dialogs need to be popped open; sidebar asides are visible via CSS.
     if (typeof target.showModal !== "function") return;
     if (!target.open) target.showModal();
 });
@@ -153,7 +154,7 @@ document.addEventListener("htmx:afterSwap", (event) => {
 document.addEventListener("click", (event) => {
     const closer = event.target.closest("[data-modal-close]");
     if (!closer) return;
-    const modal = closer.closest("dialog.issue-modal");
+    const modal = closer.closest("#issue-modal");
     if (!modal) return;
     event.preventDefault();
     closeIssueModal();
@@ -162,7 +163,9 @@ document.addEventListener("click", (event) => {
 document.addEventListener("click", (event) => {
     const modal = getIssueModal();
     if (!modal || !modal.open) return;
-    // <dialog> treats clicks on the backdrop as events on itself.
+    // <dialog> treats clicks on the backdrop as events on itself. The sidebar
+    // aside has no `open` property and does not receive these, so it is
+    // unaffected — outside clicks never close the sidebar by design.
     if (event.target === modal) closeIssueModal();
 });
 

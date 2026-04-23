@@ -54,7 +54,6 @@ class Issue(BaseModel):
         "assignee",
         "interested_parties",
         "links",
-        "closed_at",
     )
 
     number = models.PositiveIntegerField(unique=True, editable=False, db_index=True)

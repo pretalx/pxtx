@@ -85,23 +85,15 @@ def test_issue_status_change_alone_emits_only_status_entry():
 
 
 @pytest.mark.django_db
-def test_issue_close_logs_status_and_closed_at():
+def test_issue_close_logs_only_status_entry():
     issue = IssueFactory(status=Status.OPEN)
     ActivityLog.objects.all().delete()
 
     issue.status = Status.COMPLETED
     issue.save()
 
-    entries = sorted(issue.logged_actions(), key=lambda e: e.action_type)
-    assert [e.action_type for e in entries] == [
-        "pxtx.issue.status.completed",
-        "pxtx.issue.update",
-    ]
-    update_entry = entries[1]
-    # closed_at flips from None to a real datetime, so it shows up here
-    assert set(update_entry.data["before"]) == {"closed_at"}
-    assert update_entry.data["before"]["closed_at"] is None
-    assert update_entry.data["after"]["closed_at"] is not None
+    entries = list(issue.logged_actions())
+    assert [e.action_type for e in entries] == ["pxtx.issue.status.completed"]
 
 
 @pytest.mark.django_db

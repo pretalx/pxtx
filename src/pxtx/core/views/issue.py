@@ -11,7 +11,7 @@ from django.views import View
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 
-from pxtx.core.forms import CommentForm, DescriptionForm, IssueForm
+from pxtx.core.forms import CommentForm, DescriptionForm, IssueFilterForm, IssueForm
 from pxtx.core.models import (
     ActivityLog,
     Comment,
@@ -205,12 +205,14 @@ def _issue_list_context(params):
                 "active": _quick_filter_active(spec, params),
             }
         )
+    selected_statuses = (
+        params.getlist("status") if "status" in params else list(DEFAULT_STATUSES)
+    )
+    selected_priorities = params.getlist("priority")
     return {
         "issues": _filtered_issues(params),
-        "selected_statuses": (
-            params.getlist("status") if "status" in params else list(DEFAULT_STATUSES)
-        ),
-        "selected_priorities": params.getlist("priority"),
+        "selected_statuses": selected_statuses,
+        "selected_priorities": selected_priorities,
         "selected_milestone": params.get("milestone", ""),
         "search_value": params.get("search", ""),
         "assignee_value": params.get("assignee", ""),
@@ -219,8 +221,9 @@ def _issue_list_context(params):
         "direction": direction,
         "sort_headers": _sort_headers(params, sort, direction),
         "can_reorder": sort == "priority" and direction == "asc",
-        "status_choices": Status.choices,
-        "priority_choices": Priority.choices,
+        "filter_form": IssueFilterForm(
+            initial={"status": selected_statuses, "priority": selected_priorities}
+        ),
         "milestones": list(Milestone.objects.order_by("-target_date", "name")),
         "quick_filters": quick_filters,
     }

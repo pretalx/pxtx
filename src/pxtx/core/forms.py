@@ -1,7 +1,9 @@
 from django import forms
+from django.urls import reverse_lazy
 from django.utils.text import slugify
 
-from pxtx.core.models import Comment, Issue, Milestone, Status
+from pxtx.core.models import Comment, Issue, Milestone, Priority, Status
+from pxtx.core.widgets import EnhancedSelect, EnhancedSelectMultiple
 
 
 class IssueForm(forms.ModelForm):
@@ -23,6 +25,19 @@ class IssueForm(forms.ModelForm):
             "title": forms.TextInput(attrs={"autofocus": True}),
             "description": forms.Textarea(attrs={"rows": 10}),
             "blocked_reason": forms.Textarea(attrs={"rows": 3}),
+            "priority": EnhancedSelect(badge_type="priority"),
+            "effort_minutes": EnhancedSelect(badge_type="effort"),
+            "status": EnhancedSelect(
+                badge_type="status",
+                attrs={
+                    "hx-get": reverse_lazy("core:issue-blocked-reason"),
+                    "hx-target": "#blocked-reason-wrap",
+                    "hx-swap": "outerHTML",
+                    "hx-trigger": "change",
+                },
+            ),
+            "milestone": EnhancedSelect(),
+            "source": EnhancedSelect(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -46,6 +61,25 @@ class IssueForm(forms.ModelForm):
         elif status != Status.BLOCKED:
             cleaned["blocked_reason"] = ""
         return cleaned
+
+
+class IssueFilterForm(forms.Form):
+    """Unbound helper for the list-view filter bar. Only exists so the
+    status/priority selects render through the shared ``EnhancedSelectMultiple``
+    widget — the view still reads filter values straight off ``request.GET``."""
+
+    status = forms.MultipleChoiceField(
+        choices=Status.choices,
+        required=False,
+        widget=EnhancedSelectMultiple(badge_type="status", placeholder="any status"),
+    )
+    priority = forms.MultipleChoiceField(
+        choices=Priority.choices,
+        required=False,
+        widget=EnhancedSelectMultiple(
+            badge_type="priority", placeholder="any priority"
+        ),
+    )
 
 
 class MilestoneForm(forms.ModelForm):

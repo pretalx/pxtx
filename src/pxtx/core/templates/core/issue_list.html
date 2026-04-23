@@ -29,19 +29,11 @@
     <div class="filter-row">
         <label>
             <span>Status</span>
-            <select name="status" class="enhanced" multiple data-placeholder="any status">
-                {% for value, label in status_choices %}
-                <option value="{{ value }}" {% if value in selected_statuses %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
+            {{ filter_form.status }}
         </label>
         <label>
             <span>Priority</span>
-            <select name="priority" class="enhanced" multiple data-placeholder="any priority">
-                {% for value, label in priority_choices %}
-                <option value="{{ value }}" {% if value|stringformat:"s" in selected_priorities %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
+            {{ filter_form.priority }}
         </label>
         <label>
             <span>Release</span>

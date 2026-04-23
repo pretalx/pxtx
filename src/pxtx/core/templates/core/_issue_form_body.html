@@ -23,14 +23,7 @@
     </div>
     <div class="form-field">
         <label for="{{ form.status.id_for_label }}">Status</label>
-        <select name="status" id="{{ form.status.id_for_label }}"
-                hx-get="{% url 'core:issue-blocked-reason' %}"
-                hx-target="#blocked-reason-wrap" hx-swap="outerHTML"
-                hx-trigger="change">
-            {% for value, label in form.status.field.choices %}
-            <option value="{{ value }}" {% if form.status.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
+        {{ form.status }}
     </div>
 </div>
 

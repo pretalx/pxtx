@@ -12,7 +12,6 @@ from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 
 from pxtx.core.forms import CommentForm, DescriptionForm, IssueFilterForm, IssueForm
-from pxtx.core.widgets import EnhancedSelect
 from pxtx.core.models import (
     ActivityLog,
     Comment,
@@ -25,6 +24,7 @@ from pxtx.core.models import (
     Status,
 )
 from pxtx.core.views._helpers import is_htmx, request_actor
+from pxtx.core.widgets import EnhancedSelect
 
 QUICK_FILTERS = [
     {

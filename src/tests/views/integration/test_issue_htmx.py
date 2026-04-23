@@ -299,6 +299,37 @@ def test_inline_cell_get_returns_select_with_current_selected(auth_client):
 
 
 @pytest.mark.django_db
+def test_inline_cell_get_renders_shared_enhanced_widget(auth_client):
+    """The inline cell select is rendered via the shared ``EnhancedSelect``
+    widget — the same widget the full edit form and the modal use. That's
+    how a fix in ``choices-init.js`` (e.g. the textContent label re-seed for
+    ``<1h`` / ``>1d``) stays applied across every dropdown without
+    template-level duplication."""
+    from pxtx.core.models import Effort
+
+    issue = IssueFactory(effort_minutes=Effort.TINY)
+
+    response = auth_client.get(f"/issues/{issue.number}/cell/effort/")
+
+    body = response.content.decode()
+    import re
+
+    match = re.search(r"<select[^>]*>", body)
+    assert match
+    tag = match.group(0)
+    assert 'data-badge-type="effort"' in tag
+    assert 'data-inline-edit="1"' in tag
+    assert "enhanced" in tag
+    assert "inline-edit" in tag
+    # htmx wiring is still applied on top of the shared widget markers.
+    assert f'hx-post="/issues/{issue.number}/cell/effort/"' in tag
+    assert f'data-revert-url="/issues/{issue.number}/cell/effort/"' in tag
+    # Options carry the escaped-entity labels; the decoded labels come back
+    # via textContent in the JS re-seed.
+    assert "&lt;1h" in body
+
+
+@pytest.mark.django_db
 def test_inline_cell_get_rejects_unknown_field(auth_client):
     issue = IssueFactory()
 

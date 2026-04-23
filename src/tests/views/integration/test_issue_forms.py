@@ -226,3 +226,30 @@ def test_blocked_reason_field_visibility_depends_on_status(auth_client):
 
     assert "hidden" not in shown.content.decode().split("form-field")[1].split(">")[0]
     assert "hidden" in hidden.content.decode().split("form-field")[1].split(">")[0]
+
+
+@pytest.mark.django_db
+def test_edit_form_effort_select_has_enhanced_markers(auth_client):
+    """The edit form renders effort through ``EnhancedSelect`` — the same
+    widget the modal form and the inline-editable table cell use. The JS in
+    ``choices-init.js`` keys off ``class="enhanced"`` plus
+    ``data-badge-type`` to apply the badge styling and the textContent-based
+    label re-seed that fixes options like ``<1h`` / ``>1d``. Pin the contract
+    here so a widget regression fails this test before it reaches the UI."""
+    issue = IssueFactory()
+
+    response = auth_client.get(f"/issues/{issue.number}/edit/")
+
+    body = response.content.decode()
+    import re
+
+    match = re.search(r'<select name="effort_minutes"[^>]*>', body)
+    assert match, "effort_minutes select not found on edit form"
+    tag = match.group(0)
+    assert 'class="enhanced"' in tag
+    assert 'data-badge-type="effort"' in tag
+    # The literal entity-escaped option labels are what Choices.js then
+    # re-seeds from textContent on the client. If Django stops escaping we
+    # want to know — the JS fix hinges on this shape.
+    assert "&lt;1h" in body
+    assert "&gt;1d" in body

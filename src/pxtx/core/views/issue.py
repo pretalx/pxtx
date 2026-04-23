@@ -300,29 +300,43 @@ class IssueDescriptionEditView(LoginRequiredMixin, View):
 
 
 class IssueReorderView(LoginRequiredMixin, View):
-    """Move an issue up or down within its priority bucket, then re-render
-    the table. order_in_priority is rewritten densely (0..N-1) so subsequent
-    reorders stay stable."""
+    """Drop an issue at a given index within its priority bucket, then
+    re-render the table. Sibling ordering matches the display sort
+    (``-is_highlighted, order_in_priority, -created_at``) so the client's
+    drop index maps to what the user sees. ``order_in_priority`` is rewritten
+    densely (0..N-1) via ``bulk_update`` so subsequent reorders stay stable
+    and no ActivityLog entries are produced."""
 
     def post(self, request, number):
-        direction = request.POST.get("direction")
-        if direction not in {"up", "down"}:
-            return HttpResponseBadRequest("direction must be up or down")
+        index_raw = request.POST.get("index")
+        if index_raw is None:
+            return HttpResponseBadRequest("index is required")
+        try:
+            index = int(index_raw)
+        except ValueError:
+            return HttpResponseBadRequest("index must be an integer")
         issue = get_object_or_404(Issue, number=number)
         siblings = list(
-            Issue.objects.filter(priority=issue.priority).order_by(
-                "order_in_priority", "-created_at"
-            )
+            Issue.objects.filter(priority=issue.priority)
+            .exclude(pk=issue.pk)
+            .order_by("-is_highlighted", "order_in_priority", "-created_at")
         )
-        index = next(i for i, s in enumerate(siblings) if s.pk == issue.pk)
-        target = index - 1 if direction == "up" else index + 1
-        if 0 <= target < len(siblings):
-            siblings[index], siblings[target] = siblings[target], siblings[index]
+        index = max(0, min(index, len(siblings)))
+        siblings.insert(index, issue)
+        # Highlighted issues are the primary in-bucket sort key on the list,
+        # so a non-highlighted drop into the highlighted band (or vice-versa)
+        # would snap back on re-render. A stable sort by ``-is_highlighted``
+        # keeps the user's intra-group order while enforcing that invariant
+        # in the stored ``order_in_priority``.
+        siblings.sort(key=lambda s: 0 if s.is_highlighted else 1)
+        updates = []
+        for position, sibling in enumerate(siblings):
+            if sibling.order_in_priority != position:
+                sibling.order_in_priority = position
+                updates.append(sibling)
+        if updates:
             with transaction.atomic():
-                for position, sibling in enumerate(siblings):
-                    if sibling.order_in_priority != position:
-                        sibling.order_in_priority = position
-                        sibling.save(actor=request_actor(request), skip_log=True)
+                Issue.objects.bulk_update(updates, ["order_in_priority"])
         # Respond with the re-rendered table so htmx can swap it in place.
         return render(
             request, "core/_issue_table.html", _issue_list_context(request.GET)

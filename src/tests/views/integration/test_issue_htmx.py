@@ -1,6 +1,6 @@
 """htmx-driven interactions on the issue detail view: highlight toggle,
-inline description edit, comment create/edit, and the in-priority reorder
-button on the list view."""
+inline description edit, comment create/edit, and the in-priority drag-
+and-drop reorder on the list view."""
 
 import pytest
 
@@ -160,14 +160,12 @@ def test_comment_edit_invalid_body_rerenders_form(auth_client):
 
 
 @pytest.mark.django_db
-def test_reorder_up_moves_issue_earlier(auth_client):
+def test_reorder_moves_issue_to_given_index(auth_client):
     a = IssueFactory(priority=Priority.WANT, order_in_priority=0, title="a")
     b = IssueFactory(priority=Priority.WANT, order_in_priority=1, title="b")
     c = IssueFactory(priority=Priority.WANT, order_in_priority=2, title="c")
 
-    response = auth_client.post(
-        f"/issues/{b.number}/reorder/", data={"direction": "up"}
-    )
+    response = auth_client.post(f"/issues/{b.number}/reorder/", data={"index": "0"})
 
     a.refresh_from_db()
     b.refresh_from_db()
@@ -177,26 +175,60 @@ def test_reorder_up_moves_issue_earlier(auth_client):
 
 
 @pytest.mark.django_db
-def test_reorder_down_at_end_is_noop(auth_client):
+def test_reorder_clamps_index_past_the_end(auth_client):
     a = IssueFactory(priority=Priority.WANT, order_in_priority=0)
     b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
 
-    auth_client.post(f"/issues/{b.number}/reorder/", data={"direction": "down"})
+    auth_client.post(f"/issues/{a.number}/reorder/", data={"index": "99"})
+
+    a.refresh_from_db()
+    b.refresh_from_db()
+    assert (b.order_in_priority, a.order_in_priority) == (0, 1)
+
+
+@pytest.mark.django_db
+def test_reorder_clamps_negative_index_to_start(auth_client):
+    a = IssueFactory(priority=Priority.WANT, order_in_priority=0)
+    b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
+
+    auth_client.post(f"/issues/{b.number}/reorder/", data={"index": "-5"})
+
+    a.refresh_from_db()
+    b.refresh_from_db()
+    assert (b.order_in_priority, a.order_in_priority) == (0, 1)
+
+
+@pytest.mark.django_db
+def test_reorder_requires_index(auth_client):
+    issue = IssueFactory()
+
+    response = auth_client.post(f"/issues/{issue.number}/reorder/", data={})
+
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_reorder_rejects_non_integer_index(auth_client):
+    issue = IssueFactory()
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/reorder/", data={"index": "nope"}
+    )
+
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_reorder_to_current_position_is_a_noop(auth_client):
+    a = IssueFactory(priority=Priority.WANT, order_in_priority=0)
+    b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
+
+    response = auth_client.post(f"/issues/{a.number}/reorder/", data={"index": "0"})
 
     a.refresh_from_db()
     b.refresh_from_db()
     assert (a.order_in_priority, b.order_in_priority) == (0, 1)
-
-
-@pytest.mark.django_db
-def test_reorder_rejects_invalid_direction(auth_client):
-    issue = IssueFactory()
-
-    response = auth_client.post(
-        f"/issues/{issue.number}/reorder/", data={"direction": "sideways"}
-    )
-
-    assert response.status_code == 400
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db
@@ -205,7 +237,7 @@ def test_reorder_does_not_emit_activity_log_entries(auth_client):
     b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
     before = ActivityLog.objects.count()
 
-    auth_client.post(f"/issues/{b.number}/reorder/", data={"direction": "up"})
+    auth_client.post(f"/issues/{b.number}/reorder/", data={"index": "0"})
 
     assert ActivityLog.objects.count() == before
     assert Issue.objects.filter(pk=a.pk, order_in_priority=1).exists()
@@ -217,7 +249,7 @@ def test_reorder_only_affects_same_priority_bucket(auth_client):
     want_b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
     should_a = IssueFactory(priority=Priority.SHOULD, order_in_priority=5)
 
-    auth_client.post(f"/issues/{want_b.number}/reorder/", data={"direction": "up"})
+    auth_client.post(f"/issues/{want_b.number}/reorder/", data={"index": "0"})
 
     want_a.refresh_from_db()
     want_b.refresh_from_db()
@@ -226,6 +258,28 @@ def test_reorder_only_affects_same_priority_bucket(auth_client):
     assert want_b.order_in_priority == 0
     # Unrelated bucket is untouched even if it had gaps.
     assert should_a.order_in_priority == 5
+
+
+@pytest.mark.django_db
+def test_reorder_places_highlighted_issues_ahead_of_non_highlighted(auth_client):
+    """Siblings are ordered the way the list displays them, so dragging a
+    non-highlighted issue to ``index=0`` lands it after any highlighted
+    issues in the bucket (which display first)."""
+    starred = IssueFactory(
+        priority=Priority.WANT, is_highlighted=True, order_in_priority=0
+    )
+    plain_a = IssueFactory(priority=Priority.WANT, order_in_priority=1)
+    plain_b = IssueFactory(priority=Priority.WANT, order_in_priority=2)
+
+    auth_client.post(f"/issues/{plain_b.number}/reorder/", data={"index": "0"})
+
+    starred.refresh_from_db()
+    plain_a.refresh_from_db()
+    plain_b.refresh_from_db()
+    # Starred stays first, the dragged issue slots in next, plain_a last.
+    assert starred.order_in_priority == 0
+    assert plain_b.order_in_priority == 1
+    assert plain_a.order_in_priority == 2
 
 
 # ---- issue detail context ---------------------------------------------------

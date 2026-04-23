@@ -1,8 +1,9 @@
-<div id="issue-table" class="card">
+<div id="issue-table" class="card"{% if can_reorder %} data-reorder-url-template="{% url 'core:issue-reorder' number=0 %}" data-csrf-token="{{ csrf_token }}"{% endif %}>
     {% if issues %}
-    <table class="issue-table">
+    <table class="issue-table{% if can_reorder %} reorderable{% endif %}">
         <thead>
             <tr>
+                {% if can_reorder %}<th class="drag-col" aria-label="Drag handle"></th>{% endif %}
                 <th>Issue</th>
                 <th>Title</th>
                 <th>Status</th>
@@ -11,12 +12,12 @@
                 <th>Assignee</th>
                 <th>Release</th>
                 <th>Updated</th>
-                {% if can_reorder %}<th class="reorder-col">Order</th>{% endif %}
             </tr>
         </thead>
         <tbody>
             {% for issue in issues %}
-            <tr>
+            <tr{% if can_reorder %} data-issue-number="{{ issue.number }}" data-priority="{{ issue.priority }}"{% endif %}>
+                {% if can_reorder %}<td class="drag-col" aria-label="Drag to reorder">⋮⋮</td>{% endif %}
                 <td><a href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.slug }}</a></td>
                 <td>
                     {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span> {% endif %}
@@ -28,18 +29,6 @@
                 <td>{{ issue.assignee|default:"—" }}</td>
                 <td>{% if issue.milestone %}<a href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% else %}—{% endif %}</td>
                 <td class="meta" title="{{ issue.updated_at|date:'Y-m-d H:i' }}">{{ issue.updated_at|timesince }} ago</td>
-                {% if can_reorder %}
-                <td class="reorder-col">
-                    <button type="button" class="reorder-btn" title="Move up"
-                            hx-post="{% url 'core:issue-reorder' number=issue.number %}"
-                            hx-vals='{"direction": "up"}'
-                            hx-target="#issue-table" hx-swap="outerHTML">▲</button>
-                    <button type="button" class="reorder-btn" title="Move down"
-                            hx-post="{% url 'core:issue-reorder' number=issue.number %}"
-                            hx-vals='{"direction": "down"}'
-                            hx-target="#issue-table" hx-swap="outerHTML">▼</button>
-                </td>
-                {% endif %}
             </tr>
             {% endfor %}
         </tbody>

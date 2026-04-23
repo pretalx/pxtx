@@ -163,21 +163,84 @@ nav.site a.new-issue { color: var(--accent); }
     margin-bottom: 1rem;
 }
 .filter-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
-.filter-row label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; color: var(--text-muted); }
-.filter-row label.inline { flex-direction: row; align-items: center; gap: 0.4rem; margin-top: 1.2rem; }
+.filter-row label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; color: var(--text-muted); min-width: 12rem; flex: 1 1 12rem; }
+.filter-row label.inline { flex-direction: row; align-items: center; gap: 0.4rem; margin-top: 1.2rem; flex: 0 0 auto; min-width: 0; }
 .filter-row label.wide { flex: 1; }
 .filter-row label.wide input { width: 100%; }
 
-.reorder-col { width: 4rem; white-space: nowrap; }
-.reorder-btn {
+/* Choices.js: match the rest of the UI (colors, radii, density). */
+.choices { margin-bottom: 0; font-size: 0.85rem; }
+.choices__inner {
     background: var(--surface);
-    color: var(--text-muted);
     border: 1px solid var(--border);
-    padding: 0.1rem 0.35rem;
-    font-size: 0.75rem;
-    cursor: pointer;
+    border-radius: 4px;
+    color: var(--text);
+    min-height: 2.1rem;
+    padding: 2px 4px;
+    font-size: 0.85rem;
 }
-.reorder-btn:hover { color: var(--accent); border-color: var(--accent); }
+.choices[data-type*="select-one"] .choices__inner { padding-bottom: 2px; }
+.choices__list--dropdown, .choices__list[aria-expanded] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    z-index: 5;
+}
+.choices__list--dropdown .choices__item--selectable,
+.choices__list[aria-expanded] .choices__item--selectable { padding-right: 0.6rem; }
+.choices__list--dropdown .choices__item--selectable.is-highlighted,
+.choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+    background: var(--bg);
+    color: var(--text);
+}
+.choices__list--multiple .choices__item {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    color: #fff;
+    font-size: 0.8rem;
+    padding: 1px 6px;
+    margin: 2px 2px 2px 0;
+}
+.choices__list--multiple .choices__item.is-highlighted {
+    background: var(--accent);
+    border-color: var(--accent);
+    filter: brightness(1.1);
+}
+.choices__input {
+    background: transparent;
+    color: var(--text);
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    margin-bottom: 0;
+}
+.choices[data-type*="select-one"]::after { border-color: var(--text-muted) transparent transparent; }
+.choices[data-type*="select-one"].is-open::after { border-color: transparent transparent var(--text-muted); }
+.choices__placeholder { opacity: 0.7; }
+.choices.is-focused .choices__inner,
+.choices.is-open .choices__inner { border-color: var(--accent); }
+/* The "×" on selected chips needs to read as a chip action, not a page button. */
+.choices__list--multiple .choices__item .choices__button {
+    border-left: 1px solid rgba(255, 255, 255, 0.4);
+    margin: 0 -4px 0 6px;
+    padding: 0 0 0 10px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 21 21'><path fill='%23fff' d='M2.59 2.59a2 2 0 0 1 2.82 0L10.5 7.67l5.09-5.08a2 2 0 1 1 2.82 2.82L13.33 10.5l5.08 5.09a2 2 0 1 1-2.82 2.82l-5.09-5.08-5.09 5.08a2 2 0 1 1-2.82-2.82L7.67 10.5 2.59 5.41a2 2 0 0 1 0-2.82z'/></svg>");
+    opacity: 0.85;
+}
+.choices__list--multiple .choices__item .choices__button:hover { opacity: 1; }
+
+.issue-table .drag-col {
+    width: 1.5rem;
+    padding: 0.25rem 0.4rem;
+    color: var(--text-muted);
+    font-family: ui-monospace, Menlo, monospace;
+    user-select: none;
+    cursor: grab;
+    text-align: center;
+}
+.issue-table .drag-col:active { cursor: grabbing; }
+.issue-table.reorderable tr.sortable-ghost { opacity: 0.35; }
+.issue-table.reorderable tr.sortable-chosen { box-shadow: inset 0 0 0 2px var(--accent); }
 
 .issue-form { max-width: 900px; }
 .issue-form .form-field { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem; }

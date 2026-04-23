@@ -1,5 +1,10 @@
 {% extends "core/base.html" %}
+{% load static %}
 {% block title %}Issues – pxtx{% endblock %}
+{% block extra_head %}
+<script src="{% static 'core/Sortable.min.js' %}" defer></script>
+<script src="{% static 'core/issue-reorder.js' %}" defer></script>
+{% endblock %}
 {% block content %}
 <h1>Issues</h1>
 
@@ -22,7 +27,7 @@
     <div class="filter-row">
         <label>
             <span>Status</span>
-            <select name="status" multiple size="6">
+            <select name="status" class="enhanced" multiple data-placeholder="any status">
                 {% for value, label in status_choices %}
                 <option value="{{ value }}" {% if value in selected_statuses %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -30,7 +35,7 @@
         </label>
         <label>
             <span>Priority</span>
-            <select name="priority" multiple size="5">
+            <select name="priority" class="enhanced" multiple data-placeholder="any priority">
                 {% for value, label in priority_choices %}
                 <option value="{{ value }}" {% if value|stringformat:"s" in selected_priorities %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -38,7 +43,7 @@
         </label>
         <label>
             <span>Source</span>
-            <select name="source" multiple size="3">
+            <select name="source" class="enhanced" multiple data-placeholder="any source">
                 {% for value, label in source_choices %}
                 <option value="{{ value }}" {% if value in selected_sources %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -46,7 +51,7 @@
         </label>
         <label>
             <span>Release</span>
-            <select name="milestone">
+            <select name="milestone" class="enhanced">
                 <option value="">— any —</option>
                 <option value="null" {% if selected_milestone == "null" %}selected{% endif %}>— unassigned —</option>
                 {% for milestone in milestones %}
@@ -60,7 +65,7 @@
         </label>
         <label>
             <span>Sort by</span>
-            <select name="sort">
+            <select name="sort" class="enhanced">
                 <option value="priority" {% if sort == "priority" %}selected{% endif %}>Priority</option>
                 <option value="updated" {% if sort == "updated" %}selected{% endif %}>Recently updated</option>
                 <option value="created" {% if sort == "created" %}selected{% endif %}>Newest</option>

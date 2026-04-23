@@ -114,7 +114,7 @@ nav.site form.deploy-form button.btn-deploy:hover { filter: brightness(1.05); }
     0%, 100% { opacity: 1; }
     50%      { opacity: 0.55; }
 }
-main { max-width: 1200px; margin: 0 auto; padding: 1.25rem; }
+main { max-width: 1350px; margin: 0 auto; padding: 1.25rem; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
 h1 { font-size: 1.4rem; margin-bottom: 0.75rem; }
 h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
@@ -256,6 +256,7 @@ nav.site a.new-issue { color: var(--accent); }
 }
 .choices__list--multiple .choices__item .choices__button:hover { opacity: 1; }
 
+.issue-table td.meta { white-space: nowrap; }
 .issue-table .edit-cell { cursor: pointer; }
 .issue-table .edit-cell:hover { background: var(--bg); }
 .issue-table .edit-cell.editing { padding: 0.2rem 0.3rem; cursor: default; }

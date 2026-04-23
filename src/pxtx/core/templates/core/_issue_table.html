@@ -15,7 +15,7 @@
         </thead>
         <tbody>
             {% for issue in issues %}
-            <tr{% if can_reorder %} data-issue-number="{{ issue.number }}" data-priority="{{ issue.priority }}"{% endif %}>
+            <tr data-issue-href="{% url 'core:issue-modal-edit' number=issue.number %}"{% if can_reorder %} data-issue-number="{{ issue.number }}" data-priority="{{ issue.priority }}"{% endif %}>
                 {% if can_reorder %}<td class="drag-col" aria-label="Drag to reorder">⋮⋮</td>{% endif %}
                 <td><a href="{% url 'core:issue-detail' number=issue.number %}"
                        hx-get="{% url 'core:issue-modal-edit' number=issue.number %}"

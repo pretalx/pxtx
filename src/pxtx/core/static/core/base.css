@@ -267,6 +267,8 @@ nav.site a.new-issue { color: var(--accent); }
 .choices__list--multiple .choices__item .choices__button:hover { opacity: 1; }
 
 .issue-table td.meta { white-space: nowrap; }
+.issue-table tr[data-issue-href] { cursor: pointer; }
+.issue-table tr[data-issue-href]:hover td:not(.edit-cell) { background: var(--bg); }
 .issue-table .edit-cell { cursor: pointer; }
 .issue-table .edit-cell:hover { background: var(--bg); }
 .issue-table .edit-cell.editing { padding: 0.2rem 0.3rem; cursor: default; }

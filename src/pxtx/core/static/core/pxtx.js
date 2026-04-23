@@ -240,6 +240,22 @@ document.addEventListener("click", (event) => {
     }
 });
 
+// Row-level click opens the issue sidebar. Nested interactive elements
+// (links, editable cells, drag handle, form controls) keep their own
+// behavior — we only fire when the click landed on "dead" row space.
+document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!target || !target.closest) return;
+    if (target.closest("a, button, input, select, textarea, label, .drag-col, .edit-cell")) return;
+    const row = target.closest("tr[data-issue-href]");
+    if (!row || !window.htmx) return;
+    event.preventDefault();
+    window.htmx.ajax("GET", row.dataset.issueHref, {
+        target: "#issue-modal",
+        swap: "innerHTML",
+    });
+});
+
 // Inline-editable list cells: once a <select> is in the DOM, a change event
 // POSTs the new value (htmx handles that). If the user opens the widget and
 // clicks away without picking anything different, no `change` fires and the

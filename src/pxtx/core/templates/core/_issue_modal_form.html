@@ -18,10 +18,11 @@
         </div>
     </header>
     <form method="post"
-          class="issue-form modal-form"
+          class="issue-form modal-form{% if sidebar_mode %} sidebar-form{% endif %}"
           hx-post="{{ form_action }}"
           hx-target="#{{ modal_target }}"
-          hx-swap="innerHTML">
+          hx-swap="innerHTML"
+          {% if sidebar_mode %}hx-trigger="change"{% endif %}>
         {% csrf_token %}
         {% if form.non_field_errors %}<p class="error">{{ form.non_field_errors }}</p>{% endif %}
 
@@ -93,9 +94,11 @@
             </div>
         </div>
 
+        {% if not sidebar_mode %}
         <div class="form-actions modal-actions">
             <button type="submit">{{ submit_label }}</button>
             <button type="button" class="secondary" data-modal-close>Cancel</button>
         </div>
+        {% endif %}
     </form>
 </div>

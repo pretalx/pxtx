@@ -15,15 +15,15 @@
         </thead>
         <tbody>
             {% for issue in issues %}
-            <tr data-issue-href="{% url 'core:issue-modal-edit' number=issue.number %}"{% if can_reorder %} data-issue-number="{{ issue.number }}" data-priority="{{ issue.priority }}"{% endif %}>
+            <tr data-issue-href="{% url 'core:issue-modal-edit' number=issue.number %}?mode=sidebar"{% if can_reorder %} data-issue-number="{{ issue.number }}" data-priority="{{ issue.priority }}"{% endif %}>
                 {% if can_reorder %}<td class="drag-col" aria-label="Drag to reorder">⋮⋮</td>{% endif %}
                 <td><a href="{% url 'core:issue-detail' number=issue.number %}"
-                       hx-get="{% url 'core:issue-modal-edit' number=issue.number %}"
+                       hx-get="{% url 'core:issue-modal-edit' number=issue.number %}?mode=sidebar"
                        hx-target="#issue-modal" hx-swap="innerHTML">{{ issue.slug }}</a></td>
                 <td>
                     {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span> {% endif %}
                     <a href="{% url 'core:issue-detail' number=issue.number %}"
-                       hx-get="{% url 'core:issue-modal-edit' number=issue.number %}"
+                       hx-get="{% url 'core:issue-modal-edit' number=issue.number %}?mode=sidebar"
                        hx-target="#issue-modal" hx-swap="innerHTML">{{ issue.title }}</a>
                 </td>
                 {% include "core/_issue_cell.html" with issue=issue field="status" editing=False %}

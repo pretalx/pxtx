@@ -657,6 +657,111 @@ def test_modal_edit_post_with_errors_rerenders_form_without_trigger(auth_client)
 
 
 @pytest.mark.django_db
+def test_modal_edit_sidebar_mode_omits_submit_button_and_wires_autosave(auth_client):
+    """In sidebar mode the form auto-saves on field changes — no submit button,
+    and the ``<form>`` itself carries ``hx-trigger="change"`` so any input/select
+    change bubbles up and fires the POST."""
+    import re
+
+    issue = IssueFactory(title="sidebar me")
+
+    response = auth_client.get(f"/issues/{issue.number}/modal-edit/?mode=sidebar")
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    form_match = re.search(r"<form[^>]*>", body)
+    assert form_match
+    form_tag = form_match.group(0)
+    assert 'hx-trigger="change"' in form_tag
+    # Form posts back to the sidebar endpoint so the server keeps emitting
+    # the auto-save trigger on subsequent saves.
+    assert f'hx-post="/issues/{issue.number}/modal-edit/?mode=sidebar"' in form_tag
+    # No submit button in sidebar mode (the header × is the only way to close).
+    assert "Save changes" not in body
+    assert "modal-actions" not in body
+
+
+@pytest.mark.django_db
+def test_modal_edit_default_mode_keeps_submit_button(auth_client):
+    """Without ``?mode=sidebar`` the form still renders its submit button —
+    this is the kanban dialog path. The status select has its own
+    ``hx-trigger="change"`` for the blocked-reason wrap fetch, but the
+    ``<form>`` itself must not auto-submit."""
+    import re
+
+    issue = IssueFactory(title="modal me")
+
+    response = auth_client.get(f"/issues/{issue.number}/modal-edit/")
+
+    body = response.content.decode()
+    form_match = re.search(r"<form[^>]*>", body)
+    assert form_match
+    form_tag = form_match.group(0)
+    assert "Save changes" in body
+    assert "hx-trigger" not in form_tag
+
+
+@pytest.mark.django_db
+def test_modal_edit_sidebar_post_signals_autosave_not_close(auth_client):
+    """Sidebar POST answers with the ``pxtx:issue-autosaved`` trigger so the
+    client refreshes the list but leaves the sidebar open — distinct from the
+    modal's ``pxtx:issue-saved`` (which closes the dialog)."""
+    issue = IssueFactory(title="before")
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/modal-edit/?mode=sidebar",
+        data={
+            "title": "after",
+            "description": "",
+            "priority": issue.priority,
+            "status": issue.status,
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "",
+            "source": issue.source,
+        },
+    )
+
+    assert response.status_code == 204
+    assert response["HX-Trigger"] == "pxtx:issue-autosaved"
+    issue.refresh_from_db()
+    assert issue.title == "after"
+
+
+@pytest.mark.django_db
+def test_modal_edit_sidebar_post_with_errors_rerenders_sidebar_form(auth_client):
+    """A validation error in sidebar mode re-renders the sidebar form fragment
+    so the user sees the error inline — and the fragment is still the sidebar
+    variant (auto-save wired, no submit button) so the next edit still saves
+    automatically."""
+    from pxtx.core.models import Status
+
+    issue = IssueFactory(status=Status.OPEN)
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/modal-edit/?mode=sidebar",
+        data={
+            "title": "still here",
+            "description": "",
+            "priority": issue.priority,
+            "status": Status.BLOCKED,  # without a reason — should fail.
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "",
+            "source": issue.source,
+        },
+    )
+
+    assert response.status_code == 200
+    assert "HX-Trigger" not in response
+    body = response.content.decode()
+    assert "A reason is required" in body
+    # Sidebar variant is preserved across re-renders.
+    assert 'hx-trigger="change"' in body
+    assert "Save changes" not in body
+
+
+@pytest.mark.django_db
 def test_modal_edit_requires_login(client):
     issue = IssueFactory()
 
@@ -667,18 +772,22 @@ def test_modal_edit_requires_login(client):
 
 
 @pytest.mark.django_db
-def test_issue_list_rows_link_to_modal_edit(auth_client):
+def test_issue_list_rows_link_to_sidebar_edit(auth_client):
+    """Issue list opens the edit form in the sidebar (``?mode=sidebar``) so
+    the server knows to render the auto-save variant of the form."""
     issue = IssueFactory()
 
     response = auth_client.get("/issues/")
 
     body = response.content.decode()
-    assert f'hx-get="/issues/{issue.number}/modal-edit/"' in body
+    assert f'hx-get="/issues/{issue.number}/modal-edit/?mode=sidebar"' in body
     assert 'hx-target="#issue-modal"' in body
 
 
 @pytest.mark.django_db
 def test_kanban_cards_link_to_modal_edit(auth_client):
+    """Kanban keeps using the dialog modal (no ``?mode=sidebar``) — the
+    sidebar auto-save flow is list-only."""
     from tests.factories import MilestoneFactory
 
     milestone = MilestoneFactory(slug="rel-1")
@@ -688,6 +797,7 @@ def test_kanban_cards_link_to_modal_edit(auth_client):
 
     body = response.content.decode()
     assert f'hx-get="/issues/{issue.number}/modal-edit/"' in body
+    assert "mode=sidebar" not in body
     assert 'hx-target="#issue-modal"' in body
 
 

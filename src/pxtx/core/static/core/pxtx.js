@@ -193,8 +193,7 @@ document.addEventListener("close", (event) => {
     }
 }, true);
 
-document.addEventListener("pxtx:issue-saved", () => {
-    closeModalElement(getIssueModal());
+function refreshListContainer() {
     if (!window.htmx) return;
     const table = document.getElementById("issue-table");
     if (table) {
@@ -213,6 +212,17 @@ document.addEventListener("pxtx:issue-saved", () => {
             select: ".kanban",
         });
     }
+}
+
+document.addEventListener("pxtx:issue-saved", () => {
+    closeModalElement(getIssueModal());
+    refreshListContainer();
+});
+
+// Sidebar auto-save: the form POSTs on each field change, so the server
+// just tells us "saved" and we refresh the list without closing the sidebar.
+document.addEventListener("pxtx:issue-autosaved", () => {
+    refreshListContainer();
 });
 
 // Click-to-edit text fields inside the issue modal: the read-only view is

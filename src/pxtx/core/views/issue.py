@@ -331,42 +331,55 @@ class IssueUpdateView(LoginRequiredMixin, _IssueFormMixin, UpdateView):
 
 class IssueModalEditView(LoginRequiredMixin, View):
     """Modal-friendly edit endpoint for the list and kanban views. GET returns
-    the form fragment (no chrome) so htmx can drop it into the dialog. POST
-    saves and answers 204 + ``HX-Trigger: pxtx:issue-saved`` on success — the
-    client closes the dialog and refreshes whichever container it came from.
-    Validation errors rerender the fragment so the dialog stays open with
-    messages in place."""
+    the form fragment (no chrome) so htmx can drop it into the dialog. In
+    sidebar mode (``?mode=sidebar``, used by the issue list side panel) the
+    form is rendered without a submit button and auto-saves on field changes;
+    POST answers 204 + ``HX-Trigger: pxtx:issue-autosaved`` so the list
+    refreshes but the sidebar stays open. In modal mode POST answers 204 +
+    ``HX-Trigger: pxtx:issue-saved`` so the client closes the dialog and
+    refreshes the container. Validation errors rerender the fragment in
+    either case."""
 
-    def _context(self, issue, form):
+    def _context(self, issue, form, *, sidebar_mode=False):
         return {
             "form": form,
             "issue": issue,
             "form_action": reverse(
                 "core:issue-modal-edit", kwargs={"number": issue.number}
-            ),
+            )
+            + ("?mode=sidebar" if sidebar_mode else ""),
             "modal_target": "issue-modal",
             "submit_label": "Save changes",
             "blocked_reason_visible": (form["status"].value() == Status.BLOCKED),
+            "sidebar_mode": sidebar_mode,
         }
 
     def get(self, request, number):
         issue = get_object_or_404(Issue, number=number)
         form = IssueForm(instance=issue)
+        sidebar_mode = request.GET.get("mode") == "sidebar"
         return render(
-            request, "core/_issue_modal_form.html", self._context(issue, form)
+            request,
+            "core/_issue_modal_form.html",
+            self._context(issue, form, sidebar_mode=sidebar_mode),
         )
 
     def post(self, request, number):
         issue = get_object_or_404(Issue, number=number)
+        sidebar_mode = request.GET.get("mode") == "sidebar"
         form = IssueForm(request.POST, instance=issue)
         if not form.is_valid():
             return render(
-                request, "core/_issue_modal_form.html", self._context(issue, form)
+                request,
+                "core/_issue_modal_form.html",
+                self._context(issue, form, sidebar_mode=sidebar_mode),
             )
         issue = form.save(commit=False)
         issue.save(actor=request_actor(request))
         response = HttpResponse(status=204)
-        response["HX-Trigger"] = "pxtx:issue-saved"
+        response["HX-Trigger"] = (
+            "pxtx:issue-autosaved" if sidebar_mode else "pxtx:issue-saved"
+        )
         return response
 
 

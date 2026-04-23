@@ -12,6 +12,7 @@ from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 
 from pxtx.core.forms import CommentForm, DescriptionForm, IssueFilterForm, IssueForm
+from pxtx.core.widgets import EnhancedSelect
 from pxtx.core.models import (
     ActivityLog,
     Comment,
@@ -531,11 +532,27 @@ def _cell_context(issue, field):
     spec = INLINE_CELL_FIELDS[field]
     current_raw = getattr(issue, spec["attr"])
     current = "" if current_raw is None else str(current_raw)
+    cell_url = reverse(
+        "core:issue-cell", kwargs={"number": issue.number, "field": field}
+    )
+    widget = EnhancedSelect(
+        badge_type=field,
+        inline_edit=True,
+        attrs={
+            "hx-post": cell_url,
+            "hx-trigger": "change",
+            "hx-target": "closest td",
+            "hx-swap": "outerHTML",
+            "data-revert-url": cell_url,
+            "aria-label": field,
+            "autofocus": True,
+        },
+    )
+    widget.choices = [(str(value), label) for value, label in spec["choices"]]
     return {
         "issue": issue,
         "field": field,
-        "choices": [(str(value), label) for value, label in spec["choices"]],
-        "current": current,
+        "cell_select": widget.render("value", current),
     }
 
 

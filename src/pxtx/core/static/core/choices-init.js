@@ -32,11 +32,15 @@ function initChoices(root) {
     scope.querySelectorAll("select.enhanced:not([data-choices-init])").forEach((select) => {
         select.setAttribute("data-choices-init", "1");
         decorateOptionsWithBadges(select);
-        // Choices.js copies `option.innerHTML` as the label. For labels with
+        // Choices.js copies `option.innerHTML` as the label, both for the
+        // dropdown list and for the initially-selected chip. For labels with
         // HTML entities (e.g. "<1h", ">1d"), innerHTML returns the entity-
         // escaped form (`&gt;1d`), which Choices then re-escapes under
-        // allowHTML:false, so the dropdown ends up showing "&gt;1d". Capture
-        // the decoded textContent up front so we can re-seed labels below.
+        // allowHTML:false, so the dropdown shows "&gt;1d" and so does the
+        // closed-select chip. Capture the decoded textContent up front, drop
+        // the native `selected` markers so Choices starts empty, re-seed the
+        // choice list via setChoices, and re-apply the selection via
+        // setChoiceByValue so both the list AND the chip use decoded labels.
         const seeded = Array.from(select.options).map((opt) => ({
             value: opt.value,
             label: opt.textContent,
@@ -44,6 +48,13 @@ function initChoices(root) {
             disabled: opt.disabled,
             labelClass: opt.dataset.labelClass || undefined,
         }));
+        const selectedValues = seeded
+            .filter((c) => c.selected && c.value !== "")
+            .map((c) => c.value);
+        Array.from(select.options).forEach((opt) => {
+            opt.selected = false;
+            opt.removeAttribute("selected");
+        });
         const inlineEdit = !!select.dataset.inlineEdit;
         const options = {
             removeItemButton: select.multiple,
@@ -58,6 +69,11 @@ function initChoices(root) {
         if (inlineEdit) options.searchEnabled = false;
         const instance = new Choices(select, options);
         instance.setChoices(seeded, "value", "label", true);
+        if (selectedValues.length) {
+            instance.setChoiceByValue(
+                select.multiple ? selectedValues : selectedValues[0]
+            );
+        }
         select._choicesInstance = instance;
         if (inlineEdit) {
             // autofocus on the now-hidden native select does nothing; pop the

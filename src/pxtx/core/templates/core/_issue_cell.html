@@ -1,24 +1,12 @@
 {% comment %}Inline-editable status / priority / effort cell.
 
 ``editing`` flips the cell between a clickable badge (display) and a
-<select> whose change event POSTs the new value back.{% endcomment %}
+<select> whose change event POSTs the new value back. The select itself
+is rendered via the shared ``EnhancedSelect`` widget in the view so the
+modal form, filter bar, and inline cells all share one source of truth —
+any future ``choices-init.js`` change applies here without template churn.{% endcomment %}
 {% if editing %}
-<td class="edit-cell edit-cell-{{ field }} editing">
-    <select name="value" class="inline-edit enhanced"
-            hx-post="{% url 'core:issue-cell' number=issue.number field=field %}"
-            hx-trigger="change"
-            hx-target="closest td"
-            hx-swap="outerHTML"
-            data-revert-url="{% url 'core:issue-cell' number=issue.number field=field %}"
-            data-badge-type="{{ field }}"
-            data-inline-edit="1"
-            aria-label="{{ field }}"
-            autofocus>
-        {% for value, label in choices %}
-        <option value="{{ value }}"{% if value == current %} selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-    </select>
-</td>
+<td class="edit-cell edit-cell-{{ field }} editing">{{ cell_select }}</td>
 {% else %}
 <td class="edit-cell edit-cell-{{ field }}"
     hx-get="{% url 'core:issue-cell' number=issue.number field=field %}"

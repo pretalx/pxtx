@@ -52,7 +52,7 @@ def test_issue_number_preserved_when_explicitly_set():
 def test_issue_defaults_match_plan():
     issue = IssueFactory()
 
-    assert issue.priority == Priority.COULD
+    assert issue.priority == Priority.KOENNTE
     assert issue.status == Status.OPEN
     assert issue.source == Source.MANUAL
     assert issue.effort_minutes is None
@@ -148,10 +148,10 @@ def test_issue_closed_at_preserved_across_status_save_within_closed():
 
 
 @pytest.mark.django_db
-def test_issue_ordering_puts_want_and_highlighted_first():
-    low = IssueFactory(priority=Priority.WHATEV)
-    highlighted = IssueFactory(priority=Priority.COULD, is_highlighted=True)
-    urgent = IssueFactory(priority=Priority.WANT)
+def test_issue_ordering_puts_will_and_highlighted_first():
+    low = IssueFactory(priority=Priority.EGAL)
+    highlighted = IssueFactory(priority=Priority.KOENNTE, is_highlighted=True)
+    urgent = IssueFactory(priority=Priority.WILL)
 
     assert list(Issue.objects.all()) == [urgent, highlighted, low]
 
@@ -166,8 +166,15 @@ def test_effort_choices_cover_all_buckets():
     assert {c for c, _ in Effort.choices} == {30, 90, 240, 480, 960}
 
 
-def test_priority_choices_span_one_to_five():
-    assert {c for c, _ in Priority.choices} == {1, 2, 3, 4, 5}
+def test_priority_choices_span_zero_to_five():
+    assert {c for c, _ in Priority.choices} == {0, 1, 2, 3, 4, 5}
+
+
+def test_priority_choices_are_urgent_first():
+    """``Priority.choices`` is the source of truth for every dropdown's
+    option order — keep it ascending (most urgent first) so the UI renders
+    jetzt → lol without re-sorting."""
+    assert [c for c, _ in Priority.choices] == [0, 1, 2, 3, 4, 5]
 
 
 @pytest.mark.django_db

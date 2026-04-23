@@ -161,9 +161,9 @@ def test_comment_edit_invalid_body_rerenders_form(auth_client):
 
 @pytest.mark.django_db
 def test_reorder_moves_issue_to_given_index(auth_client):
-    a = IssueFactory(priority=Priority.WANT, order_in_priority=0, title="a")
-    b = IssueFactory(priority=Priority.WANT, order_in_priority=1, title="b")
-    c = IssueFactory(priority=Priority.WANT, order_in_priority=2, title="c")
+    a = IssueFactory(priority=Priority.WILL, order_in_priority=0, title="a")
+    b = IssueFactory(priority=Priority.WILL, order_in_priority=1, title="b")
+    c = IssueFactory(priority=Priority.WILL, order_in_priority=2, title="c")
 
     response = auth_client.post(f"/issues/{b.number}/reorder/", data={"index": "0"})
 
@@ -176,8 +176,8 @@ def test_reorder_moves_issue_to_given_index(auth_client):
 
 @pytest.mark.django_db
 def test_reorder_clamps_index_past_the_end(auth_client):
-    a = IssueFactory(priority=Priority.WANT, order_in_priority=0)
-    b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
+    a = IssueFactory(priority=Priority.WILL, order_in_priority=0)
+    b = IssueFactory(priority=Priority.WILL, order_in_priority=1)
 
     auth_client.post(f"/issues/{a.number}/reorder/", data={"index": "99"})
 
@@ -188,8 +188,8 @@ def test_reorder_clamps_index_past_the_end(auth_client):
 
 @pytest.mark.django_db
 def test_reorder_clamps_negative_index_to_start(auth_client):
-    a = IssueFactory(priority=Priority.WANT, order_in_priority=0)
-    b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
+    a = IssueFactory(priority=Priority.WILL, order_in_priority=0)
+    b = IssueFactory(priority=Priority.WILL, order_in_priority=1)
 
     auth_client.post(f"/issues/{b.number}/reorder/", data={"index": "-5"})
 
@@ -220,8 +220,8 @@ def test_reorder_rejects_non_integer_index(auth_client):
 
 @pytest.mark.django_db
 def test_reorder_to_current_position_is_a_noop(auth_client):
-    a = IssueFactory(priority=Priority.WANT, order_in_priority=0)
-    b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
+    a = IssueFactory(priority=Priority.WILL, order_in_priority=0)
+    b = IssueFactory(priority=Priority.WILL, order_in_priority=1)
 
     response = auth_client.post(f"/issues/{a.number}/reorder/", data={"index": "0"})
 
@@ -233,8 +233,8 @@ def test_reorder_to_current_position_is_a_noop(auth_client):
 
 @pytest.mark.django_db
 def test_reorder_does_not_emit_activity_log_entries(auth_client):
-    a = IssueFactory(priority=Priority.WANT, order_in_priority=0)
-    b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
+    a = IssueFactory(priority=Priority.WILL, order_in_priority=0)
+    b = IssueFactory(priority=Priority.WILL, order_in_priority=1)
     before = ActivityLog.objects.count()
 
     auth_client.post(f"/issues/{b.number}/reorder/", data={"index": "0"})
@@ -245,9 +245,9 @@ def test_reorder_does_not_emit_activity_log_entries(auth_client):
 
 @pytest.mark.django_db
 def test_reorder_only_affects_same_priority_bucket(auth_client):
-    want_a = IssueFactory(priority=Priority.WANT, order_in_priority=0)
-    want_b = IssueFactory(priority=Priority.WANT, order_in_priority=1)
-    should_a = IssueFactory(priority=Priority.SHOULD, order_in_priority=5)
+    want_a = IssueFactory(priority=Priority.WILL, order_in_priority=0)
+    want_b = IssueFactory(priority=Priority.WILL, order_in_priority=1)
+    should_a = IssueFactory(priority=Priority.SOLLTE, order_in_priority=5)
 
     auth_client.post(f"/issues/{want_b.number}/reorder/", data={"index": "0"})
 
@@ -266,10 +266,10 @@ def test_reorder_places_highlighted_issues_ahead_of_non_highlighted(auth_client)
     non-highlighted issue to ``index=0`` lands it after any highlighted
     issues in the bucket (which display first)."""
     starred = IssueFactory(
-        priority=Priority.WANT, is_highlighted=True, order_in_priority=0
+        priority=Priority.WILL, is_highlighted=True, order_in_priority=0
     )
-    plain_a = IssueFactory(priority=Priority.WANT, order_in_priority=1)
-    plain_b = IssueFactory(priority=Priority.WANT, order_in_priority=2)
+    plain_a = IssueFactory(priority=Priority.WILL, order_in_priority=1)
+    plain_b = IssueFactory(priority=Priority.WILL, order_in_priority=2)
 
     auth_client.post(f"/issues/{plain_b.number}/reorder/", data={"index": "0"})
 
@@ -287,7 +287,7 @@ def test_reorder_places_highlighted_issues_ahead_of_non_highlighted(auth_client)
 
 @pytest.mark.django_db
 def test_inline_cell_get_returns_select_with_current_selected(auth_client):
-    issue = IssueFactory(priority=Priority.WANT)
+    issue = IssueFactory(priority=Priority.WILL)
 
     response = auth_client.get(f"/issues/{issue.number}/cell/priority/")
 
@@ -311,7 +311,7 @@ def test_inline_cell_get_rejects_unknown_field(auth_client):
 def test_inline_cell_post_updates_priority_and_logs(auth_client):
     from pxtx.core.models import ActivityLog
 
-    issue = IssueFactory(priority=Priority.COULD)
+    issue = IssueFactory(priority=Priority.KOENNTE)
     before = ActivityLog.objects.count()
 
     response = auth_client.post(
@@ -319,7 +319,7 @@ def test_inline_cell_post_updates_priority_and_logs(auth_client):
     )
 
     issue.refresh_from_db()
-    assert issue.priority == Priority.WANT
+    assert issue.priority == Priority.WILL
     assert response.status_code == 200
     assert 'class="prio prio-1"' in response.content.decode()
     assert ActivityLog.objects.count() == before + 1
@@ -359,14 +359,14 @@ def test_inline_cell_post_sets_effort_to_null(auth_client):
 
 @pytest.mark.django_db
 def test_inline_cell_post_rejects_value_not_in_choices(auth_client):
-    issue = IssueFactory(priority=Priority.COULD)
+    issue = IssueFactory(priority=Priority.KOENNTE)
 
     response = auth_client.post(
         f"/issues/{issue.number}/cell/priority/", data={"value": "42"}
     )
 
     issue.refresh_from_db()
-    assert issue.priority == Priority.COULD
+    assert issue.priority == Priority.KOENNTE
     assert response.status_code == 400
 
 
@@ -692,7 +692,7 @@ def test_modal_create_get_prefills_defaults(auth_client):
     response = auth_client.get("/issues/new/modal/")
 
     form = response.context["form"]
-    assert form.initial["priority"] == Priority.COULD
+    assert form.initial["priority"] == Priority.KOENNTE
     assert form.initial["status"] == Status.OPEN
     assert form.initial["source"] == Source.MANUAL
 
@@ -706,7 +706,7 @@ def test_modal_create_post_creates_and_signals_redirect(auth_client):
         data={
             "title": "created via modal",
             "description": "hello",
-            "priority": Priority.WANT,
+            "priority": Priority.WILL,
             "status": Status.OPEN,
             "blocked_reason": "",
             "milestone": "",
@@ -734,7 +734,7 @@ def test_modal_create_post_logs_activity_with_user_actor(auth_client):
         data={
             "title": "logged via modal",
             "description": "",
-            "priority": Priority.COULD,
+            "priority": Priority.KOENNTE,
             "status": Status.OPEN,
             "blocked_reason": "",
             "milestone": "",
@@ -757,7 +757,7 @@ def test_modal_create_post_with_errors_rerenders_form(auth_client):
         data={
             "title": "blocked one",
             "description": "",
-            "priority": Priority.COULD,
+            "priority": Priority.KOENNTE,
             "status": Status.BLOCKED,  # without a reason — should fail.
             "blocked_reason": "",
             "milestone": "",

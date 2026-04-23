@@ -32,9 +32,14 @@ QUICK_FILTERS = [
         "filter": {"is_highlighted": True},
     },
     {
-        "label": "🔥 want",
+        "label": "🔥 jetzt",
+        "query": [("priority", "0")],
+        "filter": {"priority": Priority.JETZT},
+    },
+    {
+        "label": "💪 will",
         "query": [("priority", "1")],
-        "filter": {"priority": Priority.WANT},
+        "filter": {"priority": Priority.WILL},
     },
     {"label": "🔧 wip", "query": [("status", "wip")], "filter": {"status": Status.WIP}},
     {
@@ -335,7 +340,7 @@ class _IssueFormMixin:
 
 
 CREATE_DEFAULTS = {
-    "priority": Priority.COULD,
+    "priority": Priority.KOENNTE,
     "status": Status.OPEN,
     "source": Source.MANUAL,
 }

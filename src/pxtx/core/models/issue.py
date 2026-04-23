@@ -14,10 +14,11 @@ class Effort(models.IntegerChoices):
 
 
 class Priority(models.IntegerChoices):
-    WANT = 1, "want"
-    SHOULD = 2, "should"
-    COULD = 3, "could"
-    WHATEV = 4, "whatev"
+    JETZT = 0, "jetzt"
+    WILL = 1, "will"
+    SOLLTE = 2, "sollte"
+    KOENNTE = 3, "könnte"
+    EGAL = 4, "egal"
     LOL = 5, "lol"
 
 
@@ -65,7 +66,7 @@ class Issue(BaseModel):
         choices=Effort.choices, null=True, blank=True
     )
     priority = models.PositiveSmallIntegerField(
-        choices=Priority.choices, default=Priority.COULD
+        choices=Priority.choices, default=Priority.KOENNTE
     )
     is_highlighted = models.BooleanField(default=False, db_index=True)
 

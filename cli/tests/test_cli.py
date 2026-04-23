@@ -30,12 +30,16 @@ def test_parse_issue_id_rejects_garbage():
 
 
 def test_parse_priority_csv_valid():
-    assert cli.parse_priority_csv("want, should") == ["want", "should"]
+    assert cli.parse_priority_csv("will, sollte") == ["will", "sollte"]
+
+
+def test_parse_priority_csv_accepts_jetzt():
+    assert cli.parse_priority_csv("jetzt") == ["jetzt"]
 
 
 def test_parse_priority_csv_rejects_unknown():
     with pytest.raises(argparse.ArgumentTypeError, match="nope"):
-        cli.parse_priority_csv("want,nope")
+        cli.parse_priority_csv("will,nope")
 
 
 def test_parse_priority_csv_rejects_empty():
@@ -217,7 +221,7 @@ def test_issue_new_posts_payload(cli_config, mocked_responses, capsys):
             "--title",
             "hello",
             "--priority",
-            "want",
+            "will",
             "--effort",
             "2-6h",
             "--milestone",
@@ -290,7 +294,7 @@ def test_issue_list_applies_filters(cli_config, mocked_responses, capsys):
             "--status",
             "open,wip",
             "--priority",
-            "want,should",
+            "will,sollte",
             "--milestone",
             "r1",
             "--assignee",

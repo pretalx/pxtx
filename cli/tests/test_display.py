@@ -28,7 +28,15 @@ def test_fmt_time_none():
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    ((1, "want"), (2, "should"), (3, "could"), (4, "whatev"), (5, "lol"), (9, "9")),
+    (
+        (0, "jetzt"),
+        (1, "will"),
+        (2, "sollte"),
+        (3, "könnte"),
+        (4, "egal"),
+        (5, "lol"),
+        (9, "9"),
+    ),
 )
 def test_format_priority(value, expected):
     assert format_priority(value) == expected
@@ -65,7 +73,7 @@ def test_format_issue_row_handles_missing_assignee():
 
     assert "PX-1" in row
     assert "open" in row
-    assert "should" in row
+    assert "sollte" in row
     assert "-" in row
     assert "x" in row
 
@@ -93,7 +101,7 @@ def test_format_issue_detail_full():
 
     assert "PX-7: do a thing" in text
     assert "status: blocked" in text
-    assert "priority: want" in text
+    assert "priority: will" in text
     assert "effort: 1-2h" in text
     assert "milestone: r1" in text
     assert "*highlighted*" in text

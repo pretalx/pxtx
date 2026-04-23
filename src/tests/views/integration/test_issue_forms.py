@@ -20,7 +20,7 @@ def test_create_form_renders_with_sensible_defaults(auth_client):
 
     assert response.status_code == 200
     form = response.context["form"]
-    assert form.initial["priority"] == Priority.COULD
+    assert form.initial["priority"] == Priority.KOENNTE
     assert form.initial["status"] == Status.OPEN
     assert form.initial["source"] == Source.MANUAL
     assert response.context["form_title"] == "New issue"
@@ -35,7 +35,7 @@ def test_create_issue_succeeds_and_redirects_to_detail(auth_client):
         data={
             "title": "new issue title",
             "description": "some description",
-            "priority": Priority.WANT,
+            "priority": Priority.WILL,
             "effort_minutes": 90,
             "status": Status.OPEN,
             "blocked_reason": "",
@@ -70,7 +70,7 @@ def test_create_ignores_posted_assignee(auth_client):
         data={
             "title": "no assignee for you",
             "description": "",
-            "priority": Priority.COULD,
+            "priority": Priority.KOENNTE,
             "status": Status.OPEN,
             "blocked_reason": "",
             "milestone": "",
@@ -95,7 +95,7 @@ def test_create_issue_logs_activity_with_user_actor(auth_client):
         data={
             "title": "new one",
             "description": "",
-            "priority": Priority.COULD,
+            "priority": Priority.KOENNTE,
             "status": Status.OPEN,
             "blocked_reason": "",
             "milestone": "",
@@ -116,7 +116,7 @@ def test_create_form_blocked_status_requires_reason(auth_client):
         data={
             "title": "blocked one",
             "description": "",
-            "priority": Priority.COULD,
+            "priority": Priority.KOENNTE,
             "status": Status.BLOCKED,
             "blocked_reason": "",
             "milestone": "",
@@ -140,7 +140,7 @@ def test_create_form_keeps_reason_when_status_is_blocked(auth_client):
         data={
             "title": "truly blocked",
             "description": "",
-            "priority": Priority.COULD,
+            "priority": Priority.KOENNTE,
             "status": Status.BLOCKED,
             "blocked_reason": "waiting for upstream fix",
             "milestone": "",
@@ -161,7 +161,7 @@ def test_create_form_blocks_reason_cleared_when_status_not_blocked(auth_client):
         data={
             "title": "not blocked",
             "description": "",
-            "priority": Priority.COULD,
+            "priority": Priority.KOENNTE,
             "status": Status.OPEN,
             "blocked_reason": "stray reason",
             "milestone": "",

@@ -17,7 +17,7 @@ from pxtx.display import (
     format_milestone_row,
 )
 
-PRIORITY_MAP = {"want": 1, "should": 2, "could": 3, "whatev": 4, "lol": 5}
+PRIORITY_MAP = {"jetzt": 0, "will": 1, "sollte": 2, "könnte": 3, "egal": 4, "lol": 5}
 EFFORT_MAP = {"<1h": 30, "1-2h": 90, "2-6h": 240, "1d": 480, ">1d": 960}
 
 SINCE_UNITS = {"m": "minutes", "h": "hours", "d": "days", "w": "weeks"}
@@ -378,7 +378,7 @@ def build_parser():
     lst.add_argument(
         "--priority",
         type=parse_priority_csv,
-        help="comma-separated priority labels (want,should,...)",
+        help="comma-separated priority labels (jetzt,will,sollte,...)",
     )
     lst.add_argument("--milestone")
     lst.add_argument("--mine", action="store_true", help="filter by current actor")

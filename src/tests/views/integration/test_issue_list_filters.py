@@ -41,8 +41,8 @@ def test_empty_status_param_returns_nothing(auth_client):
 
 @pytest.mark.django_db
 def test_priority_filter_multi(auth_client):
-    want = IssueFactory(priority=Priority.WANT, status=Status.OPEN)
-    should = IssueFactory(priority=Priority.SHOULD, status=Status.OPEN)
+    want = IssueFactory(priority=Priority.WILL, status=Status.OPEN)
+    should = IssueFactory(priority=Priority.SOLLTE, status=Status.OPEN)
     IssueFactory(priority=Priority.LOL, status=Status.OPEN)
 
     response = auth_client.get("/issues/?priority=1&priority=2")
@@ -196,11 +196,19 @@ def test_quick_filters_only_shown_when_matching_issues_exist(auth_client):
     IssueFactory(status=Status.WIP)
     IssueFactory(status=Status.BLOCKED, blocked_reason="x")
     IssueFactory(status=Status.DRAFT)
-    IssueFactory(priority=Priority.WANT, status=Status.OPEN)
+    IssueFactory(priority=Priority.JETZT, status=Status.OPEN)
+    IssueFactory(priority=Priority.WILL, status=Status.OPEN)
 
     response = auth_client.get("/issues/")
     labels = {qf["label"] for qf in response.context["quick_filters"]}
-    assert labels == {"★ highlighted", "🔥 want", "🔧 wip", "🚧 blocked", "📥 draft"}
+    assert labels == {
+        "★ highlighted",
+        "🔥 jetzt",
+        "💪 will",
+        "🔧 wip",
+        "🚧 blocked",
+        "📥 draft",
+    }
     # Nothing is applied yet, so no chip is marked active.
     assert all(qf["active"] is False for qf in response.context["quick_filters"])
 

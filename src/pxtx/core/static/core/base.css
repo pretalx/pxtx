@@ -9,6 +9,7 @@
     --danger: #dc2626;
     --ok: #16a34a;
     --code-bg: #f3f4f6;
+    --prio-0: #be185d;
     --prio-1: #dc2626;
     --prio-2: #d97706;
     --prio-3: #71717a;
@@ -491,11 +492,17 @@ button.secondary {
 
 .prio { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
 .prio::before { content: ""; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--prio-3); display: inline-block; }
+.prio.prio-0::before { background: var(--prio-0); animation: prio-pulse 1.4s ease-in-out infinite; }
 .prio.prio-1::before { background: var(--prio-1); }
 .prio.prio-2::before { background: var(--prio-2); }
 .prio.prio-3::before { background: var(--prio-3); }
 .prio.prio-4::before { background: var(--prio-4); }
 .prio.prio-5::before { background: var(--prio-5); }
+
+@keyframes prio-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--prio-0); }
+    50% { transform: scale(1.25); box-shadow: 0 0 0 3px rgba(190, 24, 93, 0); }
+}
 
 kbd {
     display: inline-block; padding: 0.05rem 0.4rem;

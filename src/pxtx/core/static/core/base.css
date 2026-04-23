@@ -525,8 +525,11 @@ kbd {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 .issue-modal::backdrop { background: rgba(0, 0, 0, 0.45); }
-.issue-modal .modal-shell { display: flex; flex-direction: column; max-height: 92vh; }
-.issue-modal .modal-head {
+/* Shared between the dialog (.issue-modal) and the list sidebar
+   (.issue-sidebar); both render the same _issue_modal_form fragment. */
+.modal-shell { display: flex; flex-direction: column; }
+.issue-modal .modal-shell { max-height: 92vh; }
+.modal-shell .modal-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -535,11 +538,18 @@ kbd {
     border-bottom: 1px solid var(--border);
     background: var(--bg);
 }
-.issue-modal .modal-title { display: flex; gap: 0.5rem; align-items: baseline; }
-.issue-modal .modal-title .px { font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; color: var(--text-muted); }
-.issue-modal .modal-title .modal-new-title { font-weight: 600; font-size: 1rem; }
-.issue-modal .modal-head-actions { display: flex; gap: 0.5rem; align-items: center; }
-.issue-modal .modal-head-actions .secondary {
+.modal-shell .modal-title {
+    display: flex;
+    gap: 0.4rem 0.6rem;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 0.3rem;
+}
+.modal-shell .modal-title .px { font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; color: var(--text-muted); }
+.modal-shell .modal-title .modal-new-title { font-weight: 600; font-size: 1rem; }
+.modal-shell .modal-title .star { font-size: 1rem; }
+.modal-shell .modal-head-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
+.modal-shell .modal-head-actions .secondary {
     background: var(--surface);
     color: var(--text);
     border: 1px solid var(--border);
@@ -549,12 +559,10 @@ kbd {
     text-decoration: none;
     cursor: pointer;
 }
-.issue-modal .modal-head-actions .secondary:hover { border-color: var(--accent); color: var(--accent); }
-.issue-modal .modal-form { padding: 1rem; overflow-y: auto; display: grid; gap: 1rem; }
-.issue-modal .modal-title { flex-wrap: wrap; align-items: center; }
-.issue-modal .modal-title .star { font-size: 1rem; }
-.issue-modal .issue-title { font-size: 1.35rem; line-height: 1.3; margin: 0; }
-.issue-modal .modal-meta {
+.modal-shell .modal-head-actions .secondary:hover { border-color: var(--accent); color: var(--accent); }
+.modal-shell .modal-form { padding: 1rem; overflow-y: auto; display: grid; gap: 1rem; }
+.modal-shell .issue-title { font-size: 1.35rem; line-height: 1.3; margin: 0; }
+.modal-shell .modal-meta {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
     gap: 0.6rem 0.9rem;
@@ -563,9 +571,9 @@ kbd {
     border: 1px solid var(--border);
     border-radius: 6px;
 }
-.issue-modal .modal-meta .form-field { margin-bottom: 0; flex: none; }
-.issue-modal .modal-meta .modal-meta-highlight { align-self: end; }
-.issue-modal .modal-actions { margin-top: 0.25rem; }
+.modal-shell .modal-meta .form-field { margin-bottom: 0; flex: none; }
+.modal-shell .modal-meta .modal-meta-highlight { align-self: end; }
+.modal-shell .modal-actions { margin-top: 0.25rem; }
 
 .issue-sidebar {
     border-left: 1px solid var(--border);
@@ -579,7 +587,7 @@ kbd {
     min-width: 0;
 }
 .issue-sidebar:empty { display: none; }
-.issue-sidebar .modal-shell { max-height: none; min-height: 100%; }
+.issue-sidebar .modal-shell { min-height: 100%; }
 .issue-sidebar .modal-head { position: sticky; top: 0; z-index: 1; }
 .issue-sidebar .modal-form { padding: 1rem 1.25rem; }
 .issue-sidebar .modal-meta { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }

@@ -294,15 +294,16 @@ nav.site a.new-issue { color: var(--accent); }
 .issue-table.reorderable tr.sortable-ghost { opacity: 0.35; }
 .issue-table.reorderable tr.sortable-chosen { box-shadow: inset 0 0 0 2px var(--accent); }
 
-.issue-form { max-width: 900px; }
-.issue-form .form-field { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem; }
-.issue-form .form-field.wide { width: 100%; }
+.issue-form, .milestone-form { max-width: 900px; }
+.issue-form .form-field, .milestone-form .form-field { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem; }
+.issue-form .form-field.wide, .milestone-form .form-field.wide { width: 100%; }
 .issue-form .form-field.inline { flex-direction: row; align-items: center; }
-.issue-form .form-field label { font-size: 0.85rem; color: var(--text-muted); }
-.issue-form .form-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
-.issue-form .form-row .form-field { flex: 1 1 12rem; }
-.issue-form textarea { width: 100%; font-family: ui-monospace, Menlo, monospace; }
-.issue-form input[type=text], .issue-form select { width: 100%; }
+.issue-form .form-field label, .milestone-form .form-field label { font-size: 0.85rem; color: var(--text-muted); }
+.issue-form .form-row, .milestone-form .form-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
+.issue-form .form-row .form-field, .milestone-form .form-row .form-field { flex: 1 1 12rem; }
+.issue-form textarea, .milestone-form textarea { width: 100%; font-family: ui-monospace, Menlo, monospace; }
+.issue-form input[type=text], .issue-form select,
+.milestone-form input[type=text], .milestone-form input[type=date], .milestone-form select { width: 100%; }
 .issue-form label.inline { display: inline-flex; align-items: center; gap: 0.4rem; }
 .issue-form .hidden { display: none; }
 .form-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }

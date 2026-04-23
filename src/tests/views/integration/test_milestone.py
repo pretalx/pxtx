@@ -69,6 +69,168 @@ def test_milestone_detail_requires_login(client):
     assert response.url.startswith("/login/")
 
 
+# ---- create / edit / release ------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_milestone_new_requires_login(client):
+    response = client.get("/milestones/new/")
+
+    assert response.status_code == 302
+    assert response.url.startswith("/login/")
+
+
+@pytest.mark.django_db
+def test_milestone_edit_requires_login(client):
+    milestone = MilestoneFactory()
+
+    response = client.get(f"/milestones/{milestone.slug}/edit/")
+
+    assert response.status_code == 302
+    assert response.url.startswith("/login/")
+
+
+@pytest.mark.django_db
+def test_milestone_release_requires_login(client):
+    milestone = MilestoneFactory()
+
+    response = client.post(f"/milestones/{milestone.slug}/release/")
+
+    assert response.status_code == 302
+    assert response.url.startswith("/login/")
+
+
+@pytest.mark.django_db
+def test_milestone_new_renders_form(auth_client):
+    response = auth_client.get("/milestones/new/")
+
+    assert response.status_code == 200
+    assert "New release" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_milestone_create_persists_and_redirects(auth_client):
+    from pxtx.core.models import Milestone
+
+    response = auth_client.post(
+        "/milestones/new/",
+        data={
+            "name": "Version 42",
+            "slug": "v42",
+            "description": "first shot",
+            "target_date": "2026-12-01",
+        },
+    )
+
+    milestone = Milestone.objects.get(slug="v42")
+    assert milestone.name == "Version 42"
+    assert milestone.description == "first shot"
+    assert response.status_code == 302
+    assert response.url == f"/milestones/{milestone.slug}/"
+
+
+@pytest.mark.django_db
+def test_milestone_create_autogenerates_slug_from_name(auth_client):
+    from pxtx.core.models import Milestone
+
+    auth_client.post(
+        "/milestones/new/", data={"name": "Spring 2027", "slug": "", "description": ""}
+    )
+
+    assert Milestone.objects.get(name="Spring 2027").slug == "spring-2027"
+
+
+@pytest.mark.django_db
+def test_milestone_create_surfaces_validation_errors(auth_client):
+    response = auth_client.post(
+        "/milestones/new/", data={"name": "", "slug": "", "description": ""}
+    )
+
+    assert response.status_code == 200
+    assert response.context["form"].errors
+
+
+@pytest.mark.django_db
+def test_milestone_edit_renders_prefilled_form(auth_client):
+    milestone = MilestoneFactory(name="Alpha", description="notes")
+
+    response = auth_client.get(f"/milestones/{milestone.slug}/edit/")
+
+    assert response.status_code == 200
+    assert response.context["form"].initial["name"] == "Alpha"
+
+
+@pytest.mark.django_db
+def test_milestone_edit_saves_changes(auth_client):
+    milestone = MilestoneFactory(name="Old", description="")
+
+    response = auth_client.post(
+        f"/milestones/{milestone.slug}/edit/",
+        data={
+            "name": "New name",
+            "slug": milestone.slug,
+            "description": "updated",
+            "target_date": "",
+        },
+    )
+
+    milestone.refresh_from_db()
+    assert milestone.name == "New name"
+    assert milestone.description == "updated"
+    assert response.status_code == 302
+    assert response.url == f"/milestones/{milestone.slug}/"
+
+
+@pytest.mark.django_db
+def test_milestone_release_sets_released_at(auth_client):
+    milestone = MilestoneFactory(released_at=None)
+
+    response = auth_client.post(f"/milestones/{milestone.slug}/release/")
+
+    milestone.refresh_from_db()
+    assert milestone.is_released
+    assert response.status_code == 302
+    assert response.url == f"/milestones/{milestone.slug}/"
+
+
+@pytest.mark.django_db
+def test_milestone_release_toggle_reopens(auth_client):
+    milestone = MilestoneFactory(released_at=timezone.now())
+
+    auth_client.post(f"/milestones/{milestone.slug}/release/")
+
+    milestone.refresh_from_db()
+    assert not milestone.is_released
+
+
+@pytest.mark.django_db
+def test_milestone_detail_shows_edit_and_release_controls(auth_client):
+    milestone = MilestoneFactory(released_at=None)
+
+    response = auth_client.get(f"/milestones/{milestone.slug}/")
+
+    body = response.content.decode()
+    assert f"/milestones/{milestone.slug}/edit/" in body
+    assert f"/milestones/{milestone.slug}/release/" in body
+    assert "Mark released" in body
+
+
+@pytest.mark.django_db
+def test_milestone_detail_shows_reopen_when_released(auth_client):
+    milestone = MilestoneFactory(released_at=timezone.now())
+
+    response = auth_client.get(f"/milestones/{milestone.slug}/")
+
+    assert "Reopen release" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_milestone_list_links_to_create(auth_client):
+    response = auth_client.get("/milestones/")
+
+    assert "/milestones/new/" in response.content.decode()
+
+
 # ---- kanban rendering -------------------------------------------------------
 
 

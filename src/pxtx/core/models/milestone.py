@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 
 from pxtx.core.models.base import BaseModel
 
@@ -15,6 +16,9 @@ class Milestone(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse("core:milestone-detail", kwargs={"slug": self.slug})
 
     @property
     def is_released(self):

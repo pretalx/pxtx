@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.text import slugify
 
 from pxtx.core.models import Comment, Issue, Milestone, Status
 
@@ -45,6 +46,29 @@ class IssueForm(forms.ModelForm):
         elif status != Status.BLOCKED:
             cleaned["blocked_reason"] = ""
         return cleaned
+
+
+class MilestoneForm(forms.ModelForm):
+    class Meta:
+        model = Milestone
+        fields = ("name", "slug", "description", "target_date")
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True}),
+            "description": forms.Textarea(attrs={"rows": 6}),
+            "target_date": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["description"].required = False
+        self.fields["slug"].required = False
+        self.fields["slug"].help_text = "Auto-generated from the name if empty."
+
+    def clean_slug(self):
+        slug = (self.cleaned_data.get("slug") or "").strip()
+        if slug:
+            return slug
+        return slugify(self.cleaned_data.get("name") or "")[:50]
 
 
 class CommentForm(forms.ModelForm):

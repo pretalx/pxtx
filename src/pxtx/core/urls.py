@@ -54,10 +54,21 @@ urlpatterns = [
         "comments/<int:pk>/edit/", views.CommentEditView.as_view(), name="comment-edit"
     ),
     path("milestones/", views.MilestoneListView.as_view(), name="milestone-list"),
+    path("milestones/new/", views.MilestoneCreateView.as_view(), name="milestone-new"),
     path(
         "milestones/<slug:slug>/",
         views.MilestoneDetailView.as_view(),
         name="milestone-detail",
+    ),
+    path(
+        "milestones/<slug:slug>/edit/",
+        views.MilestoneUpdateView.as_view(),
+        name="milestone-edit",
+    ),
+    path(
+        "milestones/<slug:slug>/release/",
+        views.MilestoneReleaseToggleView.as_view(),
+        name="milestone-release",
     ),
     path(
         "milestones/<slug:slug>/move/",

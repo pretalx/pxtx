@@ -2,10 +2,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponseBadRequest
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView, ListView
+from django.views.generic.edit import CreateView, UpdateView
 
+from pxtx.core.forms import MilestoneForm
 from pxtx.core.models import Issue, Milestone, Status
 from pxtx.core.views._helpers import request_actor
 
@@ -45,6 +49,44 @@ class MilestoneListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return Milestone.objects.annotate(issue_count=Count("issues"))
+
+
+class MilestoneCreateView(LoginRequiredMixin, CreateView):
+    model = Milestone
+    form_class = MilestoneForm
+    template_name = "core/milestone_form.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["form_title"] = "New release"
+        ctx["submit_label"] = "Create release"
+        ctx["cancel_url"] = reverse_lazy("core:milestone-list")
+        return ctx
+
+
+class MilestoneUpdateView(LoginRequiredMixin, UpdateView):
+    model = Milestone
+    form_class = MilestoneForm
+    template_name = "core/milestone_form.html"
+    slug_url_kwarg = "slug"
+    slug_field = "slug"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["form_title"] = f"Edit {self.object.name}"
+        ctx["submit_label"] = "Save changes"
+        ctx["cancel_url"] = self.object.get_absolute_url()
+        return ctx
+
+
+class MilestoneReleaseToggleView(LoginRequiredMixin, View):
+    """Flip ``released_at`` between ``now`` and ``None``. POST-only."""
+
+    def post(self, request, slug):
+        milestone = get_object_or_404(Milestone, slug=slug)
+        milestone.released_at = None if milestone.is_released else timezone.now()
+        milestone.save()
+        return redirect(milestone.get_absolute_url())
 
 
 class MilestoneDetailView(LoginRequiredMixin, DetailView):

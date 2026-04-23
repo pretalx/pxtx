@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+{% block title %}{{ form_title }} – pxtx{% endblock %}
+{% block content %}
+<h1>{{ form_title }}</h1>
+
+<form method="post" class="issue-form milestone-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<p class="error">{{ form.non_field_errors }}</p>{% endif %}
+
+    <div class="form-field wide">
+        <label for="{{ form.name.id_for_label }}">Name</label>
+        {{ form.name }}
+        {% if form.name.errors %}<p class="error">{{ form.name.errors|join:", " }}</p>{% endif %}
+    </div>
+
+    <div class="form-row">
+        <div class="form-field">
+            <label for="{{ form.slug.id_for_label }}">Slug</label>
+            {{ form.slug }}
+            <p class="meta">{{ form.slug.help_text }}</p>
+            {% if form.slug.errors %}<p class="error">{{ form.slug.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div class="form-field">
+            <label for="{{ form.target_date.id_for_label }}">Target date</label>
+            {{ form.target_date }}
+            {% if form.target_date.errors %}<p class="error">{{ form.target_date.errors|join:", " }}</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="form-field wide">
+        <label for="{{ form.description.id_for_label }}">Description (markdown)</label>
+        {{ form.description }}
+        {% if form.description.errors %}<p class="error">{{ form.description.errors|join:", " }}</p>{% endif %}
+    </div>
+
+    <div class="form-actions">
+        <button type="submit">{{ submit_label }}</button>
+        <a href="{{ cancel_url }}" class="secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}

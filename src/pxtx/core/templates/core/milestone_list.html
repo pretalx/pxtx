@@ -1,7 +1,7 @@
 {% extends "core/base.html" %}
 {% block title %}Releases – pxtx{% endblock %}
 {% block content %}
-<h1>Releases</h1>
+<h1>Releases <a class="new-issue" href="{% url 'core:milestone-new' %}">+ New</a></h1>
 <div class="card">
     {% if milestones %}
     <table>
@@ -33,7 +33,7 @@
     {% else %}
     <div class="empty">
         <p>No releases yet.</p>
-        <p class="meta">Add one from the <a href="{% url 'admin:core_milestone_add' %}">Django admin</a>; milestone management is admin-only in v1.</p>
+        <p><a href="{% url 'core:milestone-new' %}">Create the first one</a>.</p>
     </div>
     {% endif %}
 </div>

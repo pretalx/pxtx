@@ -17,9 +17,12 @@ from pxtx.core.views.issue import (
     render_markdown_preview,
 )
 from pxtx.core.views.milestone import (
+    MilestoneCreateView,
     MilestoneDetailView,
     MilestoneKanbanMoveView,
     MilestoneListView,
+    MilestoneReleaseToggleView,
+    MilestoneUpdateView,
 )
 
 __all__ = [
@@ -35,9 +38,12 @@ __all__ = [
     "IssueModalEditView",
     "IssueReorderView",
     "IssueUpdateView",
+    "MilestoneCreateView",
     "MilestoneDetailView",
     "MilestoneKanbanMoveView",
     "MilestoneListView",
+    "MilestoneReleaseToggleView",
+    "MilestoneUpdateView",
     "blocked_reason_field",
     "dashboard",
     "healthz",

@@ -24,6 +24,17 @@
     <h2 class="spaced">Description</h2>
     <div class="prose">{{ milestone.description|rich_text }}</div>
     {% endif %}
+    <div class="form-actions spaced">
+        <a class="secondary" href="{% url 'core:milestone-edit' slug=milestone.slug %}">Edit</a>
+        <form method="post" action="{% url 'core:milestone-release' slug=milestone.slug %}">
+            {% csrf_token %}
+            {% if milestone.is_released %}
+            <button type="submit" class="secondary">Reopen release</button>
+            {% else %}
+            <button type="submit">Mark released</button>
+            {% endif %}
+        </form>
+    </div>
 </div>
 
 <h2>Board</h2>

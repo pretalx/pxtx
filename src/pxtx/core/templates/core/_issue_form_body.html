@@ -34,10 +34,12 @@
         <label for="{{ form.milestone.id_for_label }}">Release</label>
         {{ form.milestone }}
     </div>
+    {% if form.assignee %}
     <div class="form-field">
         <label for="{{ form.assignee.id_for_label }}">Assignee</label>
         {{ form.assignee }}
     </div>
+    {% endif %}
     <div class="form-field">
         <label for="{{ form.source.id_for_label }}">Source</label>
         {{ form.source }}

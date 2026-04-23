@@ -53,10 +53,12 @@
                 <label for="{{ form.milestone.id_for_label }}">Release</label>
                 {{ form.milestone }}
             </div>
+            {% if form.assignee %}
             <div class="form-field">
                 <label for="{{ form.assignee.id_for_label }}">Assignee</label>
                 {{ form.assignee }}
             </div>
+            {% endif %}
             <div class="form-field">
                 <label for="{{ form.source.id_for_label }}">Source</label>
                 {{ form.source }}
@@ -71,7 +73,7 @@
 
         {% include "core/_blocked_reason.html" with field=form.blocked_reason show=blocked_reason_visible %}
 
-        <div class="inline-edit inline-edit-description{% if form.description.errors %} editing{% endif %}"
+        <div class="inline-edit inline-edit-description{% if form.description.errors or not issue %} editing{% endif %}"
              data-inline-edit>
             <div class="inline-edit-head">
                 <label for="{{ form.description.id_for_label }}" class="meta">Description (markdown)</label>

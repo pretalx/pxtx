@@ -677,6 +677,11 @@ def test_modal_create_get_returns_form_fragment(auth_client):
     assert "New issue" in body
     # The title block starts in editing mode so the user can type immediately.
     assert "inline-edit-title editing" in body
+    # The description block also starts in editing mode so users can type it
+    # without having to click-to-edit first on a brand-new issue.
+    assert "inline-edit-description editing" in body
+    # Assignee is not part of issue creation — only surfaces on edit.
+    assert 'name="assignee"' not in body
     assert "Create issue" in body
 
 
@@ -705,7 +710,6 @@ def test_modal_create_post_creates_and_signals_redirect(auth_client):
             "status": Status.OPEN,
             "blocked_reason": "",
             "milestone": "",
-            "assignee": "rixx",
             "source": Source.MANUAL,
         },
     )
@@ -714,7 +718,7 @@ def test_modal_create_post_creates_and_signals_redirect(auth_client):
     assert response.status_code == 204
     # htmx follows HX-Redirect natively → full page nav to the new issue.
     assert response["HX-Redirect"] == f"/issues/{issue.number}/"
-    assert issue.assignee == "rixx"
+    assert issue.assignee == ""
 
 
 @pytest.mark.django_db

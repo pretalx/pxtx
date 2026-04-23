@@ -40,7 +40,6 @@ def test_create_issue_succeeds_and_redirects_to_detail(auth_client):
             "status": Status.OPEN,
             "blocked_reason": "",
             "milestone": milestone.pk,
-            "assignee": "claude",
             "is_highlighted": "on",
             "source": Source.MANUAL,
         },
@@ -49,9 +48,39 @@ def test_create_issue_succeeds_and_redirects_to_detail(auth_client):
     issue = Issue.objects.get(title="new issue title")
     assert response.status_code == 302
     assert response.url == f"/issues/{issue.number}/"
-    assert issue.assignee == "claude"
+    assert issue.assignee == ""
     assert issue.is_highlighted is True
     assert issue.milestone == milestone
+
+
+@pytest.mark.django_db
+def test_create_form_has_no_assignee_field(auth_client):
+    response = auth_client.get("/issues/new/")
+
+    assert response.status_code == 200
+    assert "assignee" not in response.context["form"].fields
+    body = response.content.decode()
+    assert 'name="assignee"' not in body
+
+
+@pytest.mark.django_db
+def test_create_ignores_posted_assignee(auth_client):
+    auth_client.post(
+        "/issues/new/",
+        data={
+            "title": "no assignee for you",
+            "description": "",
+            "priority": Priority.COULD,
+            "status": Status.OPEN,
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "smuggled-in",
+            "source": Source.MANUAL,
+        },
+    )
+
+    issue = Issue.objects.get(title="no assignee for you")
+    assert issue.assignee == ""
 
 
 @pytest.mark.django_db

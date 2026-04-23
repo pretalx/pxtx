@@ -49,6 +49,8 @@ class IssueForm(forms.ModelForm):
         self.fields["milestone"].empty_label = "— none —"
         self.fields["blocked_reason"].required = False
         self.fields["description"].required = False
+        if self.instance.pk is None:
+            self.fields.pop("assignee")
 
     def clean(self):
         cleaned = super().clean()

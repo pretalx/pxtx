@@ -32,6 +32,18 @@ function initChoices(root) {
     scope.querySelectorAll("select.enhanced:not([data-choices-init])").forEach((select) => {
         select.setAttribute("data-choices-init", "1");
         decorateOptionsWithBadges(select);
+        // Choices.js copies `option.innerHTML` as the label. For labels with
+        // HTML entities (e.g. "<1h", ">1d"), innerHTML returns the entity-
+        // escaped form (`&gt;1d`), which Choices then re-escapes under
+        // allowHTML:false, so the dropdown ends up showing "&gt;1d". Capture
+        // the decoded textContent up front so we can re-seed labels below.
+        const seeded = Array.from(select.options).map((opt) => ({
+            value: opt.value,
+            label: opt.textContent,
+            selected: opt.selected,
+            disabled: opt.disabled,
+            labelClass: opt.dataset.labelClass || undefined,
+        }));
         const inlineEdit = !!select.dataset.inlineEdit;
         const options = {
             removeItemButton: select.multiple,
@@ -45,6 +57,7 @@ function initChoices(root) {
         };
         if (inlineEdit) options.searchEnabled = false;
         const instance = new Choices(select, options);
+        instance.setChoices(seeded, "value", "label", true);
         select._choicesInstance = instance;
         if (inlineEdit) {
             // autofocus on the now-hidden native select does nothing; pop the

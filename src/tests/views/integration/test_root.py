@@ -7,11 +7,18 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.mark.django_db
-def test_root_redirects_anonymous_to_login(client):
+def test_root_redirects_to_issue_list(client):
     response = client.get("/")
 
     assert response.status_code == 302
-    assert response.url.startswith("/login/")
+    assert response.url == "/issues/"
+
+
+@pytest.mark.django_db
+def test_root_redirects_anonymous_to_login(client):
+    response = client.get("/", follow=True)
+
+    assert response.redirect_chain[-1][0].startswith("/login/")
 
 
 @pytest.mark.django_db
@@ -19,7 +26,7 @@ def test_dashboard_renders_for_authenticated_user(client):
     user = UserFactory()
     client.force_login(user)
 
-    response = client.get("/")
+    response = client.get("/dashboard/")
 
     assert response.status_code == 200
     assert "core/dashboard.html" in [t.name for t in response.templates]
@@ -43,7 +50,7 @@ def test_dashboard_groups_issues_by_section(client):
     # section — we don't want the dashboard to accumulate shipped work.
     closed_highlighted = IssueFactory(status=Status.COMPLETED, is_highlighted=True)
 
-    response = client.get("/")
+    response = client.get("/dashboard/")
 
     assert list(response.context["highlighted"]) == [highlighted]
     assert list(response.context["wip"]) == [wip]

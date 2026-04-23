@@ -1,11 +1,13 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from pxtx.core import views
 
 app_name = "core"
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
+    path("", RedirectView.as_view(pattern_name="core:issue-list", permanent=False)),
+    path("dashboard/", views.dashboard, name="dashboard"),
     path("issues/", views.IssueListView.as_view(), name="issue-list"),
     path("issues/new/", views.IssueCreateView.as_view(), name="issue-new"),
     path(

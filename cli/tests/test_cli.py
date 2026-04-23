@@ -453,6 +453,65 @@ def test_issue_show_json_without_comments(cli_config, mocked_responses, capsys):
     assert '"comments"' not in out
 
 
+def test_issue_set_priority_only(cli_config, mocked_responses, capsys):
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/", json={"slug": "PX-47", "number": 47, "priority": 0}
+    )
+
+    code = cli.main(["issue", "set", "PX-47", "--priority", "jetzt"])
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body == {"priority": 0}
+    out = capsys.readouterr().out
+    assert "PX-47 updated: priority=jetzt" in out
+
+
+def test_issue_set_effort_only(cli_config, mocked_responses, capsys):
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/",
+        json={"slug": "PX-47", "number": 47, "effort_minutes": 240},
+    )
+
+    code = cli.main(["issue", "set", "47", "--effort", "2-6h"])
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body == {"effort_minutes": 240}
+    assert "PX-47 updated: effort=2-6h" in capsys.readouterr().out
+
+
+def test_issue_set_both_fields(cli_config, mocked_responses, capsys):
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/",
+        json={"slug": "PX-47", "number": 47, "priority": 1, "effort_minutes": 90},
+    )
+
+    code = cli.main(["issue", "set", "47", "--priority", "will", "--effort", "1-2h"])
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body == {"priority": 1, "effort_minutes": 90}
+    assert "priority=will, effort=1-2h" in capsys.readouterr().out
+
+
+def test_issue_set_without_fields_errors(cli_config, capsys):
+    code = cli.main(["issue", "set", "47"])
+
+    assert code == 2
+    assert "at least one" in capsys.readouterr().err
+
+
+def test_issue_set_json_output(cli_config, mocked_responses, capsys):
+    mocked_responses.patch(
+        f"{URL}/api/v1/issues/47/", json={"slug": "PX-47", "number": 47, "priority": 0}
+    )
+
+    cli.main(["--json", "issue", "set", "47", "--priority", "jetzt"])
+
+    assert '"priority": 0' in capsys.readouterr().out
+
+
 def test_issue_close_defaults_to_completed(cli_config, mocked_responses, capsys):
     mocked_responses.post(
         f"{URL}/api/v1/issues/5/completed/",

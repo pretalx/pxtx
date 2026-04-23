@@ -26,16 +26,17 @@ uvx pxtx <subcommand>
 ## Commands
 
 ```
-pxtx issue new --title "..." [--priority want|should|could|whatev|lol]
+pxtx issue new --title "..." [--priority jetzt|will|sollte|könnte|egal|lol]
                              [--effort <1h|1-2h|2-6h|1d|>1d]
                              [--milestone 25.1] [--description "..."]
                              [--assignee name]
                              [--github-issue <ref>]
 pxtx issue list [--status open,wip,blocked]
-                [--priority want,should] [--milestone 25.1]
+                [--priority will,sollte] [--milestone 25.1]
                 [--mine] [--assignee name]
                 [--highlighted] [--search "term"]
 pxtx issue show PX-47 [--comments]
+pxtx issue set PX-47 [--priority will] [--effort 2-6h]   # narrow edit
 pxtx issue close PX-47 [--wontfix]
 pxtx issue comment PX-47 "message"        # or: --stdin
 pxtx take PX-47                           # assignee=you, status=wip
@@ -100,7 +101,7 @@ picking up work is one command.
 ```
 uvx pxtx issue list --mine --status open,wip
 uvx pxtx issue list --highlighted
-uvx pxtx issue list --priority want,should --status open
+uvx pxtx issue list --priority jetzt,will,sollte --status open
 ```
 
 **"I'll take this one."** Claim it (assigns to you + moves to wip) in one shot:
@@ -117,6 +118,16 @@ uvx pxtx pr PX-47 https://github.com/pretalx/pretalx/pull/9912
 # or: uvx pxtx pr PX-47 pretalx/pretalx#9912
 ```
 
+**"Bump priority / effort on a ticket."** `issue set` is the only edit
+path — title, description, assignee, and milestone are off-limits to the
+CLI by design:
+
+```
+uvx pxtx issue set PX-47 --priority jetzt
+uvx pxtx issue set PX-47 --effort 2-6h
+uvx pxtx issue set PX-47 --priority will --effort 1-2h
+```
+
 **"Close this one, I shipped it."** Add a closing comment, then close:
 
 ```
@@ -131,7 +142,7 @@ silently; the comment is the audit trail.
 
 ```
 uvx pxtx issue list --search "rate limit"
-uvx pxtx issue new --title "..." --priority should --description "$(cat <<'EOF'
+uvx pxtx issue new --title "..." --priority sollte --description "$(cat <<'EOF'
 Steps to reproduce
 ...
 EOF
@@ -146,7 +157,7 @@ call — the `--github-issue` flag takes the same ref forms as `issue-ref`
 `github.com/.../issues/N` URL):
 
 ```
-uvx pxtx issue new --title "..." --priority should \
+uvx pxtx issue new --title "..." --priority sollte \
     --github-issue pretalx/pretalx#9912
 ```
 

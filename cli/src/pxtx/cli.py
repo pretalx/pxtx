@@ -182,6 +182,32 @@ def cmd_issue_show(args, client, config):
     print(format_issue_detail(issue, comments))
 
 
+def cmd_issue_set(args, client, config):
+    """Set priority and/or effort on an issue.
+
+    Intentionally narrow: title, description, assignee, and milestone stay
+    off-limits for the CLI per CLAUDE.md — the human owns those. If the user
+    ever asks to widen this, extend the flag set here, not the server.
+    """
+    payload = {}
+    if args.priority is not None:
+        payload["priority"] = PRIORITY_MAP[args.priority]
+    if args.effort is not None:
+        payload["effort_minutes"] = EFFORT_MAP[args.effort]
+    if not payload:
+        raise CliError("set needs at least one of --priority or --effort")
+    issue = client.update_issue(args.number, payload)
+    if args.json:
+        print_json(issue)
+        return
+    bits = []
+    if "priority" in payload:
+        bits.append(f"priority={args.priority}")
+    if "effort_minutes" in payload:
+        bits.append(f"effort={args.effort}")
+    print(f"{issue['slug']} updated: {', '.join(bits)}")
+
+
 def cmd_issue_take(args, client, config):
     """Claim an issue: set assignee to the current actor and status to wip."""
     if not client.actor:
@@ -391,6 +417,12 @@ def build_parser():
     show.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
     show.add_argument("--comments", action="store_true")
     show.set_defaults(func=cmd_issue_show)
+
+    set_ = issue_sub.add_parser("set", help="set priority/effort on an issue")
+    set_.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
+    set_.add_argument("--priority", choices=list(PRIORITY_MAP))
+    set_.add_argument("--effort", choices=list(EFFORT_MAP))
+    set_.set_defaults(func=cmd_issue_set)
 
     close = issue_sub.add_parser("close", help="close an issue")
     close.add_argument("number", type=parse_issue_id)

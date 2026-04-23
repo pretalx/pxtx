@@ -448,3 +448,153 @@ def test_issue_detail_exposes_activity_log(auth_client):
 
     actions = {entry.action_type for entry in response.context["activity"]}
     assert "pxtx.issue.create" in actions
+
+
+# ---- modal edit -------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_modal_edit_get_returns_form_fragment_without_chrome(auth_client):
+    issue = IssueFactory(title="modal me")
+
+    response = auth_client.get(f"/issues/{issue.number}/modal-edit/")
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    # Fragment: no site nav, but a form with issue slug and the title value.
+    assert "<nav" not in body
+    assert issue.slug in body
+    assert 'value="modal me"' in body
+    assert 'hx-post="/issues/' in body
+
+
+@pytest.mark.django_db
+def test_modal_edit_get_renders_blocked_reason_field_when_blocked(auth_client):
+    from pxtx.core.models import Status
+
+    issue = IssueFactory(status=Status.BLOCKED, blocked_reason="waiting")
+
+    response = auth_client.get(f"/issues/{issue.number}/modal-edit/")
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    # The wrap container should not carry the hidden class for a blocked issue.
+    wrap = body.split('id="blocked-reason-wrap"')[1].split(">")[0]
+    assert "hidden" not in wrap
+
+
+@pytest.mark.django_db
+def test_modal_edit_post_saves_and_signals_close(auth_client):
+    issue = IssueFactory(title="before", assignee="")
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/modal-edit/",
+        data={
+            "title": "after",
+            "description": "",
+            "priority": issue.priority,
+            "status": issue.status,
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "modal-owner",
+            "source": issue.source,
+        },
+    )
+
+    assert response.status_code == 204
+    # Client listens for this event to close the dialog + refresh the list.
+    assert response["HX-Trigger"] == "pxtx:issue-saved"
+    issue.refresh_from_db()
+    assert issue.title == "after"
+    assert issue.assignee == "modal-owner"
+
+
+@pytest.mark.django_db
+def test_modal_edit_post_logs_activity_with_user_actor(auth_client):
+    from tests.factories import UserFactory
+
+    user = UserFactory(username="rixx")
+    auth_client.force_login(user)
+    issue = IssueFactory(title="before")
+    before = ActivityLog.objects.filter(object_id=issue.pk).count()
+
+    auth_client.post(
+        f"/issues/{issue.number}/modal-edit/",
+        data={
+            "title": "after",
+            "description": "",
+            "priority": issue.priority,
+            "status": issue.status,
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "",
+            "source": issue.source,
+        },
+    )
+
+    new_logs = ActivityLog.objects.filter(object_id=issue.pk).order_by("-timestamp")
+    assert new_logs.count() > before
+    assert new_logs.first().actor == "user/rixx"
+
+
+@pytest.mark.django_db
+def test_modal_edit_post_with_errors_rerenders_form_without_trigger(auth_client):
+    from pxtx.core.models import Status
+
+    issue = IssueFactory(status=Status.OPEN)
+
+    response = auth_client.post(
+        f"/issues/{issue.number}/modal-edit/",
+        data={
+            "title": "still here",
+            "description": "",
+            "priority": issue.priority,
+            "status": Status.BLOCKED,  # without a reason — should fail.
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "",
+            "source": issue.source,
+        },
+    )
+
+    assert response.status_code == 200
+    assert "HX-Trigger" not in response
+    issue.refresh_from_db()
+    assert issue.status == Status.OPEN.value
+    body = response.content.decode()
+    assert "A reason is required" in body
+
+
+@pytest.mark.django_db
+def test_modal_edit_requires_login(client):
+    issue = IssueFactory()
+
+    response = client.get(f"/issues/{issue.number}/modal-edit/")
+
+    assert response.status_code == 302
+    assert response.url.startswith("/login/")
+
+
+@pytest.mark.django_db
+def test_issue_list_rows_link_to_modal_edit(auth_client):
+    issue = IssueFactory()
+
+    response = auth_client.get("/issues/")
+
+    body = response.content.decode()
+    assert f'hx-get="/issues/{issue.number}/modal-edit/"' in body
+    assert 'hx-target="#issue-modal"' in body
+
+
+@pytest.mark.django_db
+def test_kanban_cards_link_to_modal_edit(auth_client):
+    from tests.factories import MilestoneFactory
+
+    milestone = MilestoneFactory(slug="rel-1")
+    issue = IssueFactory(milestone=milestone)
+
+    response = auth_client.get(f"/milestones/{milestone.slug}/")
+
+    body = response.content.decode()
+    assert f'hx-get="/issues/{issue.number}/modal-edit/"' in body
+    assert 'hx-target="#issue-modal"' in body

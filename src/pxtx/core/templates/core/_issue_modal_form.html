@@ -1,0 +1,26 @@
+{# Modal contents for the list/kanban edit dialog. Swapped into #issue-modal
+   via htmx; on save the server answers 204 + HX-Trigger to close us. #}
+<div class="modal-shell">
+    <header class="modal-head">
+        <div class="modal-title">
+            <span class="px">{{ issue.slug }}</span>
+            <span class="meta">Edit</span>
+        </div>
+        <div class="modal-head-actions">
+            <a href="{{ issue.get_absolute_url }}" class="secondary">Open full page</a>
+            <button type="button" class="secondary" data-modal-close aria-label="Close">×</button>
+        </div>
+    </header>
+    <form method="post"
+          class="issue-form modal-form"
+          hx-post="{% url 'core:issue-modal-edit' number=issue.number %}"
+          hx-target="#issue-modal"
+          hx-swap="innerHTML">
+        {% include "core/_issue_form_body.html" %}
+
+        <div class="form-actions">
+            <button type="submit">Save changes</button>
+            <button type="button" class="secondary" data-modal-close>Cancel</button>
+        </div>
+    </form>
+</div>

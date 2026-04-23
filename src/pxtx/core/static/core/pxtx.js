@@ -150,6 +150,77 @@ function initDeployPollers(root) {
 document.addEventListener("htmx:afterSwap", () => initDeployPollers(document));
 document.addEventListener("DOMContentLoaded", () => initDeployPollers(document));
 
+// Issue edit modal wiring for the list and kanban views. Clicking an issue
+// title triggers an htmx GET into #issue-modal; once the form fragment is in
+// the DOM we pop the dialog open. On save, the server answers 204 +
+// `HX-Trigger: pxtx:issue-saved`; we close the dialog and refresh whichever
+// container is on screen so sort/filter state stays honest without a full
+// page reload. Validation errors keep the dialog open because the server
+// re-renders the fragment back into #issue-modal (no trigger fires).
+function getIssueModal() {
+    return document.getElementById("issue-modal");
+}
+
+function closeIssueModal() {
+    const modal = getIssueModal();
+    if (!modal) return;
+    if (modal.open) modal.close();
+    modal.innerHTML = "";
+}
+
+document.addEventListener("htmx:afterSwap", (event) => {
+    const target = event.target;
+    if (!target || target.id !== "issue-modal") return;
+    if (!target.innerHTML.trim()) return;
+    if (typeof target.showModal !== "function") return;
+    if (!target.open) target.showModal();
+});
+
+document.addEventListener("click", (event) => {
+    const closer = event.target.closest("[data-modal-close]");
+    if (!closer) return;
+    const modal = closer.closest("dialog.issue-modal");
+    if (!modal) return;
+    event.preventDefault();
+    closeIssueModal();
+});
+
+document.addEventListener("click", (event) => {
+    const modal = getIssueModal();
+    if (!modal || !modal.open) return;
+    // <dialog> treats clicks on the backdrop as events on itself.
+    if (event.target === modal) closeIssueModal();
+});
+
+document.addEventListener("close", (event) => {
+    // Clear stale form HTML so the next open fetches fresh contents.
+    if (event.target && event.target.id === "issue-modal") {
+        event.target.innerHTML = "";
+    }
+}, true);
+
+document.addEventListener("pxtx:issue-saved", () => {
+    closeIssueModal();
+    if (!window.htmx) return;
+    const table = document.getElementById("issue-table");
+    if (table) {
+        window.htmx.ajax("GET", window.location.href, {
+            target: "#issue-table",
+            swap: "outerHTML",
+            select: "#issue-table",
+        });
+        return;
+    }
+    const board = document.querySelector(".kanban");
+    if (board) {
+        window.htmx.ajax("GET", window.location.href, {
+            target: ".kanban",
+            swap: "outerHTML",
+            select: ".kanban",
+        });
+    }
+});
+
 // Inline-editable list cells: once an <select> is in the DOM, a change event
 // POSTs the new value (htmx handles that). If the user opens the select and
 // clicks away without picking anything different, no `change` fires and the

@@ -58,5 +58,6 @@
     <main>
         {% block content %}{% endblock %}
     </main>
+    {% if user.is_authenticated %}<dialog id="issue-modal" class="issue-modal"></dialog>{% endif %}
 </body>
 </html>

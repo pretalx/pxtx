@@ -21,6 +21,11 @@ urlpatterns = [
         "issues/<int:number>/edit/", views.IssueUpdateView.as_view(), name="issue-edit"
     ),
     path(
+        "issues/<int:number>/modal-edit/",
+        views.IssueModalEditView.as_view(),
+        name="issue-modal-edit",
+    ),
+    path(
         "issues/<int:number>/highlight/",
         views.IssueHighlightToggleView.as_view(),
         name="issue-highlight",

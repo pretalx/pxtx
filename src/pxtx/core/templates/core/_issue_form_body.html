@@ -1,0 +1,67 @@
+{% csrf_token %}
+{% if form.non_field_errors %}<p class="error">{{ form.non_field_errors }}</p>{% endif %}
+
+<div class="form-field wide">
+    <label for="{{ form.title.id_for_label }}">Title</label>
+    {{ form.title }}
+    {% if form.title.errors %}<p class="error">{{ form.title.errors|join:", " }}</p>{% endif %}
+</div>
+
+<div class="form-field wide">
+    <label for="{{ form.description.id_for_label }}">Description (markdown)</label>
+    {{ form.description }}
+    <div class="form-preview-controls">
+        <button type="button" class="secondary" data-preview-toggle
+                data-preview-target="#description-preview"
+                data-preview-source="#{{ form.description.id_for_label }}"
+                hx-post="{% url 'core:issue-markdown-preview' %}"
+                hx-vals='js:{text: document.getElementById("{{ form.description.id_for_label }}").value}'
+                hx-target="#description-preview" hx-swap="innerHTML">Preview</button>
+    </div>
+    <div id="description-preview" class="prose preview" hidden></div>
+</div>
+
+<div class="form-row">
+    <div class="form-field">
+        <label for="{{ form.priority.id_for_label }}">Priority</label>
+        {{ form.priority }}
+    </div>
+    <div class="form-field">
+        <label for="{{ form.effort_minutes.id_for_label }}">Effort</label>
+        {{ form.effort_minutes }}
+    </div>
+    <div class="form-field">
+        <label for="{{ form.status.id_for_label }}">Status</label>
+        <select name="status" id="{{ form.status.id_for_label }}"
+                hx-get="{% url 'core:issue-blocked-reason' %}"
+                hx-target="#blocked-reason-wrap" hx-swap="outerHTML"
+                hx-trigger="change">
+            {% for value, label in form.status.field.choices %}
+            <option value="{{ value }}" {% if form.status.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+{% include "core/_blocked_reason.html" with field=form.blocked_reason show=blocked_reason_visible %}
+
+<div class="form-row">
+    <div class="form-field">
+        <label for="{{ form.milestone.id_for_label }}">Release</label>
+        {{ form.milestone }}
+    </div>
+    <div class="form-field">
+        <label for="{{ form.assignee.id_for_label }}">Assignee</label>
+        {{ form.assignee }}
+    </div>
+    <div class="form-field">
+        <label for="{{ form.source.id_for_label }}">Source</label>
+        {{ form.source }}
+    </div>
+    <div class="form-field inline">
+        <label class="inline">
+            {{ form.is_highlighted }}
+            <span>Highlighted</span>
+        </label>
+    </div>
+</div>

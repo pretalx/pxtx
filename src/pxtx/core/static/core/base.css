@@ -476,6 +476,43 @@ kbd {
 .help-dialog h2 { margin-bottom: 0.75rem; }
 .help-dialog dl.kv { grid-template-columns: max-content 1fr; gap: 0.4rem 1rem; }
 .help-dialog dl.kv dt { color: var(--text); display: flex; gap: 0.25rem; align-items: center; }
+
+.issue-modal {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0;
+    width: min(920px, 95vw);
+    max-height: 92vh;
+    background: var(--surface);
+    color: var(--text);
+    overflow: hidden;
+}
+.issue-modal::backdrop { background: rgba(0, 0, 0, 0.45); }
+.issue-modal .modal-shell { display: flex; flex-direction: column; max-height: 92vh; }
+.issue-modal .modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+}
+.issue-modal .modal-title { display: flex; gap: 0.5rem; align-items: baseline; }
+.issue-modal .modal-title .px { font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; color: var(--text-muted); }
+.issue-modal .modal-head-actions { display: flex; gap: 0.5rem; align-items: center; }
+.issue-modal .modal-head-actions .secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 0.25rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+.issue-modal .modal-head-actions .secondary:hover { border-color: var(--accent); color: var(--accent); }
+.issue-modal .modal-form { padding: 1rem; overflow-y: auto; }
 body[data-g-prefix]::after {
     content: "g…";
     position: fixed; bottom: 1rem; right: 1rem;

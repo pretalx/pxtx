@@ -274,6 +274,42 @@ class IssueUpdateView(LoginRequiredMixin, _IssueFormMixin, UpdateView):
         return ctx
 
 
+class IssueModalEditView(LoginRequiredMixin, View):
+    """Modal-friendly edit endpoint for the list and kanban views. GET returns
+    the form fragment (no chrome) so htmx can drop it into the dialog. POST
+    saves and answers 204 + ``HX-Trigger: pxtx:issue-saved`` on success — the
+    client closes the dialog and refreshes whichever container it came from.
+    Validation errors rerender the fragment so the dialog stays open with
+    messages in place."""
+
+    def _context(self, issue, form):
+        return {
+            "form": form,
+            "issue": issue,
+            "blocked_reason_visible": (form["status"].value() == Status.BLOCKED),
+        }
+
+    def get(self, request, number):
+        issue = get_object_or_404(Issue, number=number)
+        form = IssueForm(instance=issue)
+        return render(
+            request, "core/_issue_modal_form.html", self._context(issue, form)
+        )
+
+    def post(self, request, number):
+        issue = get_object_or_404(Issue, number=number)
+        form = IssueForm(request.POST, instance=issue)
+        if not form.is_valid():
+            return render(
+                request, "core/_issue_modal_form.html", self._context(issue, form)
+            )
+        issue = form.save(commit=False)
+        issue.save(actor=request_actor(request))
+        response = HttpResponse(status=204)
+        response["HX-Trigger"] = "pxtx:issue-saved"
+        return response
+
+
 class IssueHighlightToggleView(LoginRequiredMixin, View):
     def post(self, request, number):
         issue = get_object_or_404(Issue, number=number)

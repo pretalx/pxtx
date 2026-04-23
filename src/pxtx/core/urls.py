@@ -9,6 +9,11 @@ urlpatterns = [
     path("issues/", views.IssueListView.as_view(), name="issue-list"),
     path("issues/new/", views.IssueCreateView.as_view(), name="issue-new"),
     path(
+        "issues/new/modal/",
+        views.IssueModalCreateView.as_view(),
+        name="issue-modal-new",
+    ),
+    path(
         "issues/blocked-reason/",
         views.blocked_reason_field,
         name="issue-blocked-reason",

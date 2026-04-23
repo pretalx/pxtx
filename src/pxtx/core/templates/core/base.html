@@ -24,7 +24,9 @@
         <a href="{% url 'core:issue-list' %}" {% if 'issues' in request.path %}class="active"{% endif %}>Issues</a>
         <a href="{% url 'core:milestone-list' %}" {% if 'milestones' in request.path %}class="active"{% endif %}>Releases</a>
         <a href="{% url 'core:activity' %}" {% if 'activity' in request.path %}class="active"{% endif %}>Activity</a>
-        <a href="{% url 'core:issue-new' %}" class="new-issue" title="New issue (c)">+ New</a>
+        <a href="{% url 'core:issue-new' %}" class="new-issue" title="New issue (c)"
+           hx-get="{% url 'core:issue-modal-new' %}"
+           hx-target="#issue-create-modal" hx-swap="innerHTML">+ New</a>
         <span class="right">
             {% if user.is_superuser and deploy_enabled %}
             <form method="post" action="{% url 'core:deploy' %}" class="deploy-form"
@@ -67,6 +69,8 @@
     </div>
     {% if user.is_authenticated %}{% block issue_modal %}
     <dialog id="issue-modal" class="issue-modal"></dialog>
-    {% endblock %}{% endif %}
+    {% endblock %}
+    <dialog id="issue-create-modal" class="issue-modal"></dialog>
+    {% endif %}
 </body>
 </html>

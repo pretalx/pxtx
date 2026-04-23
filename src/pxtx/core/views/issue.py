@@ -332,13 +332,16 @@ class _IssueFormMixin:
         return ctx
 
 
+CREATE_DEFAULTS = {
+    "priority": Priority.COULD,
+    "status": Status.OPEN,
+    "source": Source.MANUAL,
+}
+
+
 class IssueCreateView(LoginRequiredMixin, _IssueFormMixin, CreateView):
     def get_initial(self):
-        return {
-            "priority": Priority.COULD,
-            "status": Status.OPEN,
-            "source": Source.MANUAL,
-        }
+        return dict(CREATE_DEFAULTS)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -370,6 +373,11 @@ class IssueModalEditView(LoginRequiredMixin, View):
         return {
             "form": form,
             "issue": issue,
+            "form_action": reverse(
+                "core:issue-modal-edit", kwargs={"number": issue.number}
+            ),
+            "modal_target": "issue-modal",
+            "submit_label": "Save changes",
             "blocked_reason_visible": (form["status"].value() == Status.BLOCKED),
         }
 
@@ -391,6 +399,38 @@ class IssueModalEditView(LoginRequiredMixin, View):
         issue.save(actor=request_actor(request))
         response = HttpResponse(status=204)
         response["HX-Trigger"] = "pxtx:issue-saved"
+        return response
+
+
+class IssueModalCreateView(LoginRequiredMixin, View):
+    """Modal-friendly create endpoint. GET returns the form fragment pre-filled
+    with sensible defaults so htmx can drop it into ``#issue-create-modal``.
+    POST creates the issue and answers 204 + ``HX-Redirect`` to the new issue
+    detail page on success; validation errors rerender the fragment so the
+    dialog stays open."""
+
+    def _context(self, form):
+        return {
+            "form": form,
+            "issue": None,
+            "form_action": reverse("core:issue-modal-new"),
+            "modal_target": "issue-create-modal",
+            "submit_label": "Create issue",
+            "blocked_reason_visible": (form["status"].value() == Status.BLOCKED),
+        }
+
+    def get(self, request):
+        form = IssueForm(initial=dict(CREATE_DEFAULTS))
+        return render(request, "core/_issue_modal_form.html", self._context(form))
+
+    def post(self, request):
+        form = IssueForm(request.POST)
+        if not form.is_valid():
+            return render(request, "core/_issue_modal_form.html", self._context(form))
+        issue = form.save(commit=False)
+        issue.save(actor=request_actor(request))
+        response = HttpResponse(status=204)
+        response["HX-Redirect"] = issue.get_absolute_url()
         return response
 
 

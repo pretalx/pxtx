@@ -2,26 +2,30 @@
 <div class="modal-shell">
     <header class="modal-head">
         <div class="modal-title">
+            {% if issue %}
             <span class="px">{{ issue.slug }}</span>
             <span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
             <span class="prio prio-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
             {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span>{% endif %}
             {% if issue.milestone %}<a class="chip" href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% endif %}
+            {% else %}
+            <span class="modal-new-title">New issue</span>
+            {% endif %}
         </div>
         <div class="modal-head-actions">
-            <a href="{{ issue.get_absolute_url }}" class="secondary">Open full page</a>
+            {% if issue %}<a href="{{ issue.get_absolute_url }}" class="secondary">Open full page</a>{% endif %}
             <button type="button" class="secondary" data-modal-close aria-label="Close">×</button>
         </div>
     </header>
     <form method="post"
           class="issue-form modal-form"
-          hx-post="{% url 'core:issue-modal-edit' number=issue.number %}"
-          hx-target="#issue-modal"
+          hx-post="{{ form_action }}"
+          hx-target="#{{ modal_target }}"
           hx-swap="innerHTML">
         {% csrf_token %}
         {% if form.non_field_errors %}<p class="error">{{ form.non_field_errors }}</p>{% endif %}
 
-        <div class="inline-edit inline-edit-title{% if form.title.errors %} editing{% endif %}"
+        <div class="inline-edit inline-edit-title{% if form.title.errors or not issue %} editing{% endif %}"
              data-inline-edit>
             <h2 class="inline-edit-view issue-title" data-inline-edit-view
                 title="Click to edit">{{ form.title.value|default:"(no title)" }}</h2>
@@ -95,7 +99,7 @@
         </div>
 
         <div class="form-actions modal-actions">
-            <button type="submit">Save changes</button>
+            <button type="submit">{{ submit_label }}</button>
             <button type="button" class="secondary" data-modal-close>Cancel</button>
         </div>
     </form>

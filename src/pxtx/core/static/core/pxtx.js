@@ -80,9 +80,21 @@ document.addEventListener("keydown", (event) => {
     }
     if (event.key === "c") {
         event.preventDefault();
-        window.location.href = "/issues/new/";
+        openCreateIssueModal();
     }
 });
+
+function openCreateIssueModal() {
+    // Delegate to the nav "+ New" trigger so htmx picks up its hx-get and
+    // target attributes. Falls back to the full-page form if the trigger
+    // isn't on screen (e.g. unauthenticated).
+    const trigger = document.querySelector(".new-issue[hx-get]");
+    if (trigger) {
+        trigger.click();
+        return;
+    }
+    window.location.href = "/issues/new/";
+}
 
 document.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-help-toggle]");
@@ -124,27 +136,33 @@ function initDeployPollers(root) {
 document.addEventListener("htmx:afterSwap", () => initDeployPollers(document));
 document.addEventListener("DOMContentLoaded", () => initDeployPollers(document));
 
-// Issue edit modal wiring for the list and kanban views. Clicking an issue
-// title triggers an htmx GET into #issue-modal; once the form fragment is in
-// the DOM we pop the dialog open. On save, the server answers 204 +
-// `HX-Trigger: pxtx:issue-saved`; we close the dialog and refresh whichever
-// container is on screen so sort/filter state stays honest without a full
-// page reload. Validation errors keep the dialog open because the server
-// re-renders the fragment back into #issue-modal (no trigger fires).
-function getIssueModal() {
-    return document.getElementById("issue-modal");
+// Issue edit/create modal wiring. The edit flow targets `#issue-modal`
+// (which is a <dialog> on most pages but a sidebar <aside> on the issue
+// list) and the create flow targets `#issue-create-modal` (always a
+// <dialog>). Both reuse the same form fragment, so the modal wiring is
+// shared. On save, the edit view answers 204 + `HX-Trigger: pxtx:issue-saved`
+// and we refresh the container in place; the create view answers 204 +
+// `HX-Redirect` which htmx handles natively. Validation errors re-render
+// the fragment back into the same target, keeping the dialog open.
+const ISSUE_MODAL_IDS = ["issue-modal", "issue-create-modal"];
+
+function getIssueModal(id = "issue-modal") {
+    return document.getElementById(id);
 }
 
-function closeIssueModal() {
-    const modal = getIssueModal();
+function closeModalElement(modal) {
     if (!modal) return;
     if (typeof modal.close === "function" && modal.open) modal.close();
     modal.innerHTML = "";
 }
 
+function isIssueModal(el) {
+    return !!(el && el.id && ISSUE_MODAL_IDS.includes(el.id));
+}
+
 document.addEventListener("htmx:afterSwap", (event) => {
     const target = event.target;
-    if (!target || target.id !== "issue-modal") return;
+    if (!isIssueModal(target)) return;
     if (!target.innerHTML.trim()) return;
     // Dialogs need to be popped open; sidebar asides are visible via CSS.
     if (typeof target.showModal !== "function") return;
@@ -154,30 +172,30 @@ document.addEventListener("htmx:afterSwap", (event) => {
 document.addEventListener("click", (event) => {
     const closer = event.target.closest("[data-modal-close]");
     if (!closer) return;
-    const modal = closer.closest("#issue-modal");
+    const modal = closer.closest("#issue-modal, #issue-create-modal");
     if (!modal) return;
     event.preventDefault();
-    closeIssueModal();
+    closeModalElement(modal);
 });
 
 document.addEventListener("click", (event) => {
-    const modal = getIssueModal();
-    if (!modal || !modal.open) return;
     // <dialog> treats clicks on the backdrop as events on itself. The sidebar
     // aside has no `open` property and does not receive these, so it is
     // unaffected — outside clicks never close the sidebar by design.
-    if (event.target === modal) closeIssueModal();
+    if (!isIssueModal(event.target)) return;
+    if (!event.target.open) return;
+    closeModalElement(event.target);
 });
 
 document.addEventListener("close", (event) => {
     // Clear stale form HTML so the next open fetches fresh contents.
-    if (event.target && event.target.id === "issue-modal") {
+    if (isIssueModal(event.target)) {
         event.target.innerHTML = "";
     }
 }, true);
 
 document.addEventListener("pxtx:issue-saved", () => {
-    closeIssueModal();
+    closeModalElement(getIssueModal());
     if (!window.htmx) return;
     const table = document.getElementById("issue-table");
     if (table) {

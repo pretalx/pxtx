@@ -658,3 +658,132 @@ def test_kanban_cards_link_to_modal_edit(auth_client):
     body = response.content.decode()
     assert f'hx-get="/issues/{issue.number}/modal-edit/"' in body
     assert 'hx-target="#issue-modal"' in body
+
+
+# ---- modal create -----------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_modal_create_get_returns_form_fragment(auth_client):
+    response = auth_client.get("/issues/new/modal/")
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    # Fragment: no site nav, and the form posts back to the modal-create URL.
+    assert "<nav" not in body
+    assert 'hx-post="/issues/new/modal/"' in body
+    assert 'hx-target="#issue-create-modal"' in body
+    # Header shows the "New issue" label, not a slug.
+    assert "New issue" in body
+    # The title block starts in editing mode so the user can type immediately.
+    assert "inline-edit-title editing" in body
+    assert "Create issue" in body
+
+
+@pytest.mark.django_db
+def test_modal_create_get_prefills_defaults(auth_client):
+    from pxtx.core.models import Priority, Source, Status
+
+    response = auth_client.get("/issues/new/modal/")
+
+    form = response.context["form"]
+    assert form.initial["priority"] == Priority.COULD
+    assert form.initial["status"] == Status.OPEN
+    assert form.initial["source"] == Source.MANUAL
+
+
+@pytest.mark.django_db
+def test_modal_create_post_creates_and_signals_redirect(auth_client):
+    from pxtx.core.models import Priority, Source, Status
+
+    response = auth_client.post(
+        "/issues/new/modal/",
+        data={
+            "title": "created via modal",
+            "description": "hello",
+            "priority": Priority.WANT,
+            "status": Status.OPEN,
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "rixx",
+            "source": Source.MANUAL,
+        },
+    )
+
+    issue = Issue.objects.get(title="created via modal")
+    assert response.status_code == 204
+    # htmx follows HX-Redirect natively → full page nav to the new issue.
+    assert response["HX-Redirect"] == f"/issues/{issue.number}/"
+    assert issue.assignee == "rixx"
+
+
+@pytest.mark.django_db
+def test_modal_create_post_logs_activity_with_user_actor(auth_client):
+    from pxtx.core.models import Priority, Source, Status
+    from tests.factories import UserFactory
+
+    user = UserFactory(username="rixx")
+    auth_client.force_login(user)
+
+    auth_client.post(
+        "/issues/new/modal/",
+        data={
+            "title": "logged via modal",
+            "description": "",
+            "priority": Priority.COULD,
+            "status": Status.OPEN,
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "",
+            "source": Source.MANUAL,
+        },
+    )
+
+    issue = Issue.objects.get(title="logged via modal")
+    actors = {log.actor for log in ActivityLog.objects.filter(object_id=issue.pk)}
+    assert actors == {"user/rixx"}
+
+
+@pytest.mark.django_db
+def test_modal_create_post_with_errors_rerenders_form(auth_client):
+    from pxtx.core.models import Priority, Source, Status
+
+    response = auth_client.post(
+        "/issues/new/modal/",
+        data={
+            "title": "blocked one",
+            "description": "",
+            "priority": Priority.COULD,
+            "status": Status.BLOCKED,  # without a reason — should fail.
+            "blocked_reason": "",
+            "milestone": "",
+            "assignee": "",
+            "source": Source.MANUAL,
+        },
+    )
+
+    assert response.status_code == 200
+    assert "HX-Redirect" not in response
+    assert Issue.objects.filter(title="blocked one").exists() is False
+    body = response.content.decode()
+    assert "A reason is required" in body
+    # The fragment posts back to itself so the dialog stays open on retry.
+    assert 'hx-post="/issues/new/modal/"' in body
+
+
+@pytest.mark.django_db
+def test_modal_create_requires_login(client):
+    response = client.get("/issues/new/modal/")
+
+    assert response.status_code == 302
+    assert response.url.startswith("/login/")
+
+
+@pytest.mark.django_db
+def test_nav_new_issue_button_targets_create_modal(auth_client):
+    response = auth_client.get("/issues/")
+
+    body = response.content.decode()
+    assert 'hx-get="/issues/new/modal/"' in body
+    assert 'hx-target="#issue-create-modal"' in body
+    assert 'id="issue-create-modal"' in body

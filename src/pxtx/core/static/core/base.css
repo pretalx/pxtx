@@ -537,6 +537,7 @@ kbd {
 }
 .issue-modal .modal-title { display: flex; gap: 0.5rem; align-items: baseline; }
 .issue-modal .modal-title .px { font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; color: var(--text-muted); }
+.issue-modal .modal-title .modal-new-title { font-weight: 600; font-size: 1rem; }
 .issue-modal .modal-head-actions { display: flex; gap: 0.5rem; align-items: center; }
 .issue-modal .modal-head-actions .secondary {
     background: var(--surface);

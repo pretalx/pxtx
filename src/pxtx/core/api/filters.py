@@ -39,9 +39,10 @@ class IssueFilter(filters.FilterSet):
         return queryset.filter(milestone__slug=value)
 
     def filter_search(self, queryset, name, value):
-        return queryset.filter(
-            Q(title__icontains=value) | Q(description__icontains=value)
-        )
+        query = Q(title__icontains=value) | Q(description__icontains=value)
+        if value.isdigit():
+            query |= Q(number=int(value))
+        return queryset.filter(query)
 
 
 class ActivityLogFilter(filters.FilterSet):

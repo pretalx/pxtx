@@ -112,6 +112,16 @@ def test_search_matches_title_description_and_comments(auth_client):
 
 
 @pytest.mark.django_db
+def test_search_matches_issue_number(auth_client):
+    issues = [IssueFactory(title=f"issue {i}", status=Status.OPEN) for i in range(3)]
+    target = issues[1]
+
+    response = auth_client.get(f"/issues/?search={target.number}")
+
+    assert target.pk in {i.pk for i in response.context["issues"]}
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("querystring", "first_field"),
     (

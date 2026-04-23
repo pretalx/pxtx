@@ -181,11 +181,14 @@ def _filtered_issues(params):
 
     search = params.get("search", "").strip()
     if search:
-        qs = qs.filter(
+        query = (
             Q(title__icontains=search)
             | Q(description__icontains=search)
             | Q(comments__body__icontains=search)
-        ).distinct()
+        )
+        if search.isdigit():
+            query |= Q(number=int(search))
+        qs = qs.filter(query).distinct()
 
     sort, direction = _resolve_sort(params)
     return qs.order_by(*SORT_COLUMNS[sort][direction])

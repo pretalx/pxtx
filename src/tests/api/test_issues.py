@@ -138,6 +138,16 @@ def test_list_filters_by_search_matches_description(token_client):
 
 
 @pytest.mark.django_db
+def test_list_filters_by_search_matches_issue_number(token_client):
+    issues = [IssueFactory(title=f"issue {i}") for i in range(5)]
+    target = issues[2]
+
+    response = token_client.get(f"/api/v1/issues/?search={target.number}")
+
+    assert target.number in [r["number"] for r in response.json()["results"]]
+
+
+@pytest.mark.django_db
 def test_retrieve_issue_by_number_not_pk(token_client):
     issue = IssueFactory()
     # Bump pk/number apart to make sure number-based lookup is used.

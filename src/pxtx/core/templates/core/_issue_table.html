@@ -9,7 +9,6 @@
                 <th>{% include "core/_sort_header.html" with header=sort_headers.status %}</th>
                 <th>{% include "core/_sort_header.html" with header=sort_headers.priority %}</th>
                 <th>{% include "core/_sort_header.html" with header=sort_headers.effort %}</th>
-                <th>{% include "core/_sort_header.html" with header=sort_headers.assignee %}</th>
                 <th>{% include "core/_sort_header.html" with header=sort_headers.milestone %}</th>
                 <th>{% include "core/_sort_header.html" with header=sort_headers.updated %}</th>
             </tr>
@@ -30,7 +29,6 @@
                 {% include "core/_issue_cell.html" with issue=issue field="status" editing=False %}
                 {% include "core/_issue_cell.html" with issue=issue field="priority" editing=False %}
                 {% include "core/_issue_cell.html" with issue=issue field="effort" editing=False %}
-                <td>{{ issue.assignee|default:"—" }}</td>
                 <td>{% if issue.milestone %}<a href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% else %}—{% endif %}</td>
                 <td class="meta" title="{{ issue.updated_at|date:'Y-m-d H:i' }}">{{ issue.updated_at|timesince }} ago</td>
             </tr>

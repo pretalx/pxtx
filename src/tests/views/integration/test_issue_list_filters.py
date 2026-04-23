@@ -164,7 +164,6 @@ def test_sort_headers_track_active_column_and_direction(auth_client):
         "status",
         "priority",
         "effort",
-        "assignee",
         "milestone",
         "updated",
     }

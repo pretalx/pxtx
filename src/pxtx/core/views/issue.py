@@ -109,7 +109,6 @@ SORT_HEADER_ORDER = (
     "status",
     "priority",
     "effort",
-    "assignee",
     "milestone",
     "updated",
 )

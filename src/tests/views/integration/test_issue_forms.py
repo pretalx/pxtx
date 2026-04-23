@@ -191,25 +191,6 @@ def test_edit_form_with_blocked_status_shows_reason_field(auth_client):
 
 
 @pytest.mark.django_db
-def test_markdown_preview_renders_with_pxtx_refs(auth_client):
-    response = auth_client.post(
-        "/issues/preview/", data={"text": "see PX-42 for details"}
-    )
-
-    assert response.status_code == 200
-    body = response.content.decode()
-    assert "PX-42" in body
-    assert 'href="/issues/42/"' in body
-
-
-@pytest.mark.django_db
-def test_markdown_preview_rejects_get(auth_client):
-    response = auth_client.get("/issues/preview/")
-
-    assert response.status_code == 405
-
-
-@pytest.mark.django_db
 def test_blocked_reason_field_visibility_depends_on_status(auth_client):
     shown = auth_client.get("/issues/blocked-reason/?status=blocked")
     hidden = auth_client.get("/issues/blocked-reason/?status=open")

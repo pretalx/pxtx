@@ -10,15 +10,6 @@
 <div class="form-field wide">
     <label for="{{ form.description.id_for_label }}">Description (markdown)</label>
     {{ form.description }}
-    <div class="form-preview-controls">
-        <button type="button" class="secondary" data-preview-toggle
-                data-preview-target="#description-preview"
-                data-preview-source="#{{ form.description.id_for_label }}"
-                hx-post="{% url 'core:issue-markdown-preview' %}"
-                hx-vals='js:{text: document.getElementById("{{ form.description.id_for_label }}").value}'
-                hx-target="#description-preview" hx-swap="innerHTML">Preview</button>
-    </div>
-    <div id="description-preview" class="prose preview" hidden></div>
 </div>
 
 <div class="form-row">

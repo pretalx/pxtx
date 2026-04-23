@@ -317,10 +317,6 @@ button.secondary {
     padding: 0.4rem 0.6rem;
     border-radius: 4px;
 }
-.form-preview-controls { margin-top: 0.25rem; }
-.preview { background: var(--bg); border: 1px dashed var(--border); padding: 0.5rem; margin-top: 0.5rem; min-height: 1rem; }
-.preview:empty { display: none; }
-
 .layout-detail { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
 @media (max-width: 900px) { .layout-detail { grid-template-columns: 1fr; } }
 .description-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }

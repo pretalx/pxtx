@@ -8,7 +8,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
-from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 
@@ -24,7 +23,6 @@ from pxtx.core.models import (
     Source,
     Status,
 )
-from pxtx.core.text import render_markdown
 from pxtx.core.views._helpers import is_htmx, request_actor
 
 QUICK_FILTERS = [
@@ -422,13 +420,6 @@ class CommentEditView(LoginRequiredMixin, View):
         comment.edited_at = timezone.now()
         comment.save(actor=request_actor(request))
         return render(request, "core/_comment.html", {"comment": comment})
-
-
-@login_required
-@require_POST
-def render_markdown_preview(request):
-    html = render_markdown(request.POST.get("text", ""))
-    return HttpResponse(html)
 
 
 INLINE_CELL_FIELDS = {

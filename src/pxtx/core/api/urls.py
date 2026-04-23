@@ -37,6 +37,5 @@ urlpatterns = [
         name="issue-reference-detail",
     ),
     path("activity/", views.ActivityLogView.as_view(), name="activity"),
-    path("render/", views.RenderView.as_view(), name="render"),
     *router.urls,
 ]

@@ -241,7 +241,3 @@ class ActivityLogCreateSerializer(serializers.Serializer):
             actor=self.context.get("actor", ""),
             data=validated_data.get("data") or {},
         )
-
-
-class RenderSerializer(serializers.Serializer):
-    text = serializers.CharField(allow_blank=True)

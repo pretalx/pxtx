@@ -148,23 +148,3 @@ def test_activity_post_requires_existing_issue(token_client):
 
     assert response.status_code == 400
     assert "issue" in response.json()
-
-
-@pytest.mark.django_db
-def test_render_returns_html(token_client):
-    response = token_client.post(
-        "/api/v1/render/", {"text": "# Hello\n\n**bold**"}, format="json"
-    )
-
-    assert response.status_code == 200
-    html = response.json()["html"]
-    assert "<h1>" in html
-    assert "<strong>bold</strong>" in html
-
-
-@pytest.mark.django_db
-def test_render_empty_text_returns_empty_html(token_client):
-    response = token_client.post("/api/v1/render/", {"text": ""}, format="json")
-
-    assert response.status_code == 200
-    assert response.json()["html"] == ""

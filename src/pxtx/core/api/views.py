@@ -22,7 +22,6 @@ from pxtx.core.api.serializers import (
     IssueReferenceCreateSerializer,
     IssueSerializer,
     MilestoneSerializer,
-    RenderSerializer,
     StatusActionSerializer,
 )
 from pxtx.core.models import (
@@ -35,7 +34,6 @@ from pxtx.core.models import (
     Milestone,
     Status,
 )
-from pxtx.core.text import render_markdown
 
 
 def _actor(request):
@@ -312,13 +310,3 @@ class ActivityLogView(ListModelMixin, GenericAPIView):
         return Response(
             ActivityLogSerializer(log).data, status=http_status.HTTP_201_CREATED
         )
-
-
-class RenderView(APIView):
-    """Markdown preview endpoint used by the htmx detail-view edit flow."""
-
-    def post(self, request):
-        serializer = RenderSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        html = render_markdown(serializer.validated_data["text"])
-        return Response({"html": str(html)})

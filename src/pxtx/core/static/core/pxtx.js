@@ -221,21 +221,26 @@ document.addEventListener("pxtx:issue-saved", () => {
     }
 });
 
-// Inline-editable list cells: once an <select> is in the DOM, a change event
-// POSTs the new value (htmx handles that). If the user opens the select and
+// Inline-editable list cells: once a <select> is in the DOM, a change event
+// POSTs the new value (htmx handles that). If the user opens the widget and
 // clicks away without picking anything different, no `change` fires and the
-// cell would stay as a bare <select>. Revert to the display badge on blur.
+// cell would stay in edit mode. Revert to the display badge on blur.
+//
+// Choices.js hides the native <select> and focus lives on its own wrapper,
+// so we key off the `.edit-cell.editing` container instead of the select
+// itself. We also bail if focus is still inside the cell — Choices moves
+// focus between its internal elements as the user interacts with the
+// dropdown, and each hop fires focusout.
 document.addEventListener("focusout", (event) => {
-    const select = event.target;
-    if (!select || !select.matches || !select.matches(".edit-cell select")) return;
-    const td = select.closest(".edit-cell");
-    const url = select.dataset.revertUrl;
-    if (!td || !url || !window.htmx) return;
-    // Defer so the `change` POST (if any) runs first. If the cell is still
-    // in edit mode after that, the user bailed — re-fetch the display.
+    const cell = event.target.closest && event.target.closest(".edit-cell.editing");
+    if (!cell || !window.htmx) return;
+    const select = cell.querySelector("select");
+    const url = select && select.dataset.revertUrl;
+    if (!url) return;
     setTimeout(() => {
-        if (td.isConnected && td.contains(select)) {
-            window.htmx.ajax("GET", url, { target: td, swap: "outerHTML" });
-        }
+        if (!cell.isConnected) return;
+        if (!cell.classList.contains("editing")) return;
+        if (cell.contains(document.activeElement)) return;
+        window.htmx.ajax("GET", url, { target: cell, swap: "outerHTML" });
     }, 150);
 });

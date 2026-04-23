@@ -267,6 +267,19 @@ nav.site a.new-issue { color: var(--accent); }
     color: var(--text);
     border-color: var(--accent);
 }
+/* Choices.js inside an inline-edit cell: strip the default chrome down so
+   only the badge/prio label + a dropdown arrow show inside the table cell,
+   and let the dropdown list render each choice as its real badge. */
+.issue-table .edit-cell.editing .choices { margin: 0; font-size: 0.8rem; min-width: 7rem; }
+.issue-table .edit-cell.editing .choices__inner {
+    min-height: 0;
+    padding: 1px 1.5rem 1px 4px;
+    background: transparent;
+}
+.issue-table .edit-cell.editing .choices__list--single { padding: 0; }
+.issue-table .edit-cell.editing .choices__list--single .choices__item { padding: 0; }
+.issue-table .edit-cell.editing .choices__list--dropdown .choices__item,
+.issue-table .edit-cell.editing .choices__list[aria-expanded] .choices__item { padding: 0.25rem 0.5rem; }
 
 .issue-table .drag-col {
     width: 1.5rem;

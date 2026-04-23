@@ -51,12 +51,102 @@ QUICK_FILTERS = [
 
 DEFAULT_STATUSES = [Status.OPEN.value, Status.WIP.value, Status.BLOCKED.value]
 
-SORT_ORDERS = {
-    "priority": ("priority", "-is_highlighted", "order_in_priority", "-created_at"),
-    "updated": ("-updated_at",),
-    "created": ("-created_at",),
-    "milestone": ("milestone__name", "order_in_milestone"),
+SORT_COLUMNS = {
+    "priority": {
+        "label": "Priority",
+        "default": "asc",
+        "asc": ("priority", "-is_highlighted", "order_in_priority", "-created_at"),
+        "desc": ("-priority", "-is_highlighted", "order_in_priority", "-created_at"),
+    },
+    "number": {
+        "label": "Issue",
+        "default": "desc",
+        "asc": ("number",),
+        "desc": ("-number",),
+    },
+    "title": {
+        "label": "Title",
+        "default": "asc",
+        "asc": ("title",),
+        "desc": ("-title",),
+    },
+    "status": {
+        "label": "Status",
+        "default": "asc",
+        "asc": ("status",),
+        "desc": ("-status",),
+    },
+    "effort": {
+        "label": "Effort",
+        "default": "asc",
+        "asc": ("effort_minutes",),
+        "desc": ("-effort_minutes",),
+    },
+    "assignee": {
+        "label": "Assignee",
+        "default": "asc",
+        "asc": ("assignee",),
+        "desc": ("-assignee",),
+    },
+    "milestone": {
+        "label": "Release",
+        "default": "asc",
+        "asc": ("milestone__name", "order_in_milestone"),
+        "desc": ("-milestone__name", "order_in_milestone"),
+    },
+    "updated": {
+        "label": "Updated",
+        "default": "desc",
+        "asc": ("updated_at",),
+        "desc": ("-updated_at",),
+    },
 }
+
+# Order the table columns render in, so the template can look up by key.
+SORT_HEADER_ORDER = (
+    "number",
+    "title",
+    "status",
+    "priority",
+    "effort",
+    "assignee",
+    "milestone",
+    "updated",
+)
+
+
+def _resolve_sort(params):
+    sort = params.get("sort") or "priority"
+    if sort not in SORT_COLUMNS:
+        sort = "priority"
+    direction = params.get("dir")
+    if direction not in {"asc", "desc"}:
+        direction = SORT_COLUMNS[sort]["default"]
+    return sort, direction
+
+
+def _sort_headers(params, sort, direction):
+    base = params.copy()
+    base.pop("sort", None)
+    base.pop("dir", None)
+    headers = {}
+    for column in SORT_HEADER_ORDER:
+        spec = SORT_COLUMNS[column]
+        is_active = column == sort
+        if is_active:
+            next_direction = "desc" if direction == "asc" else "asc"
+        else:
+            next_direction = spec["default"]
+        query = base.copy()
+        query["sort"] = column
+        query["dir"] = next_direction
+        headers[column] = {
+            "label": spec["label"],
+            "active": is_active,
+            "direction": direction if is_active else "",
+            "querystring": query.urlencode(),
+        }
+    return headers
 
 
 def _filtered_issues(params):
@@ -81,10 +171,6 @@ def _filtered_issues(params):
     if assignee:
         qs = qs.filter(assignee__icontains=assignee)
 
-    sources = params.getlist("source")
-    if sources:
-        qs = qs.filter(source__in=sources)
-
     if params.get("is_highlighted") == "on":
         qs = qs.filter(is_highlighted=True)
 
@@ -96,8 +182,8 @@ def _filtered_issues(params):
             | Q(comments__body__icontains=search)
         ).distinct()
 
-    order = SORT_ORDERS.get(params.get("sort"), SORT_ORDERS["priority"])
-    return qs.order_by(*order)
+    sort, direction = _resolve_sort(params)
+    return qs.order_by(*SORT_COLUMNS[sort][direction])
 
 
 def _quick_filter_active(spec, params):
@@ -108,7 +194,7 @@ def _quick_filter_active(spec, params):
 
 
 def _issue_list_context(params):
-    sort = params.get("sort") or "priority"
+    sort, direction = _resolve_sort(params)
     quick_filters = []
     for spec in QUICK_FILTERS:
         if not Issue.objects.filter(**spec["filter"]).exists():
@@ -126,16 +212,16 @@ def _issue_list_context(params):
             params.getlist("status") if "status" in params else list(DEFAULT_STATUSES)
         ),
         "selected_priorities": params.getlist("priority"),
-        "selected_sources": params.getlist("source"),
         "selected_milestone": params.get("milestone", ""),
         "search_value": params.get("search", ""),
         "assignee_value": params.get("assignee", ""),
         "highlighted_only": params.get("is_highlighted") == "on",
         "sort": sort,
-        "can_reorder": sort == "priority",
+        "direction": direction,
+        "sort_headers": _sort_headers(params, sort, direction),
+        "can_reorder": sort == "priority" and direction == "asc",
         "status_choices": Status.choices,
         "priority_choices": Priority.choices,
-        "source_choices": Source.choices,
         "milestones": list(Milestone.objects.order_by("-target_date", "name")),
         "quick_filters": quick_filters,
     }

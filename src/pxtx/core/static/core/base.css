@@ -304,6 +304,18 @@ nav.site a.new-issue { color: var(--accent); }
 .issue-table .drag-col:active { cursor: grabbing; }
 .issue-table.reorderable tr.sortable-ghost { opacity: 0.35; }
 .issue-table.reorderable tr.sortable-chosen { box-shadow: inset 0 0 0 2px var(--accent); }
+.issue-table thead th { user-select: none; }
+.issue-table .sort-link {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    cursor: pointer;
+}
+.issue-table .sort-link:hover { color: var(--accent); }
+.issue-table .sort-link.active { color: var(--text); }
+.issue-table .sort-indicator { font-size: 0.7rem; }
 
 .issue-form, .milestone-form { max-width: 900px; }
 .issue-form .form-field, .milestone-form .form-field { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem; }

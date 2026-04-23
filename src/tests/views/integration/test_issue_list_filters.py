@@ -1,6 +1,6 @@
 import pytest
 
-from pxtx.core.models import Priority, Source, Status
+from pxtx.core.models import Priority, Status
 from tests.factories import IssueFactory, MilestoneFactory
 
 pytestmark = pytest.mark.integration
@@ -83,16 +83,6 @@ def test_assignee_filter_is_icontains(auth_client):
 
 
 @pytest.mark.django_db
-def test_source_filter(auth_client):
-    gh = IssueFactory(source=Source.GITHUB, status=Status.OPEN)
-    IssueFactory(source=Source.MANUAL, status=Status.OPEN)
-
-    response = auth_client.get("/issues/?source=github")
-
-    assert {i.pk for i in response.context["issues"]} == {gh.pk}
-
-
-@pytest.mark.django_db
 def test_highlighted_only_toggle(auth_client):
     starred = IssueFactory(is_highlighted=True, status=Status.OPEN)
     IssueFactory(status=Status.OPEN)
@@ -123,28 +113,79 @@ def test_search_matches_title_description_and_comments(auth_client):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    ("sort", "first_field"),
+    ("querystring", "first_field"),
     (
-        ("priority", "priority"),
-        ("updated", "-updated_at"),
-        ("created", "-created_at"),
-        ("milestone", "milestone__name"),
-        ("nonsense", "priority"),
+        ("sort=priority", "priority"),
+        ("sort=priority&dir=desc", "-priority"),
+        ("sort=updated", "-updated_at"),
+        ("sort=updated&dir=asc", "updated_at"),
+        ("sort=number", "-number"),
+        ("sort=number&dir=asc", "number"),
+        ("sort=title", "title"),
+        ("sort=title&dir=desc", "-title"),
+        ("sort=status", "status"),
+        ("sort=effort", "effort_minutes"),
+        ("sort=assignee", "assignee"),
+        ("sort=milestone", "milestone__name"),
+        # Unknown sort keys fall back to the default priority order.
+        ("sort=nonsense", "priority"),
+        # Unknown direction falls back to the column's default direction.
+        ("sort=updated&dir=sideways", "-updated_at"),
     ),
 )
-def test_sort_option_applies_expected_order(auth_client, sort, first_field):
-    response = auth_client.get(f"/issues/?sort={sort}")
+def test_sort_option_applies_expected_order(auth_client, querystring, first_field):
+    response = auth_client.get(f"/issues/?{querystring}")
 
     assert response.context["issues"].query.order_by[0] == first_field
 
 
 @pytest.mark.django_db
-def test_can_reorder_only_when_sorting_by_priority(auth_client):
+def test_can_reorder_only_when_sorting_by_priority_ascending(auth_client):
     response = auth_client.get("/issues/")
     assert response.context["can_reorder"] is True
 
     response = auth_client.get("/issues/?sort=updated")
     assert response.context["can_reorder"] is False
+
+    # Reordering only makes sense for the default priority+ascending state —
+    # a descending priority sort would fight the bucketed ``order_in_priority``.
+    response = auth_client.get("/issues/?sort=priority&dir=desc")
+    assert response.context["can_reorder"] is False
+
+
+@pytest.mark.django_db
+def test_sort_headers_track_active_column_and_direction(auth_client):
+    response = auth_client.get("/issues/?sort=title&dir=desc")
+
+    headers = response.context["sort_headers"]
+    assert set(headers) == {
+        "number",
+        "title",
+        "status",
+        "priority",
+        "effort",
+        "assignee",
+        "milestone",
+        "updated",
+    }
+    assert headers["title"]["active"] is True
+    assert headers["title"]["direction"] == "desc"
+    # Clicking the active header toggles to the opposite direction.
+    assert "dir=asc" in headers["title"]["querystring"]
+    # An inactive header links to its own default direction.
+    assert headers["updated"]["active"] is False
+    assert "sort=updated" in headers["updated"]["querystring"]
+    assert "dir=desc" in headers["updated"]["querystring"]
+
+
+@pytest.mark.django_db
+def test_sort_header_querystring_preserves_filters(auth_client):
+    response = auth_client.get("/issues/?status=open&assignee=claude&sort=updated")
+
+    querystring = response.context["sort_headers"]["title"]["querystring"]
+    assert "status=open" in querystring
+    assert "assignee=claude" in querystring
+    assert "sort=title" in querystring
 
 
 @pytest.mark.django_db

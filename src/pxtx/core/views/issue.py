@@ -45,6 +45,7 @@ QUICK_FILTERS = [
         "query": [("priority", "1")],
         "filter": {"priority": Priority.WILL},
     },
+    {"label": "📋 open", "query": [], "filter": None, "is_default": True},
     {"label": "🔧 wip", "query": [("status", "wip")], "filter": {"status": Status.WIP}},
     {
         "label": "🚧 blocked",
@@ -59,6 +60,15 @@ QUICK_FILTERS = [
 ]
 
 DEFAULT_STATUSES = [Status.OPEN.value, Status.WIP.value, Status.BLOCKED.value]
+
+FILTER_PARAMS = (
+    "status",
+    "priority",
+    "milestone",
+    "assignee",
+    "is_highlighted",
+    "search",
+)
 
 SORT_COLUMNS = {
     "priority": {
@@ -200,15 +210,22 @@ def _filtered_issues(params):
 def _quick_filter_active(spec, params):
     """A quick filter is "active" when every ``(key, value)`` in its query is
     present in the currently-applied params. Multi-valued params match if the
-    expected value is one of the selected values."""
+    expected value is one of the selected values. The default-view pill is
+    active when no filter params are set at all."""
+    if spec.get("is_default"):
+        return not any(params.get(key) for key in FILTER_PARAMS)
     return all(value in params.getlist(key) for key, value in spec["query"])
 
 
 def _issue_list_context(params):
     sort, direction = _resolve_sort(params)
+    any_issues = Issue.objects.exists()
     quick_filters = []
     for spec in QUICK_FILTERS:
-        if not Issue.objects.filter(**spec["filter"]).exists():
+        if spec.get("is_default"):
+            if not any_issues:
+                continue
+        elif not Issue.objects.filter(**spec["filter"]).exists():
             continue
         quick_filters.append(
             {

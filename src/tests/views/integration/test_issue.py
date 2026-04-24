@@ -40,7 +40,7 @@ def test_issue_list_lists_all_issues_with_constant_query_count(
     # Baseline query count depends on filter metadata lookups (milestones,
     # quick-filter counts), not on the number of issues — the point is that
     # it's constant across item_count = 1 and 3.
-    with django_assert_num_queries(10):
+    with django_assert_num_queries(11):
         response = auth_client.get("/issues/")
 
     assert response.status_code == 200

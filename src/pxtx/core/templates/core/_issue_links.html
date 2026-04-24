@@ -1,0 +1,32 @@
+{% extends "core/_issue_sidebar_section.html" %}
+
+{% block title %}Links{% endblock %}
+{% block body %}
+{% if links %}
+<ul class="sidebar-list">
+    {% for link in links %}
+    <li>
+        <a href="{{ link.url }}">{{ link.label }}</a>
+        <button type="button" class="row-delete" title="Remove"
+                hx-post="{% url 'core:issue-link-delete' number=issue.number index=forloop.counter0 %}"
+                hx-target="#{{ section_id }}" hx-swap="outerHTML"
+                hx-confirm="Remove this link?">×</button>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty-row">No links.</p>
+{% endif %}
+{% endblock %}
+{% block form_fields %}
+<label class="add-field">
+    <span class="meta">Label</span>
+    <input type="text" name="label" value="{{ draft.label|default:'' }}" autofocus required>
+</label>
+<label class="add-field">
+    <span class="meta">URL</span>
+    <input type="url" name="url" value="{{ draft.url|default:'' }}" required>
+</label>
+{% endblock %}
+{% block submit_label %}Add link{% endblock %}
+{% block add_label %}+ Add link{% endblock %}

@@ -49,6 +49,44 @@ urlpatterns = [
         name="issue-cell",
     ),
     path(
+        "issues/<int:number>/links/", views.IssueLinksView.as_view(), name="issue-links"
+    ),
+    path(
+        "issues/<int:number>/links/<int:index>/delete/",
+        views.IssueLinkDeleteView.as_view(),
+        name="issue-link-delete",
+    ),
+    path(
+        "issues/<int:number>/parties/",
+        views.IssuePartiesView.as_view(),
+        name="issue-parties",
+    ),
+    path(
+        "issues/<int:number>/parties/<int:index>/delete/",
+        views.IssuePartyDeleteView.as_view(),
+        name="issue-party-delete",
+    ),
+    path(
+        "issues/<int:number>/github-refs/",
+        views.IssueGithubRefsView.as_view(),
+        name="issue-github-refs",
+    ),
+    path(
+        "issues/<int:number>/github-refs/<int:pk>/delete/",
+        views.IssueGithubRefDeleteView.as_view(),
+        name="issue-github-ref-delete",
+    ),
+    path(
+        "issues/<int:number>/related/",
+        views.IssueRelatedView.as_view(),
+        name="issue-related",
+    ),
+    path(
+        "issues/<int:number>/related/<int:pk>/delete/",
+        views.IssueRelatedDeleteView.as_view(),
+        name="issue-related-delete",
+    ),
+    path(
         "issues/<int:number>/comments/",
         views.CommentCreateView.as_view(),
         name="comment-create",

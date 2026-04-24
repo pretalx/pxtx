@@ -1,0 +1,37 @@
+{% extends "core/_issue_sidebar_section.html" %}
+
+{% block title %}Linked issues{% endblock %}
+{% block body %}
+{% if related_issues %}
+<ul class="sidebar-list">
+    {% for other in related_issues %}
+    <li>
+        <a href="{% url 'core:issue-detail' number=other.number %}">{{ other.slug }}</a>
+        <span class="badge status-{{ other.status }}">{{ other.get_status_display }}</span>
+        {{ other.title }}
+        <button type="button" class="row-delete" title="Unlink"
+                hx-post="{% url 'core:issue-related-delete' number=issue.number pk=other.ref_id %}"
+                hx-target="#{{ section_id }}" hx-swap="outerHTML"
+                hx-confirm="Unlink this issue?">×</button>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty-row">No linked issues.</p>
+{% endif %}
+{% endblock %}
+{% block form_fields %}
+<label class="add-field">
+    <span class="meta">Issue (PX-… or number)</span>
+    <input type="text" name="target" list="issue-related-options"
+           value="{{ draft.target|default:'' }}"
+           autocomplete="off" autofocus required>
+</label>
+<datalist id="issue-related-options">
+    {% for other in other_issues %}
+    <option value="PX-{{ other.number }}" label="{{ other.title }}"></option>
+    {% endfor %}
+</datalist>
+{% endblock %}
+{% block submit_label %}Link issue{% endblock %}
+{% block add_label %}+ Link issue{% endblock %}

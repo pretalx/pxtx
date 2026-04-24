@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -16,6 +17,8 @@ from pxtx.core.models import (
     ActivityLog,
     Comment,
     Effort,
+    GithubRef,
+    GithubRefKind,
     Issue,
     IssueReference,
     Milestone,
@@ -261,22 +264,9 @@ class IssueDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         issue = self.object
-        ctx["github_refs"] = list(issue.github_refs.all())
         ctx["comments"] = list(issue.comments.all())
         ctx["comment_form"] = CommentForm()
-
-        refs = IssueReference.objects.filter(
-            Q(from_issue=issue) | Q(to_issue=issue)
-        ).select_related("from_issue", "to_issue")
-        related = []
-        seen = set()
-        for ref in refs:
-            other = ref.to_issue if ref.from_issue_id == issue.pk else ref.from_issue
-            if other.pk in seen:
-                continue
-            seen.add(other.pk)
-            related.append(other)
-        ctx["related_issues"] = related
+        ctx.update(_detail_sections_context(issue))
 
         ctx["activity"] = list(
             ActivityLog.objects.filter(
@@ -629,3 +619,327 @@ def blocked_reason_field(request):
             "show": request.GET.get("status") == Status.BLOCKED,
         },
     )
+
+
+# Sidebar add-and-remove sections on the issue detail view: links,
+# interested parties, GitHub refs, and related issues. Each section is its
+# own template fragment extending ``_issue_sidebar_section.html``; the
+# "+ Add" button toggles the inline add form via htmx (``?form=1``) and
+# submit/delete swap the whole section back in place.
+
+# (section_id, url_name) keyed by the short section name used in _render_section.
+_SECTION_META = {
+    "links": ("issue-links", "core:issue-links"),
+    "parties": ("issue-parties", "core:issue-parties"),
+    "github_refs": ("issue-github-refs", "core:issue-github-refs"),
+    "related": ("issue-related", "core:issue-related"),
+}
+
+
+def _related_issues(issue):
+    """Distinct list of issues referenced from or to this issue. Each issue
+    is annotated with a ``ref_id`` attribute pointing at the IssueReference
+    row to delete when the user unlinks (the first one we see in either
+    direction — symmetric duplicates are not normally created)."""
+    refs = IssueReference.objects.filter(
+        Q(from_issue=issue) | Q(to_issue=issue)
+    ).select_related("from_issue", "to_issue")
+    related = []
+    seen = set()
+    for ref in refs:
+        other = ref.to_issue if ref.from_issue_id == issue.pk else ref.from_issue
+        if other.pk in seen:
+            continue
+        seen.add(other.pk)
+        other.ref_id = ref.pk
+        related.append(other)
+    return related
+
+
+def _other_issues(issue):
+    return list(
+        Issue.objects.exclude(pk=issue.pk).only("number", "title").order_by("number")
+    )
+
+
+def _links_ctx(issue):
+    return {"links": list(issue.links or [])}
+
+
+def _parties_ctx(issue):
+    return {"parties": list(issue.interested_parties or [])}
+
+
+def _github_refs_ctx(issue):
+    return {
+        "github_refs": list(issue.github_refs.all()),
+        "github_ref_kinds": list(GithubRefKind.choices),
+        "default_github_repo": settings.DEFAULT_GITHUB_REPO,
+    }
+
+
+def _related_ctx(issue):
+    return {
+        "related_issues": _related_issues(issue),
+        "other_issues": _other_issues(issue),
+    }
+
+
+_SECTION_CONTEXT = {
+    "links": _links_ctx,
+    "parties": _parties_ctx,
+    "github_refs": _github_refs_ctx,
+    "related": _related_ctx,
+}
+
+
+def _detail_sections_context(issue):
+    """Context for the initial full-page render: union of all four sections."""
+    ctx = {}
+    for builder in _SECTION_CONTEXT.values():
+        ctx.update(builder(issue))
+    return ctx
+
+
+def _render_section(request, issue, name, *, adding=False, error=None, draft=None):
+    section_id, section_url_name = _SECTION_META[name]
+    ctx = _SECTION_CONTEXT[name](issue)
+    ctx.update(
+        {
+            "issue": issue,
+            "section_id": section_id,
+            "section_url_name": section_url_name,
+            "adding": adding,
+            "error": error,
+            "draft": draft or {},
+        }
+    )
+    return render(request, f"core/_issue_{name}.html", ctx)
+
+
+def _form_error(request, issue, name, error, draft):
+    return _render_section(request, issue, name, adding=True, error=error, draft=draft)
+
+
+class _SectionView(LoginRequiredMixin, View):
+    section_name = ""
+
+    def get(self, request, number):
+        issue = get_object_or_404(Issue, number=number)
+        adding = request.GET.get("form") == "1"
+        return _render_section(request, issue, self.section_name, adding=adding)
+
+
+class _JsonListDeleteView(LoginRequiredMixin, View):
+    """Shared delete-by-index for sections backed by an Issue JSON-list field."""
+
+    section_name = ""
+    attr_name = ""
+
+    def post(self, request, number, index):
+        issue = get_object_or_404(Issue, number=number)
+        items = list(getattr(issue, self.attr_name) or [])
+        if 0 <= index < len(items):
+            del items[index]
+            setattr(issue, self.attr_name, items)
+            issue.save(actor=request_actor(request))
+        return _render_section(request, issue, self.section_name)
+
+
+class IssueLinksView(_SectionView):
+    section_name = "links"
+
+    def post(self, request, number):
+        issue = get_object_or_404(Issue, number=number)
+        label = request.POST.get("label", "").strip()
+        url = request.POST.get("url", "").strip()
+        draft = {"label": label, "url": url}
+        if not label or not url:
+            return _form_error(
+                request,
+                issue,
+                self.section_name,
+                "Both label and URL are required.",
+                draft,
+            )
+        issue.links = [*(issue.links or []), {"label": label, "url": url}]
+        issue.save(actor=request_actor(request))
+        return _render_section(request, issue, self.section_name)
+
+
+class IssueLinkDeleteView(_JsonListDeleteView):
+    section_name = "links"
+    attr_name = "links"
+
+
+class IssuePartiesView(_SectionView):
+    section_name = "parties"
+
+    def post(self, request, number):
+        issue = get_object_or_404(Issue, number=number)
+        label = request.POST.get("label", "").strip()
+        url = request.POST.get("url", "").strip()
+        note = request.POST.get("note", "").strip()
+        draft = {"label": label, "url": url, "note": note}
+        if not label:
+            return _form_error(
+                request, issue, self.section_name, "Label is required.", draft
+            )
+        entry = {"label": label}
+        if url:
+            entry["url"] = url
+        if note:
+            entry["note"] = note
+        issue.interested_parties = [*(issue.interested_parties or []), entry]
+        issue.save(actor=request_actor(request))
+        return _render_section(request, issue, self.section_name)
+
+
+class IssuePartyDeleteView(_JsonListDeleteView):
+    section_name = "parties"
+    attr_name = "interested_parties"
+
+
+def _github_ref_log_data(ref):
+    return {"kind": ref.kind, "repo": ref.repo, "number": ref.number, "sha": ref.sha}
+
+
+class IssueGithubRefsView(_SectionView):
+    section_name = "github_refs"
+
+    def post(self, request, number):
+        issue = get_object_or_404(Issue, number=number)
+        kind = request.POST.get("kind", "").strip()
+        repo = request.POST.get("repo", "").strip() or settings.DEFAULT_GITHUB_REPO
+        ref_number_raw = request.POST.get("number", "").strip()
+        sha = request.POST.get("sha", "").strip()
+        draft = {"kind": kind, "repo": repo, "number": ref_number_raw, "sha": sha}
+        valid_kinds = {value for value, _ in GithubRefKind.choices}
+        if kind not in valid_kinds:
+            return _form_error(request, issue, self.section_name, "Pick a kind.", draft)
+        if kind == GithubRefKind.COMMIT:
+            if not sha:
+                return _form_error(
+                    request, issue, self.section_name, "Commit SHA is required.", draft
+                )
+            ref, created = GithubRef.objects.get_or_create(
+                issue=issue, kind=kind, repo=repo, sha=sha
+            )
+        else:
+            try:
+                ref_number = int(ref_number_raw)
+            except ValueError:
+                return _form_error(
+                    request,
+                    issue,
+                    self.section_name,
+                    "Issue/PR number must be an integer.",
+                    draft,
+                )
+            ref, created = GithubRef.objects.get_or_create(
+                issue=issue, kind=kind, repo=repo, number=ref_number
+            )
+        if created:
+            issue.log_action(
+                ".github_ref.added",
+                actor=request_actor(request),
+                data=_github_ref_log_data(ref),
+            )
+        return _render_section(request, issue, self.section_name)
+
+
+class IssueGithubRefDeleteView(LoginRequiredMixin, View):
+    def post(self, request, number, pk):
+        issue = get_object_or_404(Issue, number=number)
+        ref = GithubRef.objects.filter(pk=pk, issue=issue).first()
+        if ref is not None:
+            data = _github_ref_log_data(ref)
+            ref.delete()
+            issue.log_action(
+                ".github_ref.removed", actor=request_actor(request), data=data
+            )
+        return _render_section(request, issue, "github_refs")
+
+
+class IssueRelatedView(_SectionView):
+    section_name = "related"
+
+    def post(self, request, number):
+        issue = get_object_or_404(Issue, number=number)
+        raw = request.POST.get("target", "").strip()
+        draft = {"target": raw}
+        target_number = _parse_issue_number(raw)
+        if target_number is None:
+            return _form_error(
+                request,
+                issue,
+                self.section_name,
+                "Enter an issue number, e.g. PX-42 or 42.",
+                draft,
+            )
+        if target_number == issue.number:
+            return _form_error(
+                request,
+                issue,
+                self.section_name,
+                "An issue cannot reference itself.",
+                draft,
+            )
+        try:
+            target = Issue.objects.get(number=target_number)
+        except Issue.DoesNotExist:
+            return _form_error(
+                request,
+                issue,
+                self.section_name,
+                f"No issue PX-{target_number}.",
+                draft,
+            )
+        existing = IssueReference.objects.filter(
+            Q(from_issue=issue, to_issue=target) | Q(from_issue=target, to_issue=issue)
+        ).first()
+        if existing is None:
+            IssueReference.objects.create(from_issue=issue, to_issue=target)
+            issue.log_action(
+                ".related.added",
+                actor=request_actor(request),
+                data={"other_number": target.number, "other_slug": target.slug},
+            )
+        return _render_section(request, issue, self.section_name)
+
+
+class IssueRelatedDeleteView(LoginRequiredMixin, View):
+    def post(self, request, number, pk):
+        issue = get_object_or_404(Issue, number=number)
+        ref = (
+            IssueReference.objects.filter(pk=pk)
+            .select_related("from_issue", "to_issue")
+            .first()
+        )
+        if ref is not None and issue.pk in (ref.from_issue_id, ref.to_issue_id):
+            other = ref.to_issue if ref.from_issue_id == issue.pk else ref.from_issue
+            ref.delete()
+            issue.log_action(
+                ".related.removed",
+                actor=request_actor(request),
+                data={"other_number": other.number, "other_slug": other.slug},
+            )
+        return _render_section(request, issue, "related")
+
+
+def _parse_issue_number(raw):
+    """Accept ``PX-42`` (case-insensitive), ``#42``, or plain ``42``."""
+    if not raw:
+        return None
+    cleaned = raw.strip().upper()
+    if cleaned.startswith("PX-"):
+        cleaned = cleaned[3:]
+    elif cleaned.startswith("#"):
+        cleaned = cleaned[1:]
+    try:
+        value = int(cleaned)
+    except ValueError:
+        return None
+    if value <= 0:
+        return None
+    return value

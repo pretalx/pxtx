@@ -63,53 +63,10 @@
     </dl>
 </div>
 
-{% if github_refs %}
-<div class="card">
-    <h2>GitHub references</h2>
-    <ul>
-        {% for ref in github_refs %}
-        <li><a href="{{ ref.url }}">{{ ref.display }}</a>{% if ref.title %} — {{ ref.title }}{% endif %}{% if ref.state %} <span class="badge">{{ ref.state }}</span>{% endif %}</li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
-
-{% if issue.links %}
-<div class="card">
-    <h2>Links</h2>
-    <ul>
-        {% for link in issue.links %}
-        <li><a href="{{ link.url }}">{{ link.label }}</a></li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
-
-{% if issue.interested_parties %}
-<div class="card">
-    <h2>Interested parties</h2>
-    <ul>
-        {% for party in issue.interested_parties %}
-        <li>{% if party.url %}<a href="{{ party.url }}">{{ party.label }}</a>{% else %}{{ party.label }}{% endif %}{% if party.note %} <span class="meta">{{ party.note }}</span>{% endif %}</li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
-
-{% if related_issues %}
-<div class="card">
-    <h2>Referenced issues</h2>
-    <ul>
-        {% for other in related_issues %}
-        <li>
-            <a href="{% url 'core:issue-detail' number=other.number %}">{{ other.slug }}</a>
-            <span class="badge status-{{ other.status }}">{{ other.get_status_display }}</span>
-            {{ other.title }}
-        </li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
+{% include "core/_issue_links.html" with section_id="issue-links" section_url_name="core:issue-links" %}
+{% include "core/_issue_parties.html" with section_id="issue-parties" section_url_name="core:issue-parties" %}
+{% include "core/_issue_github_refs.html" with section_id="issue-github-refs" section_url_name="core:issue-github-refs" %}
+{% include "core/_issue_related.html" with section_id="issue-related" section_url_name="core:issue-related" %}
 
 {% if activity %}
 <div class="card">

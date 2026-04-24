@@ -619,3 +619,54 @@ body[data-g-prefix]::after {
     align-items: center; justify-content: center;
 }
 .help-toggle:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Add/remove sidebar sections (links, parties, github refs, related issues) */
+.sidebar-section ul.sidebar-list { list-style: none; padding: 0; margin: 0; }
+.sidebar-section ul.sidebar-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+.sidebar-section ul.sidebar-list li:last-child { border-bottom: none; }
+.sidebar-section .empty-row { color: var(--text-muted); font-size: 0.85rem; padding: 0.25rem 0; }
+.sidebar-section .row-delete {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 0.3rem;
+    cursor: pointer;
+}
+.sidebar-section .row-delete:hover { color: var(--danger); }
+.sidebar-section .add-toggle {
+    margin-top: 0.5rem;
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--accent);
+    font-size: 0.85rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.sidebar-section .add-toggle:hover { border-color: var(--accent); background: var(--bg); }
+.sidebar-section .add-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.6rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.sidebar-section .add-field { display: flex; flex-direction: column; gap: 0.2rem; }
+.sidebar-section .add-field input,
+.sidebar-section .add-field select { width: 100%; }
+.sidebar-section .add-field .meta { font-size: 0.75rem; color: var(--text-muted); }
+.sidebar-section .add-actions { display: flex; gap: 0.5rem; }
+.sidebar-section .add-actions button { font-size: 0.85rem; padding: 0.3rem 0.6rem; }

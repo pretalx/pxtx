@@ -1,0 +1,23 @@
+<div class="card sidebar-section" id="{{ section_id }}">
+    <h2>{% block title %}{% endblock %}</h2>
+    {% block body %}{% endblock %}
+    {% if adding %}
+    <form class="add-row" method="post"
+          hx-post="{% url section_url_name number=issue.number %}"
+          hx-target="#{{ section_id }}" hx-swap="outerHTML">
+        {% csrf_token %}
+        {% block form_fields %}{% endblock %}
+        {% if error %}<p class="error">{{ error }}</p>{% endif %}
+        <div class="add-actions">
+            <button type="submit">{% block submit_label %}{% endblock %}</button>
+            <button type="button" class="secondary"
+                    hx-get="{% url section_url_name number=issue.number %}"
+                    hx-target="#{{ section_id }}" hx-swap="outerHTML">Cancel</button>
+        </div>
+    </form>
+    {% else %}
+    <button type="button" class="add-toggle"
+            hx-get="{% url section_url_name number=issue.number %}?form=1"
+            hx-target="#{{ section_id }}" hx-swap="outerHTML">{% block add_label %}{% endblock %}</button>
+    {% endif %}
+</div>

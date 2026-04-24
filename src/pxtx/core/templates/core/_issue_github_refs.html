@@ -1,0 +1,46 @@
+{% extends "core/_issue_sidebar_section.html" %}
+
+{% block title %}GitHub references{% endblock %}
+{% block body %}
+{% if github_refs %}
+<ul class="sidebar-list">
+    {% for ref in github_refs %}
+    <li>
+        <a href="{{ ref.url }}">{{ ref.display }}</a>
+        {% if ref.title %} — {{ ref.title }}{% endif %}
+        {% if ref.state %} <span class="badge">{{ ref.state }}</span>{% endif %}
+        <button type="button" class="row-delete" title="Remove"
+                hx-post="{% url 'core:issue-github-ref-delete' number=issue.number pk=ref.pk %}"
+                hx-target="#{{ section_id }}" hx-swap="outerHTML"
+                hx-confirm="Remove this GitHub reference?">×</button>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty-row">No GitHub references.</p>
+{% endif %}
+{% endblock %}
+{% block form_fields %}
+<label class="add-field">
+    <span class="meta">Kind</span>
+    <select name="kind" autofocus>
+        {% for value, label in github_ref_kinds %}
+        <option value="{{ value }}" {% if draft.kind == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</label>
+<label class="add-field">
+    <span class="meta">Repository</span>
+    <input type="text" name="repo" value="{{ draft.repo|default:default_github_repo }}" required>
+</label>
+<label class="add-field">
+    <span class="meta">Number (issue/PR)</span>
+    <input type="number" min="1" name="number" value="{{ draft.number|default:'' }}">
+</label>
+<label class="add-field">
+    <span class="meta">SHA (commit)</span>
+    <input type="text" name="sha" value="{{ draft.sha|default:'' }}">
+</label>
+{% endblock %}
+{% block submit_label %}Add reference{% endblock %}
+{% block add_label %}+ Add reference{% endblock %}

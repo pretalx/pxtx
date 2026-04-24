@@ -1,0 +1,37 @@
+{% extends "core/_issue_sidebar_section.html" %}
+
+{% block title %}Interested parties{% endblock %}
+{% block body %}
+{% if parties %}
+<ul class="sidebar-list">
+    {% for party in parties %}
+    <li>
+        {% if party.url %}<a href="{{ party.url }}">{{ party.label }}</a>{% else %}{{ party.label }}{% endif %}
+        {% if party.note %}<span class="meta">{{ party.note }}</span>{% endif %}
+        <button type="button" class="row-delete" title="Remove"
+                hx-post="{% url 'core:issue-party-delete' number=issue.number index=forloop.counter0 %}"
+                hx-target="#{{ section_id }}" hx-swap="outerHTML"
+                hx-confirm="Remove this party?">×</button>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty-row">No interested parties.</p>
+{% endif %}
+{% endblock %}
+{% block form_fields %}
+<label class="add-field">
+    <span class="meta">Name</span>
+    <input type="text" name="label" value="{{ draft.label|default:'' }}" autofocus required>
+</label>
+<label class="add-field">
+    <span class="meta">URL (optional)</span>
+    <input type="url" name="url" value="{{ draft.url|default:'' }}">
+</label>
+<label class="add-field">
+    <span class="meta">Note (optional)</span>
+    <input type="text" name="note" value="{{ draft.note|default:'' }}">
+</label>
+{% endblock %}
+{% block submit_label %}Add party{% endblock %}
+{% block add_label %}+ Add party{% endblock %}

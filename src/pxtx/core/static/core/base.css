@@ -225,6 +225,24 @@ nav.site a.new-issue { color: var(--accent); }
 .filter-row label.wide { flex: 1; }
 .filter-row label.wide input { width: 100%; }
 
+.search-wrap { position: relative; display: block; }
+.search-wrap input { padding-right: 1.8rem; }
+.search-clear {
+    position: absolute;
+    right: 0.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: 0;
+    padding: 0 0.35rem;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+.search-clear:hover { color: var(--text); }
+.search-wrap input:placeholder-shown ~ .search-clear { display: none; }
+
 /* Choices.js: match the rest of the UI (colors, radii, density). */
 .choices { margin-bottom: 0; font-size: 0.85rem; }
 .choices__inner {

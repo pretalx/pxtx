@@ -55,7 +55,10 @@
     <div class="filter-row">
         <label class="wide">
             <span>Search</span>
-            <input type="text" name="search" value="{{ search_value }}" placeholder="title, description, comments">
+            <div class="search-wrap">
+                <input type="text" name="search" value="{{ search_value }}" placeholder="title, description, comments">
+                <button type="button" class="search-clear" data-search-clear aria-label="Clear search">×</button>
+            </div>
         </label>
     </div>
 </form>

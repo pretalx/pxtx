@@ -365,6 +365,8 @@ class IssueModalEditView(LoginRequiredMixin, View):
         }
         if sidebar_mode:
             ctx.update(_detail_sections_context(issue))
+            ctx["comments"] = list(issue.comments.all())
+            ctx["comment_form"] = CommentForm()
         return ctx
 
     def get(self, request, number):

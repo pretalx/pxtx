@@ -107,6 +107,10 @@
         {% include "core/_issue_links.html" with section_id="issue-links" section_url_name="core:issue-links" %}
         {% include "core/_issue_related.html" with section_id="issue-related" section_url_name="core:issue-related" %}
         {% include "core/_issue_parties.html" with section_id="issue-parties" section_url_name="core:issue-parties" %}
+        <div class="card">
+            <h2>Comments</h2>
+            {% include "core/_comments_section.html" %}
+        </div>
     </div>
     {% endif %}
 </div>

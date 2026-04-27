@@ -101,4 +101,12 @@
         </div>
         {% endif %}
     </form>
+    {% if sidebar_mode and issue %}
+    <div class="modal-sections">
+        {% include "core/_issue_links.html" with section_id="issue-links" section_url_name="core:issue-links" %}
+        {% include "core/_issue_parties.html" with section_id="issue-parties" section_url_name="core:issue-parties" %}
+        {% include "core/_issue_github_refs.html" with section_id="issue-github-refs" section_url_name="core:issue-github-refs" %}
+        {% include "core/_issue_related.html" with section_id="issue-related" section_url_name="core:issue-related" %}
+    </div>
+    {% endif %}
 </div>

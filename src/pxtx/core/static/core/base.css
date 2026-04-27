@@ -581,6 +581,8 @@ kbd {
 .issue-sidebar .modal-head { position: sticky; top: 0; z-index: 1; }
 .issue-sidebar .modal-form { padding: 1rem 1.25rem; }
 .issue-sidebar .modal-meta { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
+.issue-sidebar .modal-sections { padding: 0 1.25rem 1rem; }
+.issue-sidebar .modal-sections .card { background: var(--bg); }
 
 .inline-edit .inline-edit-field { display: none; }
 .inline-edit.editing .inline-edit-view { display: none; }

@@ -351,7 +351,7 @@ class IssueModalEditView(LoginRequiredMixin, View):
     either case."""
 
     def _context(self, issue, form, *, sidebar_mode=False):
-        return {
+        ctx = {
             "form": form,
             "issue": issue,
             "form_action": reverse(
@@ -363,6 +363,9 @@ class IssueModalEditView(LoginRequiredMixin, View):
             "blocked_reason_visible": (form["status"].value() == Status.BLOCKED),
             "sidebar_mode": sidebar_mode,
         }
+        if sidebar_mode:
+            ctx.update(_detail_sections_context(issue))
+        return ctx
 
     def get(self, request, number):
         issue = get_object_or_404(Issue, number=number)

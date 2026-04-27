@@ -682,6 +682,40 @@ def test_modal_edit_sidebar_mode_omits_submit_button_and_wires_autosave(auth_cli
 
 
 @pytest.mark.django_db
+def test_modal_edit_sidebar_mode_renders_link_sections(auth_client):
+    """Sidebar mode is the only way to view links/parties/refs/related from
+    the issue list, so the fragment must include all four sections so users
+    can edit them inline without opening the full detail page. The plain
+    modal path (kanban) keeps the lean form."""
+    from tests.factories import GithubIssueRefFactory, IssueReferenceFactory
+
+    issue = IssueFactory(
+        title="with sections",
+        links=[{"label": "wiki", "url": "https://example.com/w"}],
+        interested_parties=[{"label": "Alice"}],
+    )
+    GithubIssueRefFactory(issue=issue, repo="pretalx/pretalx", number=42)
+    other = IssueFactory(title="related target")
+    IssueReferenceFactory(from_issue=issue, to_issue=other)
+
+    sidebar = auth_client.get(
+        f"/issues/{issue.number}/modal-edit/?mode=sidebar"
+    ).content.decode()
+    assert 'id="issue-links"' in sidebar
+    assert 'id="issue-parties"' in sidebar
+    assert 'id="issue-github-refs"' in sidebar
+    assert 'id="issue-related"' in sidebar
+    assert "wiki" in sidebar
+    assert "Alice" in sidebar
+    assert "pretalx/pretalx#42" in sidebar
+    assert other.slug in sidebar
+
+    modal = auth_client.get(f"/issues/{issue.number}/modal-edit/").content.decode()
+    assert 'id="issue-links"' not in modal
+    assert 'id="issue-github-refs"' not in modal
+
+
+@pytest.mark.django_db
 def test_modal_edit_default_mode_keeps_submit_button(auth_client):
     """Without ``?mode=sidebar`` the form still renders its submit button —
     this is the kanban dialog path. The status select has its own

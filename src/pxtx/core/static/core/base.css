@@ -60,6 +60,7 @@ table, time { font-variant-numeric: tabular-nums; }
 [hidden] { display: none !important; }
 ::selection { background: var(--accent); color: #fff; text-shadow: none; }
 
+html, body { height: 100%; }
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     background: var(--bg);
@@ -68,6 +69,9 @@ body {
     -webkit-font-smoothing: antialiased;
     text-size-adjust: none;
     text-decoration-skip-ink: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 nav.site {
     background: var(--surface);
@@ -76,6 +80,7 @@ nav.site {
     display: flex;
     align-items: center;
     gap: 1.5rem;
+    flex: none;
 }
 nav.site a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
 nav.site a:hover, nav.site a.active { color: var(--text); }
@@ -116,13 +121,25 @@ nav.site form.deploy-form button.btn-deploy:hover { filter: brightness(1.05); }
     50%      { opacity: 0.55; }
 }
 main { max-width: none; margin: 0; padding: 1.25rem 1.5rem; min-width: 0; }
-.app-body { display: block; }
+.app-body {
+    display: block;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
 .app-body:has(.issue-sidebar:not(:empty)) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) min(40rem, 42vw);
-    align-items: start;
+    grid-template-rows: 100%;
+    overflow: hidden;
 }
-.app-body:has(.issue-sidebar:not(:empty)) > main { padding-right: 0; }
+.app-body:has(.issue-sidebar:not(:empty)) > main {
+    padding-right: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
+}
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
 h1 { font-size: 1.4rem; margin-bottom: 0.75rem; }
 h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
@@ -574,11 +591,9 @@ kbd {
     border-left: 1px solid var(--border);
     background: var(--surface);
     color: var(--text);
-    position: sticky;
-    top: 0;
-    align-self: stretch;
-    max-height: 100dvh;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
     min-width: 0;
 }
 .issue-sidebar:empty { display: none; }

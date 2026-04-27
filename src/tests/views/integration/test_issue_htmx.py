@@ -716,6 +716,27 @@ def test_modal_edit_sidebar_mode_renders_link_sections(auth_client):
 
 
 @pytest.mark.django_db
+def test_modal_edit_sidebar_mode_renders_comments(auth_client):
+    """Comments must appear in the sidebar so users can read and add them
+    without opening the full detail page. The plain modal path (kanban) keeps
+    the lean form without comments."""
+    from tests.factories import CommentFactory
+
+    issue = IssueFactory(title="commented")
+    CommentFactory(issue=issue, body="prior remark", author="someone")
+
+    sidebar = auth_client.get(
+        f"/issues/{issue.number}/modal-edit/?mode=sidebar"
+    ).content.decode()
+    assert 'id="comments-section"' in sidebar
+    assert "prior remark" in sidebar
+    assert f'hx-post="/issues/{issue.number}/comments/"' in sidebar
+
+    modal = auth_client.get(f"/issues/{issue.number}/modal-edit/").content.decode()
+    assert 'id="comments-section"' not in modal
+
+
+@pytest.mark.django_db
 def test_modal_edit_default_mode_keeps_submit_button(auth_client):
     """Without ``?mode=sidebar`` the form still renders its submit button —
     this is the kanban dialog path. The status select has its own

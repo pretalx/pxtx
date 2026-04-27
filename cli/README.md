@@ -27,8 +27,8 @@ Any of these can also be supplied via environment variables: `PXTX_URL`,
 ## Commands
 
 ```
-pxtx issue new --title "..." [--priority want] [--effort 2-6h] [--milestone 25.1]
-pxtx issue list [--status open,wip] [--mine] [--priority want]
+pxtx issue new --title "..." [--priority sollte] [--effort 2-6h] [--milestone 25.1]
+pxtx issue list [--status open,wip] [--mine] [--priority will,sollte]
 pxtx issue show PX-47 [--comments]
 pxtx issue close PX-47 [--wontfix]
 pxtx issue comment PX-47 "message"    # or --stdin

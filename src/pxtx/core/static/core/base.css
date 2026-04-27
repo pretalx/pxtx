@@ -273,6 +273,10 @@ nav.site a.new-issue { color: var(--accent); }
 .issue-table .comment-col { white-space: nowrap; text-align: center; color: var(--text-muted); width: 1px; }
 .issue-table tr[data-issue-href] { cursor: pointer; }
 .issue-table tr[data-issue-href]:hover td:not(.edit-cell) { background: var(--bg); }
+/* The whole row is the click target; the title/number anchors are there for
+   middle-click and copy-link, so don't render them as visible links. */
+.issue-table .row-link { color: inherit; }
+.issue-table .row-link:hover { text-decoration: none; }
 .issue-table .edit-cell { cursor: pointer; }
 .issue-table .edit-cell:hover { background: var(--bg); }
 .issue-table .edit-cell.editing { padding: 0.2rem 0.3rem; cursor: default; }

@@ -102,6 +102,17 @@ document.addEventListener("click", (event) => {
     openHelp();
 });
 
+document.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-search-clear]");
+    if (!btn) return;
+    event.preventDefault();
+    const input = btn.parentElement.querySelector("input");
+    if (!input || input.value === "") return;
+    input.value = "";
+    input.focus();
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+});
+
 // Deploy-in-progress: after the /deploy/ POST swaps the form for the
 // "Deploying…" indicator, poll /healthz/ and reload once the server answers
 // 200 a few times in a row (so we don't reload mid-restart).

@@ -270,6 +270,7 @@ nav.site a.new-issue { color: var(--accent); }
 .choices__list--multiple .choices__item .choices__button:hover { opacity: 1; }
 
 .issue-table td.meta { white-space: nowrap; }
+.issue-table .comment-col { white-space: nowrap; text-align: center; color: var(--text-muted); width: 1px; }
 .issue-table tr[data-issue-href] { cursor: pointer; }
 .issue-table tr[data-issue-href]:hover td:not(.edit-cell) { background: var(--bg); }
 .issue-table .edit-cell { cursor: pointer; }

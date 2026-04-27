@@ -10,6 +10,7 @@
                 <th>{% include "core/_sort_header.html" with header=sort_headers.priority %}</th>
                 <th>{% include "core/_sort_header.html" with header=sort_headers.effort %}</th>
                 <th>{% include "core/_sort_header.html" with header=sort_headers.milestone %}</th>
+                <th class="comment-col" aria-label="Comments">💬</th>
                 <th>{% include "core/_sort_header.html" with header=sort_headers.updated %}</th>
             </tr>
         </thead>
@@ -30,6 +31,7 @@
                 {% include "core/_issue_cell.html" with issue=issue field="priority" editing=False %}
                 {% include "core/_issue_cell.html" with issue=issue field="effort" editing=False %}
                 <td>{% if issue.milestone %}<a href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% else %}—{% endif %}</td>
+                <td class="comment-col">{% if issue.comment_count %}<span class="comment-count" aria-label="{{ issue.comment_count }} comment{{ issue.comment_count|pluralize }}">💬 {{ issue.comment_count }}</span>{% endif %}</td>
                 <td class="meta" title="{{ issue.updated_at|date:'Y-m-d H:i' }}">{{ issue.updated_at|timesince }} ago</td>
             </tr>
             {% endfor %}

@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -168,7 +168,9 @@ def _sort_headers(params, sort, direction):
 
 
 def _filtered_issues(params):
-    qs = Issue.objects.select_related("milestone")
+    qs = Issue.objects.select_related("milestone").annotate(
+        comment_count=Count("comments")
+    )
 
     statuses = params.getlist("status")
     if not statuses and "status" not in params:

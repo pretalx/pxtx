@@ -48,6 +48,22 @@ def test_issue_list_lists_all_issues_with_constant_query_count(
 
 
 @pytest.mark.django_db
+def test_issue_list_shows_comment_count(auth_client):
+    chatty = IssueFactory(title="chatty")
+    quiet = IssueFactory(title="quiet")
+    CommentFactory(issue=chatty)
+    CommentFactory(issue=chatty)
+
+    response = auth_client.get("/issues/")
+
+    assert response.status_code == 200
+    issues = {i.number: i for i in response.context["issues"]}
+    assert issues[chatty.number].comment_count == 2
+    assert issues[quiet.number].comment_count == 0
+    assert "💬 2" in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_issue_detail_returns_404_for_unknown_number(auth_client):
     response = auth_client.get("/issues/999999/")
 

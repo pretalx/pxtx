@@ -274,13 +274,22 @@ document.addEventListener("click", (event) => {
     }
 });
 
-// Row-level click opens the issue sidebar. Nested interactive elements
-// (links, editable cells, drag handle, form controls) keep their own
-// behavior — we only fire when the click landed on "dead" row space.
+// Row click opens the issue sidebar. The whole row is one target — including
+// the title/number anchors (.row-link), which keep their `href` for
+// middle-click and modifier-click new-tab navigation but otherwise route
+// through this handler. Going through one document-level listener (rather
+// than htmx attrs on each link) means freshly swapped rows after a filter
+// don't have to wait for htmx to re-bind before they respond to clicks.
+// Nested interactive cells (drag handle, inline-edit cells, other links
+// like the milestone chip) keep their own behavior.
 document.addEventListener("click", (event) => {
+    if (event.button !== 0) return;
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     const target = event.target;
     if (!target || !target.closest) return;
-    if (target.closest("a, button, input, select, textarea, label, .drag-col, .edit-cell")) return;
+    if (target.closest("button, input, select, textarea, label, .drag-col, .edit-cell")) return;
+    const link = target.closest("a");
+    if (link && !link.matches(".row-link")) return;
     const row = target.closest("tr[data-issue-href]");
     if (!row || !window.htmx) return;
     event.preventDefault();

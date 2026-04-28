@@ -829,14 +829,17 @@ def test_modal_edit_requires_login(client):
 @pytest.mark.django_db
 def test_issue_list_rows_link_to_sidebar_edit(auth_client):
     """Issue list opens the edit form in the sidebar (``?mode=sidebar``) so
-    the server knows to render the auto-save variant of the form."""
+    the server knows to render the auto-save variant of the form. The
+    sidebar-edit URL lives on the row's ``data-issue-href`` (read by the
+    document-level click handler in pxtx.js) — keeping the row a single
+    click target avoids races where freshly swapped rows after a filter
+    aren't yet bound by htmx."""
     issue = IssueFactory()
 
     response = auth_client.get("/issues/")
 
     body = response.content.decode()
-    assert f'hx-get="/issues/{issue.number}/modal-edit/?mode=sidebar"' in body
-    assert 'hx-target="#issue-modal"' in body
+    assert f'data-issue-href="/issues/{issue.number}/modal-edit/?mode=sidebar"' in body
 
 
 @pytest.mark.django_db

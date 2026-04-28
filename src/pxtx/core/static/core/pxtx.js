@@ -95,6 +95,20 @@ function openCreateIssueModal() {
     window.location.href = "/issues/new/";
 }
 
+// Ctrl/Cmd+Enter inside the issue form submits it. Skipped in sidebar mode,
+// where the form auto-saves on change and has no submit button.
+document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    if (!(event.ctrlKey || event.metaKey)) return;
+    if (!event.target || !event.target.closest) return;
+    const form = event.target.closest("form.issue-form");
+    if (!form) return;
+    const submit = form.querySelector("button[type=submit]");
+    if (!submit) return;
+    event.preventDefault();
+    submit.click();
+});
+
 document.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-help-toggle]");
     if (!trigger) return;

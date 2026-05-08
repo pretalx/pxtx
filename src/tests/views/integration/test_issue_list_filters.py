@@ -1,6 +1,6 @@
 import pytest
 
-from pxtx.core.models import Priority, Status
+from pxtx.core.models import Effort, Priority, Status
 from tests.factories import IssueFactory, MilestoneFactory
 
 pytestmark = pytest.mark.integration
@@ -208,6 +208,7 @@ def test_quick_filters_only_shown_when_matching_issues_exist(auth_client):
     IssueFactory(status=Status.DRAFT)
     IssueFactory(priority=Priority.JETZT, status=Status.OPEN)
     IssueFactory(priority=Priority.WILL, status=Status.OPEN)
+    IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
 
     response = auth_client.get("/issues/")
     labels = {qf["label"] for qf in response.context["quick_filters"]}
@@ -215,6 +216,7 @@ def test_quick_filters_only_shown_when_matching_issues_exist(auth_client):
         "★ highlighted",
         "🔥 jetzt",
         "💪 will",
+        "🍒 easy pickings",
         "📋 open",
         "🔧 wip",
         "🚧 blocked",
@@ -237,6 +239,34 @@ def test_quick_filter_active_when_its_params_match_current_request(auth_client):
     assert active["🔧 wip"] is True
     assert active["🚧 blocked"] is False
     assert active["📋 open"] is False
+
+
+@pytest.mark.django_db
+def test_effort_filter_multi(auth_client):
+    tiny = IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
+    small = IssueFactory(effort_minutes=Effort.SMALL, status=Status.OPEN)
+    IssueFactory(effort_minutes=Effort.LARGE, status=Status.OPEN)
+    IssueFactory(status=Status.OPEN)  # no effort set
+
+    response = auth_client.get("/issues/?effort=30&effort=90")
+
+    assert {i.pk for i in response.context["issues"]} == {tiny.pk, small.pk}
+
+
+@pytest.mark.django_db
+def test_easy_pickings_pill_filters_to_low_effort_open_work(auth_client):
+    tiny = IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
+    small = IssueFactory(effort_minutes=Effort.SMALL, status=Status.WIP)
+    IssueFactory(effort_minutes=Effort.MEDIUM, status=Status.OPEN)
+    # Closed issues with low effort should still be excluded by default statuses.
+    IssueFactory(effort_minutes=Effort.TINY, status=Status.COMPLETED)
+
+    response = auth_client.get("/issues/?effort=30&effort=90")
+
+    assert {i.pk for i in response.context["issues"]} == {tiny.pk, small.pk}
+    by_label = {qf["label"]: qf for qf in response.context["quick_filters"]}
+    assert by_label["🍒 easy pickings"]["active"] is True
+    assert by_label["📋 open"]["active"] is False
 
 
 @pytest.mark.django_db

@@ -45,6 +45,11 @@ QUICK_FILTERS = [
         "query": [("priority", "1")],
         "filter": {"priority": Priority.WILL},
     },
+    {
+        "label": "🍒 easy pickings",
+        "query": [("effort", str(Effort.TINY)), ("effort", str(Effort.SMALL))],
+        "filter": {"effort_minutes__in": [Effort.TINY, Effort.SMALL]},
+    },
     {"label": "📋 open", "query": [], "filter": None, "is_default": True},
     {"label": "🔧 wip", "query": [("status", "wip")], "filter": {"status": Status.WIP}},
     {
@@ -68,6 +73,7 @@ FILTER_PARAMS = (
     "assignee",
     "is_highlighted",
     "search",
+    "effort",
 )
 
 SORT_COLUMNS = {
@@ -180,6 +186,10 @@ def _filtered_issues(params):
     priorities = params.getlist("priority")
     if priorities:
         qs = qs.filter(priority__in=[int(p) for p in priorities])
+
+    efforts = params.getlist("effort")
+    if efforts:
+        qs = qs.filter(effort_minutes__in=[int(e) for e in efforts])
 
     milestone = params.get("milestone")
     if milestone == "null":

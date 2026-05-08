@@ -85,7 +85,8 @@ def test_issue_list_shows_external_ref_counts(auth_client):
     assert issues[plain.number].github_ref_count == 0
 
     body = response.content.decode()
-    assert "🐙 2" in body
+    assert 'class="github-icon"' in body
+    assert "2 GitHub reference" in body
     assert "🔗 1" in body
 
 

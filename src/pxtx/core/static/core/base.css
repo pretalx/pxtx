@@ -307,6 +307,7 @@ nav.site a.new-issue { color: var(--accent); }
 .issue-table .comment-col { white-space: nowrap; text-align: center; color: var(--text-muted); width: 1px; }
 .issue-table .refs-col { white-space: nowrap; text-align: center; color: var(--text-muted); width: 1px; }
 .issue-table .refs-col .ref-count + .ref-count { margin-left: 0.4rem; }
+.issue-table .refs-col .github-icon { vertical-align: -2px; }
 .issue-table tr[data-issue-href] { cursor: pointer; }
 .issue-table tr[data-issue-href]:hover td:not(.edit-cell) { background: var(--bg); }
 /* The whole row is the click target; the title/number anchors are there for

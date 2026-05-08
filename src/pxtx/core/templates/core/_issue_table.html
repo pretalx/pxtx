@@ -29,7 +29,7 @@
                 {% include "core/_issue_cell.html" with issue=issue field="effort" editing=False %}
                 <td>{% if issue.milestone %}<a href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% else %}—{% endif %}</td>
                 <td class="refs-col">
-                    {% if issue.github_ref_count %}<span class="ref-count" aria-label="{{ issue.github_ref_count }} GitHub reference{{ issue.github_ref_count|pluralize }}">🐙 {{ issue.github_ref_count }}</span>{% endif %}
+                    {% if issue.github_ref_count %}<span class="ref-count" aria-label="{{ issue.github_ref_count }} GitHub reference{{ issue.github_ref_count|pluralize }}">{% include "core/_github_icon.html" %} {{ issue.github_ref_count }}</span>{% endif %}
                     {% if issue.links|length %}<span class="ref-count" aria-label="{{ issue.links|length }} external link{{ issue.links|length|pluralize }}">🔗 {{ issue.links|length }}</span>{% endif %}
                 </td>
                 <td class="comment-col">{% if issue.comment_count %}<span class="comment-count" aria-label="{{ issue.comment_count }} comment{{ issue.comment_count|pluralize }}">💬 {{ issue.comment_count }}</span>{% endif %}</td>

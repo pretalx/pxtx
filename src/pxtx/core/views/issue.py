@@ -253,7 +253,6 @@ def _issue_list_context(params):
         "selected_efforts": selected_efforts,
         "selected_milestone": params.get("milestone", ""),
         "search_value": params.get("search", ""),
-        "highlighted_only": params.get("is_highlighted") == "on",
         "sort": sort,
         "direction": direction,
         "sort_headers": _sort_headers(params, sort, direction),

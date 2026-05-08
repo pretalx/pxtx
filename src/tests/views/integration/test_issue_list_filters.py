@@ -73,7 +73,7 @@ def test_milestone_filter_null_finds_unassigned(auth_client):
 
 
 @pytest.mark.django_db
-def test_highlighted_only_toggle(auth_client):
+def test_is_highlighted_filter(auth_client):
     starred = IssueFactory(is_highlighted=True, status=Status.OPEN)
     IssueFactory(status=Status.OPEN)
 

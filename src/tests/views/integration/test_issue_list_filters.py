@@ -73,16 +73,6 @@ def test_milestone_filter_null_finds_unassigned(auth_client):
 
 
 @pytest.mark.django_db
-def test_assignee_filter_is_icontains(auth_client):
-    mine = IssueFactory(assignee="claude/feature-x", status=Status.OPEN)
-    IssueFactory(assignee="tobias", status=Status.OPEN)
-
-    response = auth_client.get("/issues/?assignee=claude")
-
-    assert {i.pk for i in response.context["issues"]} == {mine.pk}
-
-
-@pytest.mark.django_db
 def test_highlighted_only_toggle(auth_client):
     starred = IssueFactory(is_highlighted=True, status=Status.OPEN)
     IssueFactory(status=Status.OPEN)
@@ -189,11 +179,11 @@ def test_sort_headers_track_active_column_and_direction(auth_client):
 
 @pytest.mark.django_db
 def test_sort_header_querystring_preserves_filters(auth_client):
-    response = auth_client.get("/issues/?status=open&assignee=claude&sort=updated")
+    response = auth_client.get("/issues/?status=open&priority=1&sort=updated")
 
     querystring = response.context["sort_headers"]["title"]["querystring"]
     assert "status=open" in querystring
-    assert "assignee=claude" in querystring
+    assert "priority=1" in querystring
     assert "sort=title" in querystring
 
 

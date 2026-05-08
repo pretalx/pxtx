@@ -70,7 +70,6 @@ FILTER_PARAMS = (
     "status",
     "priority",
     "milestone",
-    "assignee",
     "is_highlighted",
     "search",
     "effort",
@@ -197,10 +196,6 @@ def _filtered_issues(params):
     elif milestone:
         qs = qs.filter(milestone__slug=milestone)
 
-    assignee = params.get("assignee", "").strip()
-    if assignee:
-        qs = qs.filter(assignee__icontains=assignee)
-
     if params.get("is_highlighted") == "on":
         qs = qs.filter(is_highlighted=True)
 
@@ -258,7 +253,6 @@ def _issue_list_context(params):
         "selected_efforts": selected_efforts,
         "selected_milestone": params.get("milestone", ""),
         "search_value": params.get("search", ""),
-        "assignee_value": params.get("assignee", ""),
         "highlighted_only": params.get("is_highlighted") == "on",
         "sort": sort,
         "direction": direction,

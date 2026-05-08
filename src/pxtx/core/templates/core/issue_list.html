@@ -47,10 +47,6 @@
                 {% endfor %}
             </select>
         </label>
-        <label>
-            <span>Assignee</span>
-            <input type="text" name="assignee" value="{{ assignee_value }}" placeholder="contains…">
-        </label>
         <label class="inline">
             <input type="checkbox" name="is_highlighted" {% if highlighted_only %}checked{% endif %}>
             <span>Highlighted only</span>

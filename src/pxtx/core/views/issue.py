@@ -174,7 +174,8 @@ def _sort_headers(params, sort, direction):
 
 def _filtered_issues(params):
     qs = Issue.objects.select_related("milestone").annotate(
-        comment_count=Count("comments")
+        comment_count=Count("comments", distinct=True),
+        github_ref_count=Count("github_refs", distinct=True),
     )
 
     statuses = params.getlist("status")

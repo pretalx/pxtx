@@ -64,6 +64,32 @@ def test_issue_list_shows_comment_count(auth_client):
 
 
 @pytest.mark.django_db
+def test_issue_list_shows_external_ref_counts(auth_client):
+    linked = IssueFactory(
+        title="linked", links=[{"label": "spec", "url": "https://example.com/a"}]
+    )
+    githubbed = IssueFactory(title="githubbed")
+    GithubIssueRefFactory(issue=githubbed)
+    GithubIssueRefFactory(issue=githubbed)
+    # Also pile a comment onto githubbed to confirm distinct counts don't
+    # cross-multiply when multiple annotated reverse relations exist.
+    CommentFactory(issue=githubbed)
+    plain = IssueFactory(title="plain")
+
+    response = auth_client.get("/issues/")
+
+    issues = {i.number: i for i in response.context["issues"]}
+    assert issues[githubbed.number].github_ref_count == 2
+    assert issues[githubbed.number].comment_count == 1
+    assert issues[linked.number].github_ref_count == 0
+    assert issues[plain.number].github_ref_count == 0
+
+    body = response.content.decode()
+    assert "🐙 2" in body
+    assert "🔗 1" in body
+
+
+@pytest.mark.django_db
 def test_issue_detail_returns_404_for_unknown_number(auth_client):
     response = auth_client.get("/issues/999999/")
 

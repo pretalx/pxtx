@@ -220,7 +220,7 @@ nav.site a.new-issue { color: var(--accent); }
     margin-bottom: 1rem;
 }
 .filter-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
-.filter-row label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; color: var(--text-muted); min-width: 12rem; flex: 1 1 12rem; }
+.filter-row label { display: flex; flex-direction: column; gap: 0.2rem; padding-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted); min-width: 12rem; flex: 1 1 12rem; }
 .filter-row label.inline { flex-direction: row; align-items: center; gap: 0.4rem; margin-top: 1.2rem; flex: 0 0 auto; min-width: 0; }
 .filter-row label.wide { flex: 1; }
 .filter-row label.wide input { width: 100%; }

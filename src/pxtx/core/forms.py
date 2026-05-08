@@ -2,7 +2,7 @@ from django import forms
 from django.urls import reverse_lazy
 from django.utils.text import slugify
 
-from pxtx.core.models import Comment, Issue, Milestone, Priority, Status
+from pxtx.core.models import Comment, Effort, Issue, Milestone, Priority, Status
 from pxtx.core.widgets import EnhancedSelect, EnhancedSelectMultiple
 
 
@@ -81,6 +81,11 @@ class IssueFilterForm(forms.Form):
         widget=EnhancedSelectMultiple(
             badge_type="priority", placeholder="any priority"
         ),
+    )
+    effort = forms.MultipleChoiceField(
+        choices=Effort.choices,
+        required=False,
+        widget=EnhancedSelectMultiple(badge_type="effort", placeholder="any effort"),
     )
 
 

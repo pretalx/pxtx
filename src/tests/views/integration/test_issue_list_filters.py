@@ -254,6 +254,14 @@ def test_effort_filter_multi(auth_client):
 
 
 @pytest.mark.django_db
+def test_effort_filter_form_reflects_selection(auth_client):
+    response = auth_client.get("/issues/?effort=30&effort=90")
+
+    assert response.context["selected_efforts"] == ["30", "90"]
+    assert response.context["filter_form"].initial["effort"] == ["30", "90"]
+
+
+@pytest.mark.django_db
 def test_easy_pickings_pill_filters_to_low_effort_open_work(auth_client):
     tiny = IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
     small = IssueFactory(effort_minutes=Effort.SMALL, status=Status.WIP)

@@ -250,10 +250,12 @@ def _issue_list_context(params):
         params.getlist("status") if "status" in params else list(DEFAULT_STATUSES)
     )
     selected_priorities = params.getlist("priority")
+    selected_efforts = params.getlist("effort")
     return {
         "issues": _filtered_issues(params),
         "selected_statuses": selected_statuses,
         "selected_priorities": selected_priorities,
+        "selected_efforts": selected_efforts,
         "selected_milestone": params.get("milestone", ""),
         "search_value": params.get("search", ""),
         "assignee_value": params.get("assignee", ""),
@@ -263,7 +265,11 @@ def _issue_list_context(params):
         "sort_headers": _sort_headers(params, sort, direction),
         "can_reorder": sort == "priority" and direction == "asc",
         "filter_form": IssueFilterForm(
-            initial={"status": selected_statuses, "priority": selected_priorities}
+            initial={
+                "status": selected_statuses,
+                "priority": selected_priorities,
+                "effort": selected_efforts,
+            }
         ),
         "milestones": list(Milestone.objects.order_by("-target_date", "name")),
         "quick_filters": quick_filters,

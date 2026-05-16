@@ -29,8 +29,7 @@
         <span class="right">
             {% if user.is_superuser and deploy_enabled %}
             <form method="post" action="{% url 'core:deploy' %}" class="deploy-form"
-                  hx-post="{% url 'core:deploy' %}" hx-target="this" hx-swap="outerHTML"
-                  hx-confirm="Deploy the new version now?">
+                  hx-post="{% url 'core:deploy' %}" hx-target="this" hx-swap="outerHTML">
                 {% csrf_token %}
                 <button type="submit" class="btn-deploy" title="Deploy new version">Deploy</button>
             </form>

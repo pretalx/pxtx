@@ -211,6 +211,20 @@ nav.site a.new-issue { color: var(--accent); }
     color: #fff;
 }
 .quick-filter.active:hover { color: #fff; }
+.quick-filter-count {
+    display: inline-block;
+    margin-left: 0.25rem;
+    padding: 0 0.4rem;
+    border-radius: 999px;
+    background: var(--border);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+}
+.quick-filter.active .quick-filter-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
 
 .issue-filters {
     background: var(--surface);

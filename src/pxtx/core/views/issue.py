@@ -233,13 +233,17 @@ def _issue_list_context(params):
         if spec.get("is_default"):
             if not any_issues:
                 continue
-        elif not Issue.objects.filter(**spec["filter"]).exists():
-            continue
+            count = Issue.objects.filter(status__in=DEFAULT_STATUSES).count()
+        else:
+            count = Issue.objects.filter(**spec["filter"]).count()
+            if not count:
+                continue
         quick_filters.append(
             {
                 "label": spec["label"],
                 "querystring": spec["query"],
                 "active": _quick_filter_active(spec, params),
+                "count": count,
             }
         )
     selected_statuses = (

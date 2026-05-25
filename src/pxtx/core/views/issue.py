@@ -225,6 +225,17 @@ def _quick_filter_active(spec, params):
     return all(value in params.getlist(key) for key, value in spec["query"])
 
 
+def _quick_filter_count(spec):
+    """Count issues a pill click would surface. Pills whose own filter doesn't
+    pin a status inherit the default status filter (open/wip/blocked) — same
+    rule ``_filtered_issues`` applies when no ``status`` param is set — so the
+    pill count agrees with the list the click produces."""
+    qs = Issue.objects.filter(**spec["filter"])
+    if "status" not in spec["filter"]:
+        qs = qs.filter(status__in=DEFAULT_STATUSES)
+    return qs.count()
+
+
 def _issue_list_context(params):
     sort, direction = _resolve_sort(params)
     any_issues = Issue.objects.exists()
@@ -235,7 +246,7 @@ def _issue_list_context(params):
                 continue
             count = Issue.objects.filter(status__in=DEFAULT_STATUSES).count()
         else:
-            count = Issue.objects.filter(**spec["filter"]).count()
+            count = _quick_filter_count(spec)
             if not count:
                 continue
         quick_filters.append(

@@ -252,6 +252,41 @@ def test_effort_filter_form_reflects_selection(auth_client):
 
 
 @pytest.mark.django_db
+def test_quick_filter_counts_match_the_issues_their_click_returns(auth_client):
+    """Each non-default pill's count must equal the number of rows the user
+    sees after clicking it. Completed/closed issues that share the pill's
+    attribute (priority, highlight, effort) used to inflate the count."""
+    # Active issues that should be counted by their respective pills.
+    IssueFactory(is_highlighted=True, status=Status.OPEN)
+    IssueFactory(priority=Priority.JETZT, status=Status.WIP)
+    IssueFactory(priority=Priority.WILL, status=Status.OPEN)
+    IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
+    IssueFactory(effort_minutes=Effort.SMALL, status=Status.BLOCKED, blocked_reason="x")
+    # Completed work matching the same pills — must NOT be counted, because
+    # clicking the pill applies the default status filter and hides them.
+    IssueFactory(is_highlighted=True, status=Status.COMPLETED)
+    IssueFactory(priority=Priority.JETZT, status=Status.WONTFIX)
+    IssueFactory(priority=Priority.WILL, status=Status.COMPLETED)
+    IssueFactory(effort_minutes=Effort.TINY, status=Status.COMPLETED)
+    # Status pills (wip/blocked/draft) explicitly override the default, so
+    # exercising one issue per status confirms their counts are unaffected.
+    IssueFactory(status=Status.DRAFT)
+
+    listing = auth_client.get("/issues/")
+    by_label = {qf["label"]: qf for qf in listing.context["quick_filters"]}
+
+    for label, pill in by_label.items():
+        if label == "📋 open":
+            continue
+        query = "&".join(f"{k}={v}" for k, v in pill["querystring"])
+        clicked = auth_client.get(f"/issues/?{query}")
+        assert pill["count"] == len(clicked.context["issues"]), (
+            f"pill {label!r} count {pill['count']} != "
+            f"{len(clicked.context['issues'])} issues after click"
+        )
+
+
+@pytest.mark.django_db
 def test_easy_pickings_pill_filters_to_low_effort_open_work(auth_client):
     tiny = IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
     small = IssueFactory(effort_minutes=Effort.SMALL, status=Status.WIP)

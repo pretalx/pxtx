@@ -194,10 +194,8 @@ def test_quick_filters_only_shown_when_matching_issues_exist(auth_client):
 
     IssueFactory(is_highlighted=True, status=Status.OPEN)
     IssueFactory(status=Status.WIP)
-    IssueFactory(status=Status.BLOCKED, blocked_reason="x")
     IssueFactory(status=Status.DRAFT)
     IssueFactory(priority=Priority.JETZT, status=Status.OPEN)
-    IssueFactory(priority=Priority.WILL, status=Status.OPEN)
     IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
 
     response = auth_client.get("/issues/")
@@ -205,11 +203,9 @@ def test_quick_filters_only_shown_when_matching_issues_exist(auth_client):
     assert labels == {
         "★ highlighted",
         "🔥 jetzt",
-        "💪 will",
         "🍒 easy pickings",
         "📋 open",
         "🔧 wip",
-        "🚧 blocked",
         "📥 draft",
     }
     # Nothing is applied, so the default pill is the only active chip.
@@ -221,13 +217,11 @@ def test_quick_filters_only_shown_when_matching_issues_exist(auth_client):
 @pytest.mark.django_db
 def test_quick_filter_active_when_its_params_match_current_request(auth_client):
     IssueFactory(status=Status.WIP)
-    IssueFactory(status=Status.BLOCKED, blocked_reason="x")
 
     response = auth_client.get("/issues/?status=wip")
     active = {qf["label"]: qf["active"] for qf in response.context["quick_filters"]}
 
     assert active["🔧 wip"] is True
-    assert active["🚧 blocked"] is False
     assert active["📋 open"] is False
 
 
@@ -259,16 +253,13 @@ def test_quick_filter_counts_match_the_issues_their_click_returns(auth_client):
     # Active issues that should be counted by their respective pills.
     IssueFactory(is_highlighted=True, status=Status.OPEN)
     IssueFactory(priority=Priority.JETZT, status=Status.WIP)
-    IssueFactory(priority=Priority.WILL, status=Status.OPEN)
     IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
-    IssueFactory(effort_minutes=Effort.SMALL, status=Status.BLOCKED, blocked_reason="x")
     # Completed work matching the same pills — must NOT be counted, because
     # clicking the pill applies the default status filter and hides them.
     IssueFactory(is_highlighted=True, status=Status.COMPLETED)
     IssueFactory(priority=Priority.JETZT, status=Status.WONTFIX)
-    IssueFactory(priority=Priority.WILL, status=Status.COMPLETED)
     IssueFactory(effort_minutes=Effort.TINY, status=Status.COMPLETED)
-    # Status pills (wip/blocked/draft) explicitly override the default, so
+    # Status pills (wip/draft) explicitly override the default, so
     # exercising one issue per status confirms their counts are unaffected.
     IssueFactory(status=Status.DRAFT)
 

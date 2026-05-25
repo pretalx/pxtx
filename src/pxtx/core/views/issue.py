@@ -35,27 +35,17 @@ QUICK_FILTERS = [
         "query": [("is_highlighted", "on")],
         "filter": {"is_highlighted": True},
     },
+    {"label": "📋 open", "query": [], "filter": None, "is_default": True},
+    {"label": "🔧 wip", "query": [("status", "wip")], "filter": {"status": Status.WIP}},
     {
         "label": "🔥 jetzt",
         "query": [("priority", "0")],
         "filter": {"priority": Priority.JETZT},
     },
     {
-        "label": "💪 will",
-        "query": [("priority", "1")],
-        "filter": {"priority": Priority.WILL},
-    },
-    {
         "label": "🍒 easy pickings",
         "query": [("effort", str(Effort.TINY)), ("effort", str(Effort.SMALL))],
         "filter": {"effort_minutes__in": [Effort.TINY, Effort.SMALL]},
-    },
-    {"label": "📋 open", "query": [], "filter": None, "is_default": True},
-    {"label": "🔧 wip", "query": [("status", "wip")], "filter": {"status": Status.WIP}},
-    {
-        "label": "🚧 blocked",
-        "query": [("status", "blocked")],
-        "filter": {"status": Status.BLOCKED},
     },
     {
         "label": "📥 draft",

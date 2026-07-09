@@ -395,7 +395,7 @@ def test_queue_turn_rotates_session_id_after_session_gone():
 @pytest.mark.parametrize(
     "raw_result",
     (
-        {},  # timeout class: session still resumable
+        {},  # ⁂ timeout class: session still resumable
         {"type": "result", "is_error": True, "errors": ["max turns"]},
     ),
 )

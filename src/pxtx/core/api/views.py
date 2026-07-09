@@ -1,4 +1,4 @@
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404
 from rest_framework import status as http_status
 from rest_framework import viewsets
@@ -22,6 +22,7 @@ from pxtx.core.api.serializers import (
     IssueReferenceCreateSerializer,
     IssueSerializer,
     MilestoneSerializer,
+    SpecSessionSerializer,
     StatusActionSerializer,
 )
 from pxtx.core.models import (
@@ -32,6 +33,7 @@ from pxtx.core.models import (
     Issue,
     IssueReference,
     Milestone,
+    SpecSession,
     Status,
 )
 
@@ -288,6 +290,53 @@ class IssueReferenceDeleteView(APIView):
             return Response(status=http_status.HTTP_404_NOT_FOUND)
         ref.delete()
         return Response(status=http_status.HTTP_204_NO_CONTENT)
+
+
+class IssueSpecView(APIView):
+    """⁂ Read-only spec session detail, keyed by issue number.
+
+    Spec sessions are driven exclusively through the UI; agents read specs
+    out, they never drive sessions — so there is no write surface at all
+    (any POST/PATCH/PUT/DELETE gets 405). 404 covers both an unknown issue
+    and an issue without a session.
+    """
+
+    http_method_names = ["get", "options", "head"]
+
+    def get(self, request, number):
+        session = get_object_or_404(
+            SpecSession.objects.with_waiting_on_user()
+            .select_related("issue")
+            .annotate(total_cost_usd=Sum("turns__cost_usd"))
+            .prefetch_related("turns"),
+            issue__number=number,
+        )
+        return Response(SpecSessionSerializer(session).data)
+
+
+class IssueSpecArtifactsView(APIView):
+    """⁂ The latest artifact snapshot as a relative-path → content mapping.
+
+    This is what ``pxtx spec pull`` materializes under
+    ``openspec/changes/pxtx-<n>/``; the issue number is echoed back so the
+    target directory is unambiguous. The mapping is empty when no finished
+    turn exists yet or the change directory was absent — the CLI treats that
+    as nothing to pull. Read-only, like the session detail.
+    """
+
+    http_method_names = ["get", "options", "head"]
+
+    def get(self, request, number):
+        session = get_object_or_404(
+            SpecSession.objects.select_related("issue"), issue__number=number
+        )
+        return Response(
+            {
+                "issue": session.issue.number,
+                "stage": session.stage,
+                "artifacts": session.latest_snapshot,
+            }
+        )
 
 
 class ActivityLogView(ListModelMixin, GenericAPIView):

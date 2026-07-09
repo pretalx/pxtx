@@ -9,6 +9,8 @@ from pxtx.core.models import (
     GithubRefKind,
     Issue,
     Milestone,
+    SpecSession,
+    SpecTurn,
 )
 
 
@@ -184,6 +186,59 @@ class IssueSerializer(serializers.ModelSerializer):
             setattr(instance, field, value)
         instance.save(actor=self.context.get("actor", ""))
         return instance
+
+
+class SpecTurnSerializer(serializers.ModelSerializer):
+    """⁂ One transcript entry, everything an agent needs to follow the
+    exchange: the queue-time message, the composed prompt actually sent, the
+    response, cost, and — for failed turns — error_detail plus the raw result
+    payload. Per-turn artifact snapshots are deliberately absent; the latest
+    snapshot has its own endpoint."""
+
+    class Meta:
+        model = SpecTurn
+        fields = [
+            "id",
+            "kind",
+            "stage",
+            "status",
+            "message",
+            "prompt_sent",
+            "response",
+            "cost_usd",
+            "claude_session_id",
+            "error_detail",
+            "raw_result",
+            "started_at",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
+class SpecSessionSerializer(serializers.ModelSerializer):
+    """⁂ Read-only session detail keyed by issue number: stage, the derived
+    waiting-on-user state, total cost, and the full turn list. The view
+    supplies ``waiting_on_user`` and ``total_cost_usd`` as annotations."""
+
+    issue = serializers.IntegerField(source="issue.number", read_only=True)
+    waiting_on_user = serializers.BooleanField(read_only=True)
+    total_cost_usd = serializers.DecimalField(
+        max_digits=12, decimal_places=6, read_only=True, allow_null=True
+    )
+    turns = SpecTurnSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = SpecSession
+        fields = [
+            "issue",
+            "stage",
+            "waiting_on_user",
+            "total_cost_usd",
+            "turns",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
 
 
 class IssueReferenceCreateSerializer(serializers.Serializer):

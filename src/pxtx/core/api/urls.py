@@ -36,6 +36,12 @@ urlpatterns = [
         views.IssueReferenceDeleteView.as_view(),
         name="issue-reference-detail",
     ),
+    path("issues/<int:number>/spec/", views.IssueSpecView.as_view(), name="issue-spec"),
+    path(
+        "issues/<int:number>/spec/artifacts/",
+        views.IssueSpecArtifactsView.as_view(),
+        name="issue-spec-artifacts",
+    ),
     path("activity/", views.ActivityLogView.as_view(), name="activity"),
     *router.urls,
 ]

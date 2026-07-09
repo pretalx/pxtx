@@ -89,7 +89,10 @@ def compose_first_prompt(turn):
             "was lost; the conversation so far:"
         )
         parts.append(transcript)
-    if turn.message:
+    # ⁂ Stage-command bootstrap turns queue the bare /opsx: command; the
+    # header above already carries it, so echoing it as a task would send
+    # the command twice.
+    if turn.message and turn.message != OPSX_COMMANDS[turn.stage]:
         parts.append(f"## ⁂ Your task\n\n{turn.message}")
     return "\n\n".join(parts)
 
@@ -115,7 +118,7 @@ def compose_critique_prompt(turn):
 
 class Command(BaseCommand):
     help = (
-        "Spec worker: poll for queued spec turns, run each via `claude -p` "
+        "⁂ Spec worker: poll for queued spec turns, run each via `claude -p` "
         "in the configured pretalx checkout, and store results and artifact "
         "snapshots on the turn. Serial and single-instance by contract (the "
         "startup requeue would clobber a second live worker). Configure via "
@@ -313,6 +316,11 @@ class Command(BaseCommand):
     def _warn_on_broken_settings(self):
         path = settings.SPEC_CLAUDE_SETTINGS_FILE
         if not path:
+            logger.warning(
+                "⁂ No [spec] claude settings file configured in pxtx.toml; "
+                "the agent runs without the deployed guardrails and only the "
+                "budget cap applies."
+            )
             return
         try:
             json.loads(Path(path).read_text())

@@ -1225,7 +1225,7 @@ def test_spec_pull_rejects_unsafe_paths(
     code = cli.main(["spec", "pull", "47"])
 
     assert code == 2
-    # Nothing at all may be written when the snapshot contains a bad path.
+    # ⁂ Nothing at all may be written when the snapshot contains a bad path.
     assert not (tmp_path / "openspec").exists()
     assert "unsafe path" in capsys.readouterr().err
 

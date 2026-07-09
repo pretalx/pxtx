@@ -315,13 +315,17 @@ class IssueSpecView(APIView):
 
 
 class IssueSpecArtifactsView(APIView):
-    """⁂ The latest artifact snapshot as a relative-path → content mapping.
+    """⁂ The latest non-empty artifact snapshot as a relative-path → content
+    mapping.
 
     This is what ``pxtx spec pull`` materializes under
     ``openspec/changes/pxtx-<n>/``; the issue number is echoed back so the
-    target directory is unambiguous. The mapping is empty when no finished
-    turn exists yet or the change directory was absent — the CLI treats that
-    as nothing to pull. Read-only, like the session detail.
+    target directory is unambiguous. Serving the latest *non-empty* snapshot
+    matches the web UI's current-spec view: a crashed turn with a blank
+    snapshot after a completed one must not make the pull come up empty.
+    The mapping is empty only when no finished turn ever produced artifacts —
+    the CLI treats that as nothing to pull. Read-only, like the session
+    detail.
     """
 
     http_method_names = ["get", "options", "head"]
@@ -334,7 +338,7 @@ class IssueSpecArtifactsView(APIView):
             {
                 "issue": session.issue.number,
                 "stage": session.stage,
-                "artifacts": session.latest_snapshot,
+                "artifacts": session.latest_nonempty_snapshot,
             }
         )
 

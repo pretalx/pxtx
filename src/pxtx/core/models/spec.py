@@ -88,7 +88,7 @@ class SpecSession(BaseModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Spec session for {self.issue.slug} ({self.stage})"
+        return f"⁂ Spec session for {self.issue.slug} ({self.stage})"
 
     def _split_change_actions(self, before, after):
         # ⁂ Name stage flips after the target stage (mirrors issue status
@@ -218,7 +218,7 @@ class SpecTurn(BaseModel):
         ordering = ["created_at", "pk"]
 
     def __str__(self):
-        return f"{self.kind} turn ({self.status}) in {self.session}"
+        return f"⁂ {self.kind} turn ({self.status}) in {self.session}"
 
     def _split_change_actions(self, before, after):
         # ⁂ Name status flips after the target status so queue/complete/

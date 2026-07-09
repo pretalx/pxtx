@@ -22,12 +22,14 @@
             {% if entry.turn.error_detail %}<pre>{{ entry.turn.error_detail }}</pre>{% endif %}
             {% if entry.raw_json %}<pre>{{ entry.raw_json }}</pre>{% endif %}
         </details>
+        {% if entry.turn.kind == "critique" or session.stage != "ready" %}
         <form class="spec-turn-action" method="post" action="{% url 'core:spec-retry' number=issue.number pk=entry.turn.pk %}"
               hx-post="{% url 'core:spec-retry' number=issue.number pk=entry.turn.pk %}"
               hx-target="#spec-session" hx-swap="outerHTML">
             {% csrf_token %}
             <button type="submit" class="secondary">⁂ Retry</button>
         </form>
+        {% endif %}
     </div>
     {% else %}
     <div class="spec-bubble spec-bubble-assistant{% if entry.turn.kind == 'critique' %} spec-bubble-critique{% endif %}">

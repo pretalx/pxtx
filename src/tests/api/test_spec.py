@@ -124,6 +124,28 @@ def test_spec_artifacts_returns_latest_finished_snapshot(token_client):
 
 
 @pytest.mark.django_db
+def test_spec_artifacts_survive_later_blank_snapshot(token_client):
+    """⁂ A crashed turn snapshotting an empty change dir after a completed
+    turn with artifacts must not make `pxtx spec pull` come up empty — the
+    endpoint mirrors the UI's current-spec view, not the raw latest
+    snapshot."""
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        artifacts={"proposal.md": "# Plan"},
+    )
+    SpecTurnFactory(session=session, status=SpecTurnStatus.ERROR, artifacts={})
+
+    response = token_client.get(
+        f"/api/v1/issues/{session.issue.number}/spec/artifacts/"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["artifacts"] == {"proposal.md": "# Plan"}
+
+
+@pytest.mark.django_db
 def test_spec_artifacts_empty_when_no_finished_turn(token_client):
     session = SpecSessionFactory()
     SpecTurnFactory(session=session)

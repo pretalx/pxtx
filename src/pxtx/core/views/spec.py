@@ -83,7 +83,7 @@ def _transcript_entries(session):
     return entries
 
 
-def _session_context(session, *, composer_prefill=""):
+def _session_context(session, *, composer_prefill="", preserve_inputs=False):
     return {
         "issue": session.issue,
         "session": session,
@@ -95,6 +95,10 @@ def _session_context(session, *, composer_prefill=""):
         and bool(session.latest_snapshot),
         "total_cost": session.turns.aggregate(total=Sum("cost_usd"))["total"],
         "composer_prefill": composer_prefill,
+        # ⁂ True only for timed poll responses: it stamps hx-preserve on the
+        # user-input elements so a background swap cannot wipe a draft, while
+        # user-action swaps still replace (and thus clear) them.
+        "preserve_inputs": preserve_inputs,
     }
 
 
@@ -107,7 +111,7 @@ def _session_response(request, session):
 
 
 class SpecPageView(LoginRequiredMixin, View):
-    """The per-issue spec page: transcript, composer, stage buttons. Without
+    """⁂ The per-issue spec page: transcript, composer, stage buttons. Without
     a session it offers the bootstrap affordance instead. ``?forward=<pk>``
     (set by SpecForwardView's redirect) pre-fills the composer with that
     completed critique's text."""
@@ -137,17 +141,24 @@ class SpecPageView(LoginRequiredMixin, View):
 
 
 class SpecSessionFragmentView(LoginRequiredMixin, View):
-    """Polling endpoint: the transcript/composer fragment re-requests itself
+    """⁂ Polling endpoint: the transcript/composer fragment re-requests itself
     every few seconds, but only while a turn is queued or running — the
-    rendered fragment carries no polling trigger otherwise."""
+    rendered fragment carries no polling trigger otherwise. Poll responses
+    mark the composer and critique-focus inputs ``hx-preserve`` so a timed
+    swap never clobbers text being typed; user-action responses omit the
+    attribute so a sent message still clears the composer."""
 
     def get(self, request, number):
         session = _get_session(number)
-        return render(request, "core/_spec_session.html", _session_context(session))
+        return render(
+            request,
+            "core/_spec_session.html",
+            _session_context(session, preserve_inputs=True),
+        )
 
 
 class SpecStartView(LoginRequiredMixin, View):
-    """Bootstrap: create the session (stage explore) and queue the first
+    """⁂ Bootstrap: create the session (stage explore) and queue the first
     explore turn. A second start on an existing session is a no-op."""
 
     def post(self, request, number):
@@ -193,13 +204,19 @@ class SpecStageView(LoginRequiredMixin, View):
 
 
 class SpecRetryView(LoginRequiredMixin, View):
-    """Queue a new turn with a failed turn's message. The worker recomposes
+    """⁂ Queue a new turn with a failed turn's message. The worker recomposes
     the sent prompt as the situation calls for, including fresh-session
-    recovery after the session-gone failure class."""
+    recovery after the session-gone failure class. Chat retries respect the
+    ready read-only gate, mirroring the composer; critique retries stay
+    allowed because critiques are explicitly offered in ready."""
 
     def post(self, request, number, pk):
         session = _get_session(number)
         failed = get_object_or_404(session.turns, pk=pk, status=SpecTurnStatus.ERROR)
+        if failed.kind == SpecTurnKind.CHAT and session.stage == SpecStage.READY:
+            return HttpResponseBadRequest(
+                "⁂ This spec is marked ready; reopen it to retry this turn."
+            )
         session.queue_turn(
             failed.message, kind=failed.kind, actor=request_actor(request)
         )
@@ -207,7 +224,7 @@ class SpecRetryView(LoginRequiredMixin, View):
 
 
 class SpecCritiqueView(LoginRequiredMixin, View):
-    """Queue a one-shot critique turn, gated on propose/ready and a spec
+    """⁂ Queue a one-shot critique turn, gated on propose/ready and a spec
     actually existing in the latest snapshot."""
 
     def post(self, request, number):
@@ -227,7 +244,7 @@ class SpecCritiqueView(LoginRequiredMixin, View):
 
 
 class SpecForwardView(LoginRequiredMixin, View):
-    """Hand a completed critique to the spec agent: reopen the session first
+    """⁂ Hand a completed critique to the spec agent: reopen the session first
     when it is ready, then land on the spec page with the composer pre-filled
     with the critique text (via the ``?forward=`` query parameter)."""
 
@@ -246,7 +263,7 @@ class SpecForwardView(LoginRequiredMixin, View):
 
 
 class SpecCurrentView(LoginRequiredMixin, View):
-    """The current-spec tab: the latest non-empty snapshot's files rendered
+    """⁂ The current-spec tab: the latest non-empty snapshot's files rendered
     as markdown, one file at a time, navigable via ``?file=``."""
 
     def get(self, request, number):
@@ -286,7 +303,7 @@ def _session_state(session):
 
 
 class SpecListView(LoginRequiredMixin, View):
-    """The travel inbox: every spec session with stage, state badge, and
+    """⁂ The travel inbox: every spec session with stage, state badge, and
     cost, waiting-on-you sessions first."""
 
     def get(self, request):

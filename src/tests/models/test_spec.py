@@ -167,7 +167,7 @@ def test_queueing_a_new_turn_clears_waiting_on_user():
 
 @pytest.mark.django_db
 def test_waiting_on_user_requires_no_earlier_active_turn():
-    """A queued turn behind a completed one (e.g. after a startup requeue)
+    """⁂ A queued turn behind a completed one (e.g. after a startup requeue)
     means the worker still has work — the session is not waiting."""
     session = SpecSessionFactory()
     SpecTurnFactory(session=session, status=SpecTurnStatus.QUEUED)
@@ -318,7 +318,7 @@ def test_turn_non_status_update_logs_plain_update():
 
 @pytest.mark.django_db
 def test_session_fresh_claude_session_id_logs_plain_update():
-    """Fresh-session recovery swaps the session-level claude id; that is an
+    """⁂ Fresh-session recovery swaps the session-level claude id; that is an
     update entry, not a stage entry."""
     session = SpecSessionFactory()
     old_id = session.claude_session_id

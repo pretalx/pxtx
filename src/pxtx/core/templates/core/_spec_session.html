@@ -46,7 +46,7 @@
     </div>
 
     {% if can_critique %}
-    <details class="card spec-critique-request">
+    <details class="card spec-critique-request" id="spec-critique-request"{% if preserve_inputs %} hx-preserve{% endif %}>
         <summary>⁂ Request critique</summary>
         <form method="post" action="{% url 'core:spec-critique' number=issue.number %}"
               hx-post="{% url 'core:spec-critique' number=issue.number %}"
@@ -67,7 +67,7 @@
           hx-post="{% url 'core:spec-turn-queue' number=issue.number %}"
           hx-target="#spec-session" hx-swap="outerHTML">
         {% csrf_token %}
-        <textarea name="message" rows="3" required placeholder="⁂ Message the spec agent…">{{ composer_prefill }}</textarea>
+        <textarea name="message" id="spec-composer-message" rows="3" required placeholder="⁂ Message the spec agent…"{% if preserve_inputs %} hx-preserve{% endif %}>{{ composer_prefill }}</textarea>
         <div class="form-actions">
             <button type="submit">⁂ Send</button>
         </div>

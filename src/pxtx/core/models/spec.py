@@ -117,6 +117,26 @@ class SpecSession(BaseModel):
             return False
         return not self.turns.filter(status__in=ACTIVE_TURN_STATUSES).exists()
 
+    def queue_turn(self, message="", *, kind=SpecTurnKind.CHAT, actor=None):
+        """⁂ Queue a turn on this session — the single entry point for the
+        UI. Snapshots the current stage onto the turn, and when the last
+        chat turn lost its claude session (the no-JSON-exit class), rotates
+        claude_session_id so the worker starts a fresh session with issue
+        context and the stored transcript injected. Retries after any other
+        error resume the existing session unchanged."""
+        if kind == SpecTurnKind.CHAT:
+            last_chat = (
+                self.turns.filter(kind=SpecTurnKind.CHAT)
+                .order_by("-created_at", "-pk")
+                .first()
+            )
+            if last_chat is not None and last_chat.is_session_gone:
+                self.claude_session_id = uuid.uuid4()
+                self.save(actor=actor)
+        turn = SpecTurn(session=self, kind=kind, message=message, stage=self.stage)
+        turn.save(actor=actor)
+        return turn
+
 
 class SpecTurn(BaseModel):
     log_action_prefix = "pxtx.spec.turn"
@@ -180,3 +200,16 @@ class SpecTurn(BaseModel):
         if "status" not in after:
             return super()._split_change_actions(before, after)
         return [(f".status.{after['status']}", before, after)]
+
+    @property
+    def is_session_gone(self):
+        """⁂ True when this chat turn failed the no-JSON-exit class — the
+        only outcome after which the claude session cannot be resumed. The
+        worker stores the exit code in raw_result exactly for that class,
+        so its presence is the marker. Timeouts and in-run error JSON keep
+        the session resumable and never set it."""
+        return (
+            self.kind == SpecTurnKind.CHAT
+            and self.status == SpecTurnStatus.ERROR
+            and "exit_code" in self.raw_result
+        )

@@ -110,6 +110,12 @@ serve *args="--bind 0.0.0.0:8000 --workers 2":
 runperiodic:
     {{ python }} manage.py runperiodic
 
+# ⁂ Spec worker: process queued spec turns via claude -p (needs [spec] config)
+[group('operations')]
+[working-directory("src")]
+runworker *args:
+    {{ python }} manage.py runworker {{ args }}
+
 # Run the test suite
 [group('tests')]
 [positional-arguments]

@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from pxtx.core.models import (
     ActivityLog,
@@ -333,3 +334,156 @@ def test_session_fresh_claude_session_id_logs_plain_update():
     assert entry.data["before"] == {"claude_session_id": str(old_id)}
     assert entry.data["after"] == {"claude_session_id": str(new_id)}
     assert entry.actor == "spec-worker"
+
+
+@pytest.mark.django_db
+def test_queue_turn_creates_queued_turn_with_stage_snapshot():
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+
+    turn = session.queue_turn("Write the API section", actor="tobias")
+
+    assert turn.session == session
+    assert turn.kind == SpecTurnKind.CHAT
+    assert turn.status == SpecTurnStatus.QUEUED
+    assert turn.message == "Write the API section"
+    assert turn.stage == SpecStage.PROPOSE
+    assert turn.started_at is None
+    entries = list(turn.logged_actions())
+    assert [e.action_type for e in entries] == ["pxtx.spec.turn.create"]
+    assert entries[0].actor == "tobias"
+
+
+@pytest.mark.django_db
+def test_queue_turn_on_session_without_turns_keeps_session_id():
+    session = SpecSessionFactory()
+    original = session.claude_session_id
+
+    session.queue_turn("Start exploring")
+
+    session.refresh_from_db()
+    assert session.claude_session_id == original
+
+
+@pytest.mark.django_db
+def test_queue_turn_rotates_session_id_after_session_gone():
+    session = SpecSessionFactory()
+    original = session.claude_session_id
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.ERROR,
+        started_at=timezone.now(),
+        claude_session_id=original,
+        raw_result={"exit_code": 1, "stderr": "No conversation found"},
+    )
+
+    turn = session.queue_turn("Try again", actor="tobias")
+
+    session.refresh_from_db()
+    assert session.claude_session_id != original
+    assert turn.status == SpecTurnStatus.QUEUED
+    update_entries = [
+        e
+        for e in session.logged_actions()
+        if e.action_type == "pxtx.spec.session.update"
+    ]
+    assert len(update_entries) == 1
+    assert update_entries[0].data["after"] == {
+        "claude_session_id": str(session.claude_session_id)
+    }
+
+
+@pytest.mark.parametrize(
+    "raw_result",
+    (
+        {},  # timeout class: session still resumable
+        {"type": "result", "is_error": True, "errors": ["max turns"]},
+    ),
+)
+@pytest.mark.django_db
+def test_queue_turn_keeps_session_id_after_resumable_errors(raw_result):
+    session = SpecSessionFactory()
+    original = session.claude_session_id
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.ERROR,
+        started_at=timezone.now(),
+        claude_session_id=original,
+        raw_result=raw_result,
+    )
+
+    session.queue_turn("Try again")
+
+    session.refresh_from_db()
+    assert session.claude_session_id == original
+
+
+@pytest.mark.django_db
+def test_queue_turn_critique_never_rotates_session_id():
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    original = session.claude_session_id
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.ERROR,
+        started_at=timezone.now(),
+        claude_session_id=original,
+        raw_result={"exit_code": 1, "stderr": "gone"},
+    )
+
+    turn = session.queue_turn("Focus on the API", kind=SpecTurnKind.CRITIQUE)
+
+    session.refresh_from_db()
+    assert session.claude_session_id == original
+    assert turn.kind == SpecTurnKind.CRITIQUE
+    assert turn.stage == SpecStage.PROPOSE
+
+
+@pytest.mark.django_db
+def test_queue_turn_rotation_keys_on_latest_chat_turn_only():
+    """⁂ A critique failing after a healthy chat turn says nothing about the
+    chat session — no rotation."""
+    session = SpecSessionFactory()
+    original = session.claude_session_id
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        started_at=timezone.now(),
+        claude_session_id=original,
+        response="All good",
+    )
+    SpecTurnFactory(
+        session=session,
+        kind=SpecTurnKind.CRITIQUE,
+        status=SpecTurnStatus.ERROR,
+        raw_result={"exit_code": 1, "stderr": "gone"},
+    )
+
+    session.queue_turn("Continue")
+
+    session.refresh_from_db()
+    assert session.claude_session_id == original
+
+
+@pytest.mark.parametrize(
+    ("kind", "status", "raw_result", "expected"),
+    (
+        (SpecTurnKind.CHAT, SpecTurnStatus.ERROR, {"exit_code": 1, "stderr": ""}, True),
+        (SpecTurnKind.CHAT, SpecTurnStatus.ERROR, {}, False),
+        (SpecTurnKind.CHAT, SpecTurnStatus.ERROR, {"is_error": True}, False),
+        (
+            SpecTurnKind.CHAT,
+            SpecTurnStatus.COMPLETED,
+            {"exit_code": 0, "stderr": ""},
+            False,
+        ),
+        (
+            SpecTurnKind.CRITIQUE,
+            SpecTurnStatus.ERROR,
+            {"exit_code": 1, "stderr": ""},
+            False,
+        ),
+    ),
+)
+def test_is_session_gone_matrix(kind, status, raw_result, expected):
+    turn = SpecTurn(kind=kind, status=status, raw_result=raw_result)
+
+    assert turn.is_session_gone is expected

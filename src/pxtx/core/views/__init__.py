@@ -31,6 +31,18 @@ from pxtx.core.views.milestone import (
     MilestoneReleaseToggleView,
     MilestoneUpdateView,
 )
+from pxtx.core.views.spec import (
+    SpecCritiqueView,
+    SpecCurrentView,
+    SpecForwardView,
+    SpecListView,
+    SpecPageView,
+    SpecRetryView,
+    SpecSessionFragmentView,
+    SpecStageView,
+    SpecStartView,
+    SpecTurnQueueView,
+)
 
 __all__ = [
     "ActivityView",
@@ -60,6 +72,16 @@ __all__ = [
     "MilestoneListView",
     "MilestoneReleaseToggleView",
     "MilestoneUpdateView",
+    "SpecCritiqueView",
+    "SpecCurrentView",
+    "SpecForwardView",
+    "SpecListView",
+    "SpecPageView",
+    "SpecRetryView",
+    "SpecSessionFragmentView",
+    "SpecStageView",
+    "SpecStartView",
+    "SpecTurnQueueView",
     "blocked_reason_field",
     "healthz",
     "trigger_deploy",

@@ -41,6 +41,8 @@
     .badge.effort-240 { background: #78350f; border-color: #92400e; color: #fde68a; }
     .badge.effort-480 { background: #7c2d12; border-color: #9a3412; color: #fed7aa; }
     .badge.effort-960 { background: #7f1d1d; border-color: #991b1b; color: #fecaca; }
+    .spec-pill-progress { background: #4c1d95; border-color: #5b21b6; color: #ddd6fe; }
+    .spec-pill-ready { background: #14532d; border-color: #166534; color: #bbf7d0; }
     .activity del { background: #7f1d1d; color: #fecaca; }
     .activity ins { background: #14532d; color: #bbf7d0; }
     .heat-cell.tier-0 { background: #3f3f46; }
@@ -527,6 +529,20 @@ button.secondary {
 .pagination { display: flex; gap: 1rem; align-items: center; margin-top: 0.75rem; }
 
 .chip { font-size: 0.7rem; padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); }
+
+/* Spec session indicator on issue table rows: in progress vs ready. */
+.spec-pill {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    margin-left: 0.3rem;
+}
+.spec-pill:hover { text-decoration: none; border-color: var(--accent); }
+.spec-pill-progress { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
+.spec-pill-ready { background: #dcfce7; border-color: #86efac; color: #166534; }
 
 .prio { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
 .prio::before { content: ""; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--prio-3); display: inline-block; }

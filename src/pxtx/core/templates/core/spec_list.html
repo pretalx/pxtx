@@ -1,0 +1,37 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Specs – pxtx{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'core/spec.css' %}">{% endblock %}
+{% block content %}
+<h1>⁂ Specs</h1>
+<div class="card">
+    {% if sessions %}
+    <table class="spec-list">
+        <thead>
+            <tr>
+                <th>⁂ Issue</th>
+                <th>⁂ Title</th>
+                <th>⁂ Stage</th>
+                <th>⁂ State</th>
+                <th>⁂ Cost</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for session in sessions %}
+            <tr class="spec-row spec-row-{{ session.state }}">
+                <td><a href="{% url 'core:spec-page' number=session.issue.number %}">{{ session.issue.slug }}</a></td>
+                <td><a href="{% url 'core:spec-page' number=session.issue.number %}">{{ session.issue.title }}</a></td>
+                <td><span class="badge spec-stage-{{ session.stage }}">{{ session.get_stage_display }}</span></td>
+                <td><span class="badge spec-state spec-state-{{ session.state }}">{{ session.state_label }}</span></td>
+                <td class="meta">{% if session.total_cost %}${{ session.total_cost|floatformat:2 }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+        <p>⁂ No spec sessions yet. Start one from an issue's spec page.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}{{ issue.slug }} spec – pxtx{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'core/spec.css' %}">{% endblock %}
+{% block content %}
+{% include "core/_spec_header.html" %}
+{% include "core/_spec_tabs.html" with active_tab="current" %}
+{% if files %}
+<nav class="card spec-files">
+    {% for file in files %}
+    <a class="spec-file{% if file == selected %} active{% endif %}"{% if file == selected %} aria-current="page"{% endif %} href="?file={{ file|urlencode }}">{{ file }}</a>
+    {% endfor %}
+</nav>
+<div class="card prose spec-artifact">{{ rendered }}</div>
+{% else %}
+<div class="card empty">
+    <p>⁂ No spec artifacts yet — they appear once the agent writes the change directory.</p>
+</div>
+{% endif %}
+{% endblock %}

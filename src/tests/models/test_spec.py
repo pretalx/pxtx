@@ -487,3 +487,62 @@ def test_is_session_gone_matrix(kind, status, raw_result, expected):
     turn = SpecTurn(kind=kind, status=status, raw_result=raw_result)
 
     assert turn.is_session_gone is expected
+
+
+@pytest.mark.django_db
+def test_latest_snapshot_empty_without_finished_turns():
+    session = SpecSessionFactory()
+    SpecTurnFactory(session=session, status=SpecTurnStatus.QUEUED)
+
+    assert session.latest_snapshot == {}
+
+
+@pytest.mark.django_db
+def test_latest_snapshot_skips_active_turns():
+    """⁂ A freshly queued turn (empty snapshot by definition) must not hide
+    the last finished turn's snapshot."""
+    session = SpecSessionFactory()
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        artifacts={"proposal.md": "# Plan"},
+    )
+    SpecTurnFactory(session=session, status=SpecTurnStatus.QUEUED)
+
+    assert session.latest_snapshot == {"proposal.md": "# Plan"}
+
+
+@pytest.mark.django_db
+def test_latest_snapshot_reflects_latest_finished_turn_even_when_empty():
+    """⁂ An error turn whose snapshot came back empty (change dir deleted) is
+    the truth about the disk — latest_snapshot must not fall back."""
+    session = SpecSessionFactory()
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        artifacts={"proposal.md": "# Plan"},
+    )
+    SpecTurnFactory(session=session, status=SpecTurnStatus.ERROR, artifacts={})
+
+    assert session.latest_snapshot == {}
+
+
+@pytest.mark.django_db
+def test_latest_nonempty_snapshot_falls_back_past_empty_snapshots():
+    session = SpecSessionFactory()
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        artifacts={"proposal.md": "# Plan"},
+    )
+    SpecTurnFactory(session=session, status=SpecTurnStatus.COMPLETED, artifacts={})
+
+    assert session.latest_nonempty_snapshot == {"proposal.md": "# Plan"}
+
+
+@pytest.mark.django_db
+def test_latest_nonempty_snapshot_empty_when_no_turn_produced_artifacts():
+    session = SpecSessionFactory()
+    SpecTurnFactory(session=session, status=SpecTurnStatus.COMPLETED, artifacts={})
+
+    assert session.latest_nonempty_snapshot == {}

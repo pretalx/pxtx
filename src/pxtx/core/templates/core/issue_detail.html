@@ -16,6 +16,7 @@
                     hx-target="this" hx-swap="outerHTML">
                 {% if issue.is_highlighted %}★{% else %}☆{% endif %}
             </button>
+            <a href="{% url 'core:spec-page' number=issue.number %}" class="secondary">⁂ Spec</a>
             <a href="{% url 'core:issue-edit' number=issue.number %}" class="secondary">Edit</a>
         </div>
     </div>

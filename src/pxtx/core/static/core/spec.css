@@ -1,0 +1,188 @@
+/* Spec session UI: per-issue spec page (transcript, composer, stage
+   buttons, diffs), the current-spec tab, and the /specs/ list. Phone-first:
+   everything is a single column; wider screens just get a capped width. */
+
+.spec-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+.spec-tabs a {
+    padding: 0.4rem 0.8rem;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    text-decoration: none;
+}
+.spec-tabs a:hover { color: var(--text); }
+.spec-tabs a.active {
+    color: var(--text);
+    background: var(--surface);
+    border-color: var(--border);
+    margin-bottom: -1px;
+}
+
+#spec-session, .spec-artifact, .spec-files, .spec-bootstrap { max-width: 52rem; }
+
+.spec-status {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 0.8rem;
+}
+.spec-status .spec-stage-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+.spec-status .spec-stage-actions form { display: inline; margin: 0; }
+.spec-status .spec-stage-actions button { font-size: 0.85rem; padding: 0.3rem 0.6rem; }
+.spec-working { animation: spec-working-pulse 1.4s ease-in-out infinite; }
+@keyframes spec-working-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.45; }
+}
+
+.badge.spec-stage-explore { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
+.badge.spec-stage-propose { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+.badge.spec-stage-ready { background: #dcfce7; border-color: #86efac; color: #166534; }
+
+.spec-transcript {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+.spec-turn { display: flex; flex-direction: column; gap: 0.6rem; }
+.spec-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+    max-width: 94%;
+    overflow-wrap: break-word;
+}
+.spec-bubble-user {
+    align-self: flex-end;
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.spec-bubble-assistant { align-self: flex-start; }
+.spec-bubble-pending { color: var(--text-muted); font-style: italic; }
+.spec-bubble-critique {
+    background: color-mix(in srgb, var(--warn) 8%, var(--surface));
+    border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+    border-left-width: 3px;
+}
+.spec-turn-label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+}
+.spec-turn-meta {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
+}
+.spec-turn-action { margin-top: 0.4rem; }
+.spec-turn-action button { font-size: 0.8rem; padding: 0.25rem 0.55rem; }
+
+.spec-bubble-error {
+    background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+    border-color: var(--danger);
+}
+.spec-error-mark { font-weight: 600; color: var(--danger); }
+.spec-diagnostics { margin-top: 0.4rem; font-size: 0.85rem; }
+.spec-diagnostics pre {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-top: 0.4rem;
+    overflow-x: auto;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+}
+
+.spec-diff { margin-top: 0.5rem; font-size: 0.85rem; }
+.spec-diff summary { color: var(--text-muted); }
+.spec-diff-file { margin-top: 0.4rem; }
+.spec-diff-path {
+    display: block;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+.spec-diff-file pre {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-top: 0.2rem;
+    overflow-x: auto;
+    font-size: 0.75rem;
+}
+
+.spec-critique-request summary { color: var(--text-muted); font-size: 0.9rem; }
+.spec-critique-request form { margin-top: 0.5rem; }
+.spec-critique-request textarea { width: 100%; }
+
+.spec-composer textarea { width: 100%; }
+.spec-ready-note { padding: 0.25rem 0; }
+
+.spec-files {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 0.8rem;
+}
+.spec-files .spec-file {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.8rem;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-muted);
+    text-decoration: none;
+}
+.spec-files .spec-file:hover { border-color: var(--accent); color: var(--accent); }
+.spec-files .spec-file.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+/* /specs/ list: state badges. Waiting-on-you is the highlight, error is
+   loud, the rest stays quiet. */
+.badge.spec-state-waiting {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+.badge.spec-state-error {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+.badge.spec-state-running, .badge.spec-state-queued {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e;
+}
+.badge.spec-state-ready { background: #dcfce7; border-color: #86efac; color: #166534; }
+tr.spec-row-waiting td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+tr.spec-row-error td { background: color-mix(in srgb, var(--danger) 7%, transparent); }
+
+@media (prefers-color-scheme: dark) {
+    .badge.spec-stage-explore { background: #1e3a8a; border-color: #1e40af; color: #bfdbfe; }
+    .badge.spec-stage-propose { background: #78350f; border-color: #92400e; color: #fed7aa; }
+    .badge.spec-stage-ready { background: #14532d; border-color: #166534; color: #bbf7d0; }
+    .badge.spec-state-running, .badge.spec-state-queued { background: #78350f; border-color: #92400e; color: #fed7aa; }
+    .badge.spec-state-ready { background: #14532d; border-color: #166534; color: #bbf7d0; }
+}

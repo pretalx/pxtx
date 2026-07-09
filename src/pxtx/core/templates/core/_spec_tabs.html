@@ -1,0 +1,4 @@
+<nav class="spec-tabs">
+    <a{% if active_tab == "transcript" %} class="active" aria-current="page"{% endif %} href="{% url 'core:spec-page' number=issue.number %}">⁂ Transcript</a>
+    <a{% if active_tab == "current" %} class="active" aria-current="page"{% endif %} href="{% url 'core:spec-current' number=issue.number %}">⁂ Current spec</a>
+</nav>

@@ -1,0 +1,19 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}{{ issue.slug }} spec – pxtx{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'core/spec.css' %}">{% endblock %}
+{% block content %}
+{% include "core/_spec_header.html" %}
+{% if session %}
+{% include "core/_spec_tabs.html" with active_tab="transcript" %}
+{% include "core/_spec_session.html" %}
+{% else %}
+<div class="card spec-bootstrap">
+    <p>⁂ No spec session for this issue yet. Starting one queues a first explore turn for the spec agent.</p>
+    <form method="post" action="{% url 'core:spec-start' number=issue.number %}">
+        {% csrf_token %}
+        <button type="submit">⁂ Start spec session</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

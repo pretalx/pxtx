@@ -91,6 +91,48 @@ urlpatterns = [
         views.CommentCreateView.as_view(),
         name="comment-create",
     ),
+    path("issues/<int:number>/spec/", views.SpecPageView.as_view(), name="spec-page"),
+    path(
+        "issues/<int:number>/spec/start/",
+        views.SpecStartView.as_view(),
+        name="spec-start",
+    ),
+    path(
+        "issues/<int:number>/spec/session/",
+        views.SpecSessionFragmentView.as_view(),
+        name="spec-session-fragment",
+    ),
+    path(
+        "issues/<int:number>/spec/turns/",
+        views.SpecTurnQueueView.as_view(),
+        name="spec-turn-queue",
+    ),
+    path(
+        "issues/<int:number>/spec/turns/<int:pk>/retry/",
+        views.SpecRetryView.as_view(),
+        name="spec-retry",
+    ),
+    path(
+        "issues/<int:number>/spec/turns/<int:pk>/forward/",
+        views.SpecForwardView.as_view(),
+        name="spec-forward",
+    ),
+    path(
+        "issues/<int:number>/spec/stage/",
+        views.SpecStageView.as_view(),
+        name="spec-stage",
+    ),
+    path(
+        "issues/<int:number>/spec/critique/",
+        views.SpecCritiqueView.as_view(),
+        name="spec-critique",
+    ),
+    path(
+        "issues/<int:number>/spec/current/",
+        views.SpecCurrentView.as_view(),
+        name="spec-current",
+    ),
+    path("specs/", views.SpecListView.as_view(), name="spec-list"),
     path(
         "comments/<int:pk>/edit/", views.CommentEditView.as_view(), name="comment-edit"
     ),

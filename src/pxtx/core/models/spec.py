@@ -33,6 +33,7 @@ SPEC_STAGE_TRANSITIONS = {
 }
 
 ACTIVE_TURN_STATUSES = (SpecTurnStatus.QUEUED, SpecTurnStatus.RUNNING)
+FINISHED_TURN_STATUSES = (SpecTurnStatus.COMPLETED, SpecTurnStatus.ERROR)
 
 
 class SpecSessionQuerySet(models.QuerySet):
@@ -116,6 +117,31 @@ class SpecSession(BaseModel):
         if latest is None or latest.status != SpecTurnStatus.COMPLETED:
             return False
         return not self.turns.filter(status__in=ACTIVE_TURN_STATUSES).exists()
+
+    @property
+    def latest_snapshot(self):
+        """⁂ Artifacts of the most recent finished turn — the closest proxy
+        for what is on disk right now. Queued and running turns are skipped
+        because their snapshots have not been taken yet."""
+        turn = (
+            self.turns.filter(status__in=FINISHED_TURN_STATUSES)
+            .order_by("-created_at", "-pk")
+            .first()
+        )
+        return turn.artifacts if turn else {}
+
+    @property
+    def latest_nonempty_snapshot(self):
+        """⁂ The most recent snapshot with any files in it, used by the
+        current-spec view: an agent deleting the change directory should not
+        blank the page, only the on-disk gating (latest_snapshot)."""
+        turn = (
+            self.turns.filter(status__in=FINISHED_TURN_STATUSES)
+            .exclude(artifacts={})
+            .order_by("-created_at", "-pk")
+            .first()
+        )
+        return turn.artifacts if turn else {}
 
     def queue_turn(self, message="", *, kind=SpecTurnKind.CHAT, actor=None):
         """⁂ Queue a turn on this session — the single entry point for the

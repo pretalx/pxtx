@@ -5,7 +5,8 @@ description: >-
   comments, milestones). Trigger when the user references a `PX-<number>`
   ticket, asks to list/create/close/comment/take pretalx issues, mentions
   the pretalx tracker, or asks what's assigned to them or pending on
-  the tracker.
+  the tracker. ⁂ Also trigger when asked to pull or implement a ready
+  spec session (`pxtx spec pull`).
 ---
 
 # pxtx — pretalx issue tracker CLI
@@ -46,6 +47,7 @@ pxtx add-interested PX-47 "Name" [--url URL] [--note "..."]
 pxtx add-link PX-47 "label" <url>
 pxtx milestone list
 pxtx activity log [PX-47] [--since 1h|2d|1w|<iso>]
+pxtx spec pull PX-47 [--force]            # ⁂ materialize ready spec artifacts
 ```
 
 Top-level flags (before the subcommand):
@@ -185,6 +187,24 @@ Use `add-interested` for humans/stakeholders (url + note are optional;
 url can be a `mailto:` or anything else) and `add-link` for references
 (spec, doc, related thread). Neither supports edit/remove — drop into
 the Django admin for that.
+
+**"⁂ The spec for PX-47 is ready — implement it."** Spec sessions are
+written by a server-side agent and reviewed in the pxtx UI; once the
+human marks a session *ready*, pull its OpenSpec artifacts into your
+local checkout. Run it from the repo root — files land under
+`openspec/changes/pxtx-47/` relative to your current directory:
+
+```
+uvx pxtx spec pull PX-47
+```
+
+⁂ Files that already match the snapshot are skipped silently. If a
+target file differs locally, the command refuses, lists the conflicting
+files, writes nothing, and exits non-zero — re-run with `--force` to
+overwrite them with the snapshot. If there is nothing to pull (the issue
+has no spec session, or no finished turn produced artifacts yet), it
+also exits non-zero and says so. After pulling, implement the change
+like any other OpenSpec change directory.
 
 **"What happened on PX-47 recently?"**
 

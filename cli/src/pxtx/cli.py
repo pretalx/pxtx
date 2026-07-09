@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 from datetime import UTC, datetime, timedelta
+from pathlib import Path, PurePosixPath
 
 from pxtx.client import ApiError, Client
 from pxtx.config import ConfigError, load_config
@@ -366,6 +367,85 @@ def cmd_activity_log(args, client, config):
         print(format_activity_row(entry))
 
 
+def validate_snapshot_path(value):
+    """⁂ Reject snapshot paths that could escape the target directory.
+
+    The snapshot is produced from an agent-written directory on the server,
+    so every path in it is untrusted input: no absolute paths, no ``..``
+    segments, no empty names.
+    """
+    pure = PurePosixPath(value)
+    if not pure.parts or pure.is_absolute() or ".." in pure.parts:
+        raise CliError(f"⁂ unsafe path in snapshot: {value!r}")
+    return pure
+
+
+def cmd_spec_pull(args, client, config):
+    """⁂ Materialize the latest spec snapshot under ``openspec/changes/pxtx-<n>/``.
+
+    All conflict checks run before the first write, so a refusal (or an
+    unsafe path) means the working tree was not touched at all.
+    """
+    try:
+        data = client.get_spec_artifacts(args.number)
+    except ApiError as exc:
+        if exc.status == 404:
+            raise CliError(
+                f"⁂ PX-{args.number} has no spec session — nothing to pull"
+            ) from exc
+        raise
+    artifacts = data["artifacts"]
+    if not artifacts:
+        raise CliError(
+            f"⁂ PX-{args.number} has no spec artifacts yet — nothing to pull "
+            f"(stage: {data['stage']})"
+        )
+    root = Path("openspec") / "changes" / f"pxtx-{args.number}"
+    to_write = []
+    skipped = []
+    conflicts = []
+    for relpath in sorted(artifacts):
+        content = artifacts[relpath]
+        target = root / validate_snapshot_path(relpath)
+        if target.exists():
+            if target.read_text() == content:
+                skipped.append(relpath)
+                continue
+            conflicts.append(relpath)
+        to_write.append((target, content, relpath))
+    if conflicts and not args.force:
+        listing = "\n".join(f"  {path}" for path in conflicts)
+        raise CliError(
+            f"⁂ {len(conflicts)} file(s) under {root} differ from the snapshot; "
+            f"nothing was written. Re-run with --force to overwrite:\n{listing}"
+        )
+    written = []
+    for target, content, relpath in to_write:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content)
+        written.append(relpath)
+    if args.json:
+        print_json(
+            {
+                "issue": data["issue"],
+                "stage": data["stage"],
+                "root": str(root),
+                "written": written,
+                "skipped": skipped,
+                "overwritten": conflicts,
+            }
+        )
+        return
+    if not written:
+        print(f"⁂ {root} already matches the latest snapshot — nothing to do")
+        return
+    listing = "\n".join(f"  {path}" for path in written)
+    print(
+        f"⁂ pulled {len(written)} file(s) into {root} "
+        f"(stage: {data['stage']}):\n{listing}"
+    )
+
+
 def build_parser():
     parser = argparse.ArgumentParser(prog="pxtx", description="pretalx-tracker CLI")
     parser.add_argument("--json", action="store_true", help="emit raw API JSON")
@@ -474,6 +554,17 @@ def build_parser():
     ms_sub = milestone.add_subparsers(dest="subcommand", required=True)
     ms_list = ms_sub.add_parser("list", help="list milestones")
     ms_list.set_defaults(func=cmd_milestone_list)
+
+    spec = sub.add_parser("spec", help="⁂ spec session artifacts")
+    spec_sub = spec.add_subparsers(dest="subcommand", required=True)
+    spec_pull = spec_sub.add_parser(
+        "pull", help="⁂ write the latest spec snapshot to openspec/changes/pxtx-<n>/"
+    )
+    spec_pull.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
+    spec_pull.add_argument(
+        "--force", action="store_true", help="⁂ overwrite files that differ locally"
+    )
+    spec_pull.set_defaults(func=cmd_spec_pull)
 
     activity = sub.add_parser("activity", help="activity log")
     act_sub = activity.add_subparsers(dest="subcommand", required=True)

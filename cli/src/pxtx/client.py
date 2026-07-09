@@ -130,6 +130,9 @@ class Client:
     def add_link(self, number, entry):
         return self._append_json_list(number, "links", entry, ("label", "url"))
 
+    def get_spec_artifacts(self, number):
+        return self._request("GET", f"/issues/{number}/spec/artifacts/")
+
     def list_milestones(self):
         return self.paginate("/milestones/")
 

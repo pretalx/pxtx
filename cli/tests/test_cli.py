@@ -1078,6 +1078,181 @@ def test_activity_log_json(cli_config, mocked_responses, capsys):
     assert '"action_type": "x"' in capsys.readouterr().out
 
 
+# ---------- spec pull ----------
+
+ARTIFACTS_URL = f"{URL}/api/v1/issues/47/spec/artifacts/"
+
+
+def _mock_artifacts(mocked_responses, artifacts, stage="ready"):
+    mocked_responses.get(
+        ARTIFACTS_URL, json={"issue": 47, "stage": stage, "artifacts": artifacts}
+    )
+
+
+def _change_root(tmp_path):
+    return tmp_path / "openspec" / "changes" / "pxtx-47"
+
+
+def test_spec_pull_materializes_nested_dirs(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    _mock_artifacts(
+        mocked_responses, {"proposal.md": "# P\n", "specs/api/spec.md": "# API\n"}
+    )
+
+    code = cli.main(["spec", "pull", "PX-47"])
+
+    assert code == 0
+    root = _change_root(tmp_path)
+    assert (root / "proposal.md").read_text() == "# P\n"
+    assert (root / "specs" / "api" / "spec.md").read_text() == "# API\n"
+    out = capsys.readouterr().out
+    assert "pxtx-47" in out
+    assert "specs/api/spec.md" in out
+
+
+def test_spec_pull_conflict_refuses_and_writes_nothing(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("local edit\n")
+    _mock_artifacts(mocked_responses, {"proposal.md": "# P\n", "design.md": "# D\n"})
+
+    code = cli.main(["spec", "pull", "47"])
+
+    assert code == 2
+    assert (root / "proposal.md").read_text() == "local edit\n"
+    assert not (root / "design.md").exists()
+    err = capsys.readouterr().err
+    assert "proposal.md" in err
+    assert "--force" in err
+
+
+def test_spec_pull_skips_identical_files(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    _mock_artifacts(mocked_responses, {"proposal.md": "# P\n", "design.md": "# D\n"})
+
+    code = cli.main(["spec", "pull", "47"])
+
+    assert code == 0
+    assert (root / "design.md").read_text() == "# D\n"
+    out = capsys.readouterr().out
+    assert "design.md" in out
+    assert "proposal.md" not in out
+
+
+def test_spec_pull_all_identical_is_a_noop(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    _mock_artifacts(mocked_responses, {"proposal.md": "# P\n"})
+
+    code = cli.main(["spec", "pull", "47"])
+
+    assert code == 0
+    assert (root / "proposal.md").read_text() == "# P\n"
+    out = capsys.readouterr().out
+    assert "pxtx-47" in out
+
+
+def test_spec_pull_force_overwrites_conflicts(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("local edit\n")
+    _mock_artifacts(mocked_responses, {"proposal.md": "# P\n"})
+
+    code = cli.main(["spec", "pull", "47", "--force"])
+
+    assert code == 0
+    assert (root / "proposal.md").read_text() == "# P\n"
+    assert "proposal.md" in capsys.readouterr().out
+
+
+def test_spec_pull_no_session_404(cli_config, mocked_responses, capsys):
+    mocked_responses.get(ARTIFACTS_URL, json={"detail": "Not found."}, status=404)
+
+    code = cli.main(["spec", "pull", "47"])
+
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "nothing to pull" in err
+    assert "PX-47" in err
+
+
+def test_spec_pull_empty_artifacts(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    _mock_artifacts(mocked_responses, {}, stage="explore")
+
+    code = cli.main(["spec", "pull", "47"])
+
+    assert code == 2
+    assert not (tmp_path / "openspec").exists()
+    assert "nothing to pull" in capsys.readouterr().err
+
+
+def test_spec_pull_server_error_propagates(cli_config, mocked_responses, capsys):
+    mocked_responses.get(ARTIFACTS_URL, json={"detail": "boom"}, status=500)
+
+    code = cli.main(["spec", "pull", "47"])
+
+    assert code == 1
+    assert "api error:" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("bad", ("../evil.md", "/etc/evil", "a/../../evil.md", ""))
+def test_spec_pull_rejects_unsafe_paths(
+    bad, cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    _mock_artifacts(mocked_responses, {bad: "evil", "ok.md": "safe"})
+
+    code = cli.main(["spec", "pull", "47"])
+
+    assert code == 2
+    # Nothing at all may be written when the snapshot contains a bad path.
+    assert not (tmp_path / "openspec").exists()
+    assert "unsafe path" in capsys.readouterr().err
+
+
+def test_spec_pull_json_output(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    _mock_artifacts(mocked_responses, {"proposal.md": "# P\n", "design.md": "# D\n"})
+
+    code = cli.main(["--json", "spec", "pull", "47"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == {
+        "issue": 47,
+        "stage": "ready",
+        "root": "openspec/changes/pxtx-47",
+        "written": ["design.md"],
+        "skipped": ["proposal.md"],
+        "overwritten": [],
+    }
+
+
 class _FrozenDatetime:
     """Minimal drop-in that freezes ``datetime.now`` while preserving other attrs."""
 

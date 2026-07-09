@@ -251,6 +251,18 @@ def test_list_milestones(mocked_responses, client_plain):
     assert [m["slug"] for m in client_plain.list_milestones()] == ["r1"]
 
 
+def test_get_spec_artifacts(mocked_responses, client_plain):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/spec/artifacts/",
+        json={"issue": 47, "stage": "ready", "artifacts": {"proposal.md": "# P"}},
+    )
+
+    result = client_plain.get_spec_artifacts(47)
+
+    assert result["stage"] == "ready"
+    assert result["artifacts"] == {"proposal.md": "# P"}
+
+
 def test_activity_log(mocked_responses, client_plain):
     mocked_responses.get(
         f"{URL}/api/v1/activity/",

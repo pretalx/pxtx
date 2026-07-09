@@ -168,6 +168,8 @@ DEFAULT_GITHUB_REPO = "pretalx/pretalx"
 # falling back to pxtx.toml next to pyproject.toml (dev). Missing file =
 # everything defaults. Schema -- [github].token (optional; bumps rate limit
 # 60 -> 5000) and [github].repos (list polled by `manage.py runperiodic`).
+# ⁂ The [spec] section configures `manage.py runworker` (see
+# pxtx.toml.example); without it the spec worker refuses to start.
 CONFIG_PATHS = (Path("/etc/pxtx.toml"), BASE_DIR / "pxtx.toml")
 
 
@@ -183,3 +185,12 @@ _github_cfg = _config.get("github", {})
 
 GITHUB_WATCH_REPOS = _github_cfg.get("repos") or [DEFAULT_GITHUB_REPO]
 GITHUB_TOKEN = _github_cfg.get("token", "") or ""
+
+_spec_cfg = _config.get("spec", {})
+
+SPEC_CHECKOUT_PATH = _spec_cfg.get("checkout_path", "") or ""
+SPEC_CLAUDE_BINARY = _spec_cfg.get("claude_binary", "claude")
+SPEC_CLAUDE_MODEL = _spec_cfg.get("model", "") or ""
+SPEC_CLAUDE_SETTINGS_FILE = _spec_cfg.get("settings_file", "") or ""
+SPEC_MAX_BUDGET_USD = _spec_cfg.get("max_budget_usd", 5.0)
+SPEC_TIMEOUT_SECONDS = _spec_cfg.get("timeout_seconds", 3600)

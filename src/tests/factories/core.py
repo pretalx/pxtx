@@ -9,6 +9,8 @@ from pxtx.core.models import (
     IssueReference,
     Milestone,
     Source,
+    SpecSession,
+    SpecTurn,
     Status,
     User,
 )
@@ -78,6 +80,25 @@ class GithubCommitRefFactory(factory.django.DjangoModelFactory):
     kind = GithubRefKind.COMMIT
     repo = "pretalx/pretalx"
     sha = factory.Sequence(lambda n: f"{n:040x}")
+
+
+class SpecSessionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = SpecSession
+
+    issue = factory.SubFactory(IssueFactory)
+
+
+class SpecTurnFactory(factory.django.DjangoModelFactory):
+    """⁂ Snapshots the session's current stage onto the turn, matching how
+    turns are queued in production code."""
+
+    class Meta:
+        model = SpecTurn
+
+    session = factory.SubFactory(SpecSessionFactory)
+    message = factory.Sequence(lambda n: f"Spec message {n}")
+    stage = factory.LazyAttribute(lambda o: o.session.stage)
 
 
 class IssueReferenceFactory(factory.django.DjangoModelFactory):

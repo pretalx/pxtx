@@ -7,6 +7,8 @@ from tests.factories.core import (
     IssueFactory,
     IssueReferenceFactory,
     MilestoneFactory,
+    SpecSessionFactory,
+    SpecTurnFactory,
     UserFactory,
 )
 
@@ -19,5 +21,7 @@ __all__ = [
     "IssueFactory",
     "IssueReferenceFactory",
     "MilestoneFactory",
+    "SpecSessionFactory",
+    "SpecTurnFactory",
     "UserFactory",
 ]

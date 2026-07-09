@@ -13,10 +13,19 @@ from pxtx.core.models.issue import (
 )
 from pxtx.core.models.issue_reference import IssueReference
 from pxtx.core.models.milestone import Milestone
+from pxtx.core.models.spec import (
+    SPEC_STAGE_TRANSITIONS,
+    SpecSession,
+    SpecStage,
+    SpecTurn,
+    SpecTurnKind,
+    SpecTurnStatus,
+)
 from pxtx.core.models.user import User
 
 __all__ = [
     "CLOSED_STATUSES",
+    "SPEC_STAGE_TRANSITIONS",
     "ActivityLog",
     "ApiToken",
     "BaseModel",
@@ -29,6 +38,11 @@ __all__ = [
     "Milestone",
     "Priority",
     "Source",
+    "SpecSession",
+    "SpecStage",
+    "SpecTurn",
+    "SpecTurnKind",
+    "SpecTurnStatus",
     "Status",
     "User",
 ]

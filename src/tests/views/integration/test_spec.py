@@ -690,6 +690,66 @@ def test_propose_button_changes_stage_and_queues_opsx_turn(auth_client):
 
 
 @pytest.mark.django_db
+def test_propose_button_carries_a_composer_message(auth_client):
+    session = SpecSessionFactory()
+
+    response = auth_client.post(
+        _spec_url(session, "stage/"),
+        {"stage": "propose", "message": "Skip the migration, PX-3 covers it."},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    session.refresh_from_db()
+    assert session.stage == SpecStage.PROPOSE
+    turns = list(session.turns.all())
+    assert [t.message for t in turns] == [
+        "/opsx:propose\n\nSkip the migration, PX-3 covers it."
+    ]
+    assert turns[0].stage == SpecStage.PROPOSE
+
+
+@pytest.mark.django_db
+def test_propose_button_ignores_a_blank_composer_message(auth_client):
+    session = SpecSessionFactory()
+
+    auth_client.post(_spec_url(session, "stage/"), {"stage": "propose", "message": " "})
+
+    assert [t.message for t in session.turns.all()] == ["/opsx:propose"]
+
+
+@pytest.mark.django_db
+def test_mark_ready_drops_a_message_because_it_queues_no_turn(auth_client):
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+
+    auth_client.post(
+        _spec_url(session, "stage/"), {"stage": "ready", "message": "ship it"}
+    )
+
+    session.refresh_from_db()
+    assert session.stage == SpecStage.READY
+    assert session.turns.count() == 0
+
+
+@pytest.mark.django_db
+def test_explore_composer_offers_send_and_propose(auth_client):
+    session = SpecSessionFactory()
+
+    body = auth_client.get(_spec_url(session)).content.decode()
+
+    assert "Send and propose" in body
+
+
+@pytest.mark.django_db
+def test_propose_composer_has_no_send_and_propose(auth_client):
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+
+    body = auth_client.get(_spec_url(session)).content.decode()
+
+    assert "Send and propose" not in body
+
+
+@pytest.mark.django_db
 def test_back_to_explore_queues_explore_turn(auth_client):
     session = SpecSessionFactory(stage=SpecStage.PROPOSE)
 

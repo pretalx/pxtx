@@ -184,11 +184,13 @@ def compose_first_prompt(turn, push_turn=None):
             "was lost; the conversation so far:"
         )
         parts.append(transcript)
-    # Stage-command bootstrap turns queue the bare /opsx: command; the
-    # header above already carries it, so echoing it as a task would send
-    # the command twice.
-    if turn.message and turn.message != OPSX_COMMANDS[turn.stage]:
-        parts.append(f"## Your task\n\n{turn.message}")
+    # Stage-command turns queue the /opsx: command, optionally followed by
+    # the message sent with the transition. The header above already carries
+    # the command (or, under push framing, deliberately drops it), so strip
+    # it off and keep only whatever the user wrote.
+    task = turn.message.removeprefix(OPSX_COMMANDS[turn.stage]).strip()
+    if task:
+        parts.append(f"## Your task\n\n{task}")
     return "\n\n".join(parts)
 
 

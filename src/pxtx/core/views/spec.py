@@ -23,7 +23,8 @@ from pxtx.core.views._helpers import is_htmx, request_actor
 
 # Stage transitions that involve claude queue a turn with the matching
 # /opsx: command. Marking ready and reopening are pxtx-only state flips and
-# queue nothing.
+# queue nothing. A message posted alongside the transition rides on that
+# turn, after the command.
 STAGE_COMMANDS = {
     (SpecStage.EXPLORE, SpecStage.PROPOSE): "/opsx:propose",
     (SpecStage.PROPOSE, SpecStage.EXPLORE): "/opsx:explore",
@@ -186,6 +187,13 @@ class SpecTurnQueueView(LoginRequiredMixin, View):
 
 
 class SpecStageView(LoginRequiredMixin, View):
+    """Flip the stage, and for the transitions that involve claude queue the
+    matching /opsx: command. The composer's send-and-propose button posts here
+    with a ``message``, which is appended to the command so feedback on the
+    exploration rides along instead of costing a separate turn. A message on a
+    transition that queues nothing (ready, reopen) is ignored — no UI posts
+    one."""
+
     def post(self, request, number):
         session = _get_session(number)
         target = request.POST.get("stage", "")
@@ -199,7 +207,10 @@ class SpecStageView(LoginRequiredMixin, View):
             return HttpResponseBadRequest(" ".join(exc.messages))
         command = STAGE_COMMANDS.get((old_stage, target))
         if command:
-            session.queue_turn(command, actor=actor)
+            message = request.POST.get("message", "").strip()
+            session.queue_turn(
+                f"{command}\n\n{message}" if message else command, actor=actor
+            )
         return _session_response(request, session)
 
 

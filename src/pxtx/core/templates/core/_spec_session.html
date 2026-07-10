@@ -70,6 +70,13 @@
         <textarea name="message" id="spec-composer-message" rows="3" required placeholder="Message the spec agent…"{% if preserve_inputs %} hx-preserve{% endif %}>{{ composer_prefill }}</textarea>
         <div class="form-actions">
             <button type="submit">Send</button>
+            {% if session.stage == "explore" %}
+            <button type="submit" class="secondary" name="stage" value="propose" formnovalidate
+                    formaction="{% url 'core:spec-stage' number=issue.number %}"
+                    hx-post="{% url 'core:spec-stage' number=issue.number %}"
+                    hx-target="#spec-session" hx-swap="outerHTML"
+                    title="Move to propose and send this message with the /opsx:propose turn">Send and propose</button>
+            {% endif %}
         </div>
     </form>
     {% endif %}

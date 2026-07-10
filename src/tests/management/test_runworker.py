@@ -378,6 +378,26 @@ def test_runworker_first_turn_with_bare_stage_command_sends_it_once(
     assert turn.status == SpecTurnStatus.COMPLETED
 
 
+@pytest.mark.django_db
+def test_runworker_first_turn_with_stage_command_and_message_sends_command_once(
+    checkout, monkeypatch
+):
+    """Send-and-propose queues the stage command with the user's message
+    appended. The composed first prompt opens with the command, so only the
+    message survives as the Your-task section."""
+    session = SpecSessionFactory()
+    turn = session.queue_turn("/opsx:explore\n\nStart from the API surface")
+    calls = _patch_run(monkeypatch, [_success_proc()])
+
+    _run_worker()
+
+    prompt = calls[0]["cmd"][2]
+    assert prompt.count("/opsx:explore") == 1
+    assert prompt.endswith("## Your task\n\nStart from the API surface")
+    turn.refresh_from_db()
+    assert turn.status == SpecTurnStatus.COMPLETED
+
+
 @pytest.mark.parametrize(
     "message", ("Please also cover the API surface", "/opsx:propose")
 )

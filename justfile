@@ -201,11 +201,11 @@ cli-build:
     rm -rf dist build
     uv build
 
-# Publish the CLI to PyPI (uses UV_PUBLISH_TOKEN if set, else prompts)
+# Publish the CLI to PyPI
 [group('cli')]
 [working-directory("cli")]
 cli-publish: cli-build
-    uv publish dist/*
+    uvx twine upload --non-interactive --config-file "${PYPIRC:-$HOME/.config/pypirc}" dist/*
 
 # Bump CLI __version__, commit, tag vX.Y.Z, push branch + tag
 [group('cli')]

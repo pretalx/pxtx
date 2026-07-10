@@ -11,6 +11,7 @@
             <tr>
                 <th>Issue</th>
                 <th>Title</th>
+                <th>Status</th>
                 <th>Stage</th>
                 <th>State</th>
                 <th>Cost</th>
@@ -21,6 +22,7 @@
             <tr class="spec-row spec-row-{{ session.state }}">
                 <td><a href="{% url 'core:spec-page' number=session.issue.number %}">{{ session.issue.slug }}</a></td>
                 <td><a href="{% url 'core:spec-page' number=session.issue.number %}">{{ session.issue.title }}</a></td>
+                <td><span class="badge status-{{ session.issue.status }}">{{ session.issue.get_status_display }}</span></td>
                 <td><span class="badge spec-stage-{{ session.stage }}">{{ session.get_stage_display }}</span></td>
                 <td><span class="badge spec-state spec-state-{{ session.state }}">{{ session.state_label }}</span></td>
                 <td class="meta">{% if session.total_cost %}${{ session.total_cost|floatformat:2 }}{% else %}—{% endif %}</td>

@@ -76,6 +76,12 @@
                     hx-post="{% url 'core:spec-stage' number=issue.number %}"
                     hx-target="#spec-session" hx-swap="outerHTML"
                     title="Move to propose and send this message with the /opsx:propose turn">Send and propose</button>
+            {% else %}
+            <button type="submit" class="secondary" name="stage" value="explore" formnovalidate
+                    formaction="{% url 'core:spec-stage' number=issue.number %}"
+                    hx-post="{% url 'core:spec-stage' number=issue.number %}"
+                    hx-target="#spec-session" hx-swap="outerHTML"
+                    title="Move back to explore and send this message with the /opsx:explore turn">Send and back to explore</button>
             {% endif %}
         </div>
     </form>

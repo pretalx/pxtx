@@ -732,20 +732,40 @@ def test_mark_ready_drops_a_message_because_it_queues_no_turn(auth_client):
 
 
 @pytest.mark.django_db
+def test_back_to_explore_button_carries_a_composer_message(auth_client):
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+
+    auth_client.post(
+        _spec_url(session, "stage/"),
+        {"stage": "explore", "message": "Too much guessing, dig into the model first."},
+    )
+
+    session.refresh_from_db()
+    assert session.stage == SpecStage.EXPLORE
+    turns = list(session.turns.all())
+    assert [t.message for t in turns] == [
+        "/opsx:explore\n\nToo much guessing, dig into the model first."
+    ]
+    assert turns[0].stage == SpecStage.EXPLORE
+
+
+@pytest.mark.django_db
 def test_explore_composer_offers_send_and_propose(auth_client):
     session = SpecSessionFactory()
 
     body = auth_client.get(_spec_url(session)).content.decode()
 
     assert "Send and propose" in body
+    assert "Send and back to explore" not in body
 
 
 @pytest.mark.django_db
-def test_propose_composer_has_no_send_and_propose(auth_client):
+def test_propose_composer_offers_send_and_back_to_explore(auth_client):
     session = SpecSessionFactory(stage=SpecStage.PROPOSE)
 
     body = auth_client.get(_spec_url(session)).content.decode()
 
+    assert "Send and back to explore" in body
     assert "Send and propose" not in body
 
 

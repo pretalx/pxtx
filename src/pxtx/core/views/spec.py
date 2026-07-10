@@ -188,9 +188,9 @@ class SpecTurnQueueView(LoginRequiredMixin, View):
 
 class SpecStageView(LoginRequiredMixin, View):
     """Flip the stage, and for the transitions that involve claude queue the
-    matching /opsx: command. The composer's send-and-propose button posts here
+    matching /opsx: command. The composer's send-and-<stage> buttons post here
     with a ``message``, which is appended to the command so feedback on the
-    exploration rides along instead of costing a separate turn. A message on a
+    current turn rides along instead of costing a separate one. A message on a
     transition that queues nothing (ready, reopen) is ignored — no UI posts
     one."""
 

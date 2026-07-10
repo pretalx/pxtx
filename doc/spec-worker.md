@@ -51,3 +51,5 @@ has to provide. The feature is inert until the `[spec]` section of
   requeue flips the turn back to `queued`, and the re-run resumes the
   claude session; the only cost is re-paying for the interrupted turn's
   context.
+- In practice this is `pxtx-worker.service`, provisioned by the pxtx
+  role in the ansible repo along with everything else on this checklist.

@@ -31,4 +31,11 @@ sudo -u "$PXTX_USER" uv run python src/manage.py collectstatic --noinput
 log "Restarting pxtx service"
 systemctl restart pxtx
 
+if systemctl cat pxtx-worker.service > /dev/null 2>&1; then
+    log "Restarting pxtx worker"
+    systemctl try-restart pxtx-worker.service
+else
+    log "pxtx-worker.service not installed; skipping worker restart"
+fi
+
 log "Deploy completed"

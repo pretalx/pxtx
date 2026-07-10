@@ -20,7 +20,7 @@ class SpecTurnKind(models.TextChoices):
 
 
 class SpecPushConflictError(Exception):
-    """⁂ A push cannot land right now: the session has an active turn, or
+    """A push cannot land right now: the session has an active turn, or
     it is marked ready and the push did not ask to reopen it. Maps to 409
     at the API boundary."""
 
@@ -174,7 +174,7 @@ class SpecSession(BaseModel):
     def push_snapshot(
         self, artifacts, *, message="", ready=False, reopen=False, actor=None
     ):
-        """⁂ Land an externally developed artifact snapshot as a push turn.
+        """Land an externally developed artifact snapshot as a push turn.
 
         Guards, stage effects, and the turn insert run in one atomic block
         so a push never half-applies: an active (queued/running) turn or a
@@ -191,12 +191,12 @@ class SpecSession(BaseModel):
         with transaction.atomic():
             if self.turns.filter(status__in=ACTIVE_TURN_STATUSES).exists():
                 raise SpecPushConflictError(
-                    "⁂ A spec turn is queued or running; push again once it finishes."
+                    "A spec turn is queued or running; push again once it finishes."
                 )
             if self.stage == SpecStage.READY:
                 if not reopen:
                     raise SpecPushConflictError(
-                        "⁂ This spec is marked ready; pass reopen to push anyway."
+                        "This spec is marked ready; pass reopen to push anyway."
                     )
                 self.change_stage(SpecStage.PROPOSE, actor=actor)
             if self.stage == SpecStage.EXPLORE:
@@ -244,7 +244,7 @@ class SpecTurn(BaseModel):
     # and transcript rendering key on this, not on the mutable session
     # stage, which may have moved on while the turn sat in the queue.
     stage = models.CharField(max_length=10, choices=SpecStage.choices)
-    # ⁂ Who caused this turn, for turns created through the API — push
+    # Who caused this turn, for turns created through the API — push
     # turns record the resolved request actor. Blank for UI-queued turns:
     # single-user, the queueing actor is always Tobias.
     actor = models.CharField(max_length=200, blank=True)
@@ -302,7 +302,7 @@ class SpecTurn(BaseModel):
 
 class SpecPushResult(typing.NamedTuple):
     session: SpecSession
-    turn: "SpecTurn | None"  # ⁂ None when the pushed content was unchanged
+    turn: "SpecTurn | None"  # None when the pushed content was unchanged
     created_session: bool
 
     @property
@@ -313,7 +313,7 @@ class SpecPushResult(typing.NamedTuple):
 def push_spec_snapshot(
     issue, artifacts, *, message="", ready=False, reopen=False, actor=None
 ):
-    """⁂ Push entry point for callers holding an issue, not a session: the
+    """Push entry point for callers holding an issue, not a session: the
     API view and anything else that must bootstrap the session implicitly.
     Creates a missing session at stage propose (logged with the actor)
     inside the same atomic block as the push itself, then delegates to

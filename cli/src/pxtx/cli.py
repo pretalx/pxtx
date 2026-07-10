@@ -447,7 +447,7 @@ def cmd_spec_pull(args, client, config):
 
 
 def collect_push_files(root):
-    """⁂ Read every regular file under ``root`` into a path → content
+    """Read every regular file under ``root`` into a path → content
     mapping, dotfiles included — mirroring the worker's snapshot semantics
     so pull and push round-trip. Every file NAME and every file's content
     must be UTF-8: a spec directory containing binaries or mojibake names
@@ -461,20 +461,20 @@ def collect_push_files(root):
             relpath.encode("utf-8")
         except UnicodeEncodeError as exc:
             raise CliError(
-                f"⁂ {str(path)!r} is not a UTF-8 file name — "
+                f"{str(path)!r} is not a UTF-8 file name — "
                 "a spec push carries text files only"
             ) from exc
         try:
             artifacts[relpath] = path.read_text(encoding="utf-8")
         except UnicodeDecodeError as exc:
             raise CliError(
-                f"⁂ {path} is not UTF-8 text — a spec push carries text files only"
+                f"{path} is not UTF-8 text — a spec push carries text files only"
             ) from exc
     return artifacts
 
 
 def cmd_spec_push(args, client, config):
-    """⁂ Push a local ``openspec/changes/`` directory to the issue's spec
+    """Push a local ``openspec/changes/`` directory to the issue's spec
     session. The server derives the change name from the issue number, so
     ``--change`` only picks the local source directory. Server rejections
     (400 validation, 409 active-turn/ready conflicts) surface as ApiError
@@ -483,7 +483,7 @@ def cmd_spec_push(args, client, config):
     root = Path("openspec") / "changes" / name
     artifacts = collect_push_files(root) if root.is_dir() else {}
     if not artifacts:
-        raise CliError(f"⁂ {root} is missing or empty — nothing to push")
+        raise CliError(f"{root} is missing or empty — nothing to push")
     data = client.push_spec_artifacts(
         args.number,
         {
@@ -498,13 +498,13 @@ def cmd_spec_push(args, client, config):
         return
     if data["unchanged"]:
         print(
-            f"⁂ PX-{args.number} already has this content — nothing pushed "
+            f"PX-{args.number} already has this content — nothing pushed "
             f"(stage: {data['stage']})"
         )
         return
     suffix = " (new session)" if data["created_session"] else ""
     print(
-        f"⁂ pushed {data['files']} file(s) to PX-{args.number} "
+        f"pushed {data['files']} file(s) to PX-{args.number} "
         f"(stage: {data['stage']}){suffix}"
     )
 
@@ -629,20 +629,20 @@ def build_parser():
     )
     spec_pull.set_defaults(func=cmd_spec_pull)
     spec_push = spec_sub.add_parser(
-        "push", help="⁂ push openspec/changes/pxtx-<n>/ to the issue's spec session"
+        "push", help="push openspec/changes/pxtx-<n>/ to the issue's spec session"
     )
     spec_push.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
-    spec_push.add_argument("--message", help="⁂ note shown in the session transcript")
+    spec_push.add_argument("--message", help="note shown in the session transcript")
     spec_push.add_argument(
-        "--ready", action="store_true", help="⁂ mark the session ready after the push"
+        "--ready", action="store_true", help="mark the session ready after the push"
     )
     spec_push.add_argument(
-        "--reopen", action="store_true", help="⁂ reopen a ready session before pushing"
+        "--reopen", action="store_true", help="reopen a ready session before pushing"
     )
     spec_push.add_argument(
         "--change",
         metavar="NAME",
-        help="⁂ read openspec/changes/<NAME>/ instead of pxtx-<n>/",
+        help="read openspec/changes/<NAME>/ instead of pxtx-<n>/",
     )
     spec_push.set_defaults(func=cmd_spec_push)
 

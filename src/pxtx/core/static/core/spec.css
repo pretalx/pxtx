@@ -78,7 +78,7 @@
     border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
     border-left-width: 3px;
 }
-/* ⁂ Pushed snapshots are a third voice next to chat and critique: they
+/* Pushed snapshots are a third voice next to chat and critique: they
    came from outside the session, so they sit centered and green-tinted. */
 .spec-bubble-push {
     align-self: center;

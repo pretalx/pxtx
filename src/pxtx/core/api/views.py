@@ -298,7 +298,7 @@ class IssueReferenceDeleteView(APIView):
 class IssueSpecView(APIView):
     """Read-only spec session detail, keyed by issue number.
 
-    ⁂ Spec sessions are driven through the UI; the API's only write surface
+     Spec sessions are driven through the UI; the API's only write surface
     is the artifact push on the artifacts endpoint. The session detail
     itself stays read-only (any POST/PATCH/PUT/DELETE gets 405) — nobody
     edits transcripts, flips statuses, or deletes turns through the API.
@@ -330,7 +330,7 @@ class IssueSpecArtifactsView(APIView):
     The mapping is empty only when no finished turn ever produced artifacts —
     the CLI treats that as nothing to pull.
 
-    ⁂ POST is the API's single write operation: it lands a locally developed
+     POST is the API's single write operation: it lands a locally developed
     snapshot as a born-completed push turn (``pxtx spec push``), creating
     the session at stage propose when the issue has none. Payload validation
     lives in SpecPushSerializer; guards, stage effects, idempotency, and the

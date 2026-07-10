@@ -402,7 +402,7 @@ def test_spec_push_rejects_unsafe_and_non_canonical_paths(token_client, path):
     assert SpecSession.objects.count() == 0
 
 
-# ⁂ Raw bodies, not format="json": lone surrogates from JSON "\ud800"
+# Raw bodies, not format="json": lone surrogates from JSON "\ud800"
 # escapes survive parsing as Python str but cannot be UTF-8-encoded, so the
 # test client's own JSON renderer would choke on them before the request
 # ever left — exactly the crash the serializer must catch server-side.
@@ -520,7 +520,7 @@ def test_spec_push_identical_content_with_ready_flag_still_transitions(token_cli
 def test_spec_push_unchanged_content_to_explore_session_still_normalizes_stage(
     token_client,
 ):
-    # ⁂ The explore → propose normalization is a stage effect, not a
+    # The explore → propose normalization is a stage effect, not a
     # content effect: it must apply even when the pushed content matches
     # the latest finished snapshot and no turn is created.
     session = SpecSessionFactory()

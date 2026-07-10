@@ -191,7 +191,7 @@ class IssueSerializer(serializers.ModelSerializer):
 class SpecTurnSerializer(serializers.ModelSerializer):
     """One transcript entry, everything an agent needs to follow the
     exchange: the queue-time message, the composed prompt actually sent, the
-    response, cost, ⁂ the actor (set for push turns), and — for failed turns —
+    response, cost, the actor (set for push turns), and — for failed turns —
     error_detail plus the raw result payload. Per-turn artifact snapshots are
     deliberately absent; the latest snapshot has its own endpoint."""
 
@@ -242,7 +242,7 @@ class SpecSessionSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-# ⁂ Size sanity caps for pushed snapshots: a spec is a few dozen KB of
+# Size sanity caps for pushed snapshots: a spec is a few dozen KB of
 # text, so these are tripwires against runaway payloads, not quotas.
 SPEC_PUSH_MAX_FILES = 64
 SPEC_PUSH_MAX_FILE_BYTES = 512 * 1024
@@ -250,7 +250,7 @@ SPEC_PUSH_MAX_TOTAL_BYTES = 2 * 1024 * 1024
 
 
 class SpecPushSerializer(serializers.Serializer):
-    """⁂ Payload of a spec artifact push: the path → content mapping plus
+    """Payload of a spec artifact push: the path → content mapping plus
     the optional transcript note and stage flags. Validation is
     all-or-nothing — any violation rejects the whole push with the offending
     path, and nothing is stored. Keys must equal their canonical POSIX form
@@ -269,16 +269,16 @@ class SpecPushSerializer(serializers.Serializer):
 
     def validate_artifacts(self, value):
         if not value:
-            raise serializers.ValidationError("⁂ push at least one file")
+            raise serializers.ValidationError("push at least one file")
         if len(value) > SPEC_PUSH_MAX_FILES:
             raise serializers.ValidationError(
-                f"⁂ too many files (max {SPEC_PUSH_MAX_FILES})"
+                f"too many files (max {SPEC_PUSH_MAX_FILES})"
             )
         total_bytes = 0
         for path, content in value.items():
             if not isinstance(content, str):
-                raise serializers.ValidationError(f"⁂ {path}: content must be a string")
-            # ⁂ Lone surrogates (JSON "\ud800" escapes) survive parsing as
+                raise serializers.ValidationError(f"{path}: content must be a string")
+            # Lone surrogates (JSON "\ud800" escapes) survive parsing as
             # Python str but cannot be encoded: stored, they would crash the
             # worker's materialization long after the push returned 201.
             try:
@@ -286,22 +286,22 @@ class SpecPushSerializer(serializers.Serializer):
                 size = len(content.encode("utf-8"))
             except UnicodeEncodeError as exc:
                 raise serializers.ValidationError(
-                    f"⁂ {path!r}: path and content must be valid UTF-8 text"
+                    f"{path!r}: path and content must be valid UTF-8 text"
                 ) from exc
             if "\x00" in path or any(
                 part in ("", ".", "..") for part in path.split("/")
             ):
                 raise serializers.ValidationError(
-                    f"⁂ {path}: paths must be relative, canonical POSIX form"
+                    f"{path}: paths must be relative, canonical POSIX form"
                 )
             if size > SPEC_PUSH_MAX_FILE_BYTES:
                 raise serializers.ValidationError(
-                    f"⁂ {path}: file exceeds {SPEC_PUSH_MAX_FILE_BYTES} bytes"
+                    f"{path}: file exceeds {SPEC_PUSH_MAX_FILE_BYTES} bytes"
                 )
             total_bytes += size
         if total_bytes > SPEC_PUSH_MAX_TOTAL_BYTES:
             raise serializers.ValidationError(
-                f"⁂ push exceeds {SPEC_PUSH_MAX_TOTAL_BYTES} bytes in total"
+                f"push exceeds {SPEC_PUSH_MAX_TOTAL_BYTES} bytes in total"
             )
         for path in value:
             parts = path.split("/")
@@ -309,7 +309,7 @@ class SpecPushSerializer(serializers.Serializer):
                 prefix = "/".join(parts[:index])
                 if prefix in value:
                     raise serializers.ValidationError(
-                        f"⁂ {prefix} is both a file and a directory (of {path})"
+                        f"{prefix} is both a file and a directory (of {path})"
                     )
         return value
 

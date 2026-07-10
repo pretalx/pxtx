@@ -1391,7 +1391,7 @@ def test_spec_push_non_utf8_file_aborts_and_sends_nothing(
 def test_spec_push_non_utf8_filename_aborts_and_sends_nothing(
     cli_config, mocked_responses, tmp_path, monkeypatch, capsys
 ):
-    # ⁂ A non-UTF-8 filename reaches Python as lone surrogates via
+    # A non-UTF-8 filename reaches Python as lone surrogates via
     # surrogateescape; letting it through would blow up JSON serialization
     # (or worse, land surrogates on the server), so the push must abort
     # before anything is sent.
@@ -1407,7 +1407,7 @@ def test_spec_push_non_utf8_filename_aborts_and_sends_nothing(
     assert code == 2
     err = capsys.readouterr().err
     assert "not a UTF-8 file name" in err
-    # ⁂ The offending name appears escaped — surrogates must never hit stderr raw.
+    # The offending name appears escaped — surrogates must never hit stderr raw.
     assert "bad\\udcffname.md" in err
     assert len(mocked_responses.calls) == 0
 

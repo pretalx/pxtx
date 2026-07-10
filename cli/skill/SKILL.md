@@ -6,7 +6,7 @@ description: >-
   ticket, asks to list/create/close/comment/take pretalx issues, mentions
   the pretalx tracker, or asks what's assigned to them or pending on
   the tracker. Also trigger when asked to pull or implement a ready
-  spec session (`pxtx spec pull`), ⁂ or to push a locally developed
+  spec session (`pxtx spec pull`), or to push a locally developed
   spec into an issue's spec session (`pxtx spec push`).
 ---
 
@@ -50,7 +50,7 @@ pxtx milestone list
 pxtx activity log [PX-47] [--since 1h|2d|1w|<iso>]
 pxtx spec pull PX-47 [--force]            # materialize ready spec artifacts
 pxtx spec push PX-47 [--message "..."] [--ready] [--reopen]
-                     [--change NAME]      # ⁂ send a local spec to the session
+                     [--change NAME]      # send a local spec to the session
 ```
 
 Top-level flags (before the subcommand):
@@ -209,7 +209,7 @@ has no spec session, or no finished turn produced artifacts yet), it
 also exits non-zero and says so. After pulling, implement the change
 like any other OpenSpec change directory.
 
-**"I wrote a spec locally — get it into the tracker."** ⁂ The reverse of
+**"I wrote a spec locally — get it into the tracker."** The reverse of
 `spec pull`: push everything under `openspec/changes/pxtx-47/` (relative
 to cwd, dotfiles included, text files only) into PX-47's spec session as
 a new transcript entry. Run it from the repo root:
@@ -218,14 +218,14 @@ a new transcript entry. Run it from the repo root:
 uvx pxtx spec push PX-47 --message "first draft, focus on the API shape"
 ```
 
-⁂ The issue does not need an existing spec session — pushing creates one
+The issue does not need an existing spec session — pushing creates one
 at stage `propose`. If the spec lives under a different local change
 name, `--change NAME` reads `openspec/changes/NAME/` instead (the
 server-side directory is still named after the issue). Pushing identical
 content twice is a no-op (exit 0, "nothing pushed"), so re-pushing after
 every edit is safe.
 
-⁂ The push-then-iterate loop: push a draft, then let the server-side
+The push-then-iterate loop: push a draft, then let the server-side
 session do the reviewing — in the pxtx UI, request a critique or chat
 with the spec agent about it, and `uvx pxtx spec pull PX-47 --force`
 later to converge your checkout on the reviewed result. When the spec is
@@ -234,7 +234,7 @@ same call. A session already marked `ready` rejects pushes (409) unless
 you pass `--reopen`, which deliberately un-readies it first — don't do
 that unless the human asked for the spec to change.
 
-⁂ Failure modes: a missing or empty change directory exits non-zero
+Failure modes: a missing or empty change directory exits non-zero
 ("nothing to push"), as does a non-UTF-8 file (binaries never belong in
 a spec). A 409 means the session is busy (a turn is queued or running —
 retry once it finishes) or `ready` without `--reopen`; a 400 names the

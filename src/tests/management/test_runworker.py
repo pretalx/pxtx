@@ -83,7 +83,7 @@ def _success_proc(**kwargs):
 
 def _patch_run(monkeypatch, outcomes, on_call=None):
     """Patch subprocess.run in the worker module, replaying one outcome
-    (a fake process or an exception to raise) per call. ⁂ on_call runs at
+    (a fake process or an exception to raise) per call. on_call runs at
     invocation time, before the outcome is produced — the hook by which
     materialization tests observe the checkout exactly as claude would."""
     calls = []
@@ -132,7 +132,7 @@ PUSHED = {"proposal.md": "# Pushed proposal", "specs/feature/spec.md": "# Pushed
 
 
 def _capture_dir(monkeypatch, outcomes, change_dir):
-    """⁂ Like _patch_run, but additionally record the change directory's
+    """Like _patch_run, but additionally record the change directory's
     contents at every claude invocation: materialization must be complete
     before the run starts, so this capture is the assertion point for it."""
     seen = []
@@ -780,7 +780,7 @@ def test_runworker_first_chat_after_push_materializes_and_frames_existing_change
 
     _run_worker()
 
-    # ⁂ The stale file is gone and the nested pushed file exists before
+    # The stale file is gone and the nested pushed file exists before
     # claude runs — wholesale replacement, not a merge.
     assert seen == [PUSHED]
     cmd = calls[0]["cmd"]
@@ -816,7 +816,7 @@ def test_runworker_critique_after_push_reviews_materialized_spec_without_note(
     assert seen == [PUSHED]
     prompt = calls[0]["cmd"][2]
     assert "adversarial" in prompt
-    # ⁂ Critiques are sessionless one-shots reading fresh disk: no
+    # Critiques are sessionless one-shots reading fresh disk: no
     # materialization note, no push provenance in the prompt.
     assert "claude-dev" not in prompt
     assert "re-read" not in prompt
@@ -847,7 +847,7 @@ def test_runworker_resumed_chat_after_push_carries_materialization_note(
     assert "claude-dev" in prompt
     assert "re-read" in prompt
     assert ("wip draft, needs a critique" in prompt) == bool(push_message)
-    # ⁂ For plain user text the note leads and the queued message closes.
+    # For plain user text the note leads and the queued message closes.
     assert prompt.endswith("\n\nTighten section X")
     turn.refresh_from_db()
     assert turn.prompt_sent == prompt
@@ -855,7 +855,7 @@ def test_runworker_resumed_chat_after_push_carries_materialization_note(
 
 @pytest.mark.django_db
 def test_runworker_stage_command_after_push_keeps_command_first(checkout, monkeypatch):
-    """⁂ A bare /opsx: stage command only expands when it starts the
+    """A bare /opsx: stage command only expands when it starts the
     prompt: after a push, the materialization note must follow the
     command, not displace it."""
     session = SpecSessionFactory()
@@ -919,7 +919,7 @@ def test_runworker_retry_after_errored_chat_does_not_rematerialize(
     assert first.status == SpecTurnStatus.ERROR
     assert first.artifacts == PUSHED
 
-    # ⁂ The errored chat turn is now the latest finished turn and its
+    # The errored chat turn is now the latest finished turn and its
     # snapshot mirrors disk, so the retry must not rewrite the checkout.
     _write_change_file(checkout, issue.number, "notes.md", "written after the error")
     retry = session.queue_turn("try again")
@@ -946,7 +946,7 @@ def test_runworker_second_push_supersedes_first(checkout, monkeypatch):
     assert seen == [{"proposal.md": "v2"}]
     prompt = calls[0]["cmd"][2]
     assert "claude-b" in prompt
-    # ⁂ The superseded push still shows in the injected transcript as a
+    # The superseded push still shows in the injected transcript as a
     # pushed-files line, but its content reaches neither disk nor prompt.
     assert "claude-a pushed spec files" in prompt
     assert "v1" not in prompt
@@ -963,7 +963,7 @@ def test_runworker_requeued_turn_after_push_rematerializes(checkout, monkeypatch
         claude_session_id=session.claude_session_id,
         message="draft it",
     )
-    # ⁂ The interrupted attempt may have half-run and left the change
+    # The interrupted attempt may have half-run and left the change
     # directory diverged; the re-run must converge it back to the push.
     _write_change_file(checkout, issue.number, "proposal.md", "half-clobbered")
     change_dir = runworker_module.change_dir_for(checkout, issue.number)
@@ -1014,7 +1014,7 @@ def test_runworker_fresh_recovery_after_push_injects_push_line(checkout, monkeyp
     assert "/opsx" not in prompt
     assert "claude-dev pushed spec files" in prompt
     assert "rescued the draft locally" in prompt
-    # ⁂ Pushed file contents never inline into the recovery prompt, and the
+    # Pushed file contents never inline into the recovery prompt, and the
     # push line carries no chat or critique speaker label.
     assert "# Pushed proposal" not in prompt
     assert "User:\nrescued the draft locally" not in prompt

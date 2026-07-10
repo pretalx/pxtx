@@ -14,7 +14,7 @@ has to provide. The feature is inert until the `[spec]` section of
   every `claude -p` turn with this directory as cwd; claude sessions are
   bound to the cwd they were created in, so moving the checkout makes all
   existing sessions unresumable.
-- ⁂ The worker writes into the checkout in exactly two ways outside
+- The worker writes into the checkout in exactly two ways outside
   claude runs. First, an idle `git pull --ff-only` keeps tracked files
   fresh; it never touches the untracked `openspec/changes/` directories.
   Second, when a session's latest finished turn is an API push, the

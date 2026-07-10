@@ -2,7 +2,7 @@
 <article class="spec-turn spec-turn-{{ entry.turn.kind }} spec-turn-{{ entry.turn.status }}">
     {% if entry.turn.kind == "push" %}
     <div class="spec-bubble spec-bubble-push">
-        <span class="spec-turn-label">⁂ Spec pushed by {{ entry.turn.actor|default:"unknown actor" }} — {{ entry.turn.artifacts|length }} file{{ entry.turn.artifacts|length|pluralize }}</span>
+        <span class="spec-turn-label">Spec pushed by {{ entry.turn.actor|default:"unknown actor" }} — {{ entry.turn.artifacts|length }} file{{ entry.turn.artifacts|length|pluralize }}</span>
         {% if entry.turn.message %}<div class="prose">{{ entry.turn.message|rich_text }}</div>{% endif %}
         {% if entry.diffs %}
         <details class="spec-diff">

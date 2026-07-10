@@ -1253,6 +1253,216 @@ def test_spec_pull_json_output(
     }
 
 
+# ---------- spec push ----------
+
+
+def _pushed_response(**overrides):
+    body = {
+        "issue": 47,
+        "stage": "propose",
+        "turn": 12,
+        "files": 2,
+        "created_session": False,
+        "unchanged": False,
+    }
+    body.update(overrides)
+    return body
+
+
+def test_spec_push_sends_all_files_recursively_including_dotfiles(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    (root / "specs" / "api").mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    (root / "specs" / "api" / "spec.md").write_text("# API\n")
+    (root / ".openspec").write_text("marker\n")
+    mocked_responses.post(
+        ARTIFACTS_URL, json=_pushed_response(files=3, created_session=True), status=201
+    )
+
+    code = cli.main(["spec", "push", "PX-47"])
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body == {
+        "artifacts": {
+            "proposal.md": "# P\n",
+            "specs/api/spec.md": "# API\n",
+            ".openspec": "marker\n",
+        },
+        "message": "",
+        "ready": False,
+        "reopen": False,
+    }
+    out = capsys.readouterr().out
+    assert "pushed 3 file(s)" in out
+    assert "PX-47" in out
+    assert "propose" in out
+    assert "new session" in out
+
+
+def test_spec_push_passes_flags_through(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    mocked_responses.post(
+        ARTIFACTS_URL, json=_pushed_response(stage="ready", files=1), status=201
+    )
+
+    code = cli.main(
+        ["spec", "push", "47", "--message", "take a look", "--ready", "--reopen"]
+    )
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body["message"] == "take a look"
+    assert body["ready"] is True
+    assert body["reopen"] is True
+    out = capsys.readouterr().out
+    assert "pushed 1 file(s)" in out
+    assert "ready" in out
+    assert "new session" not in out
+
+
+def test_spec_push_change_flag_reads_other_directory(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = tmp_path / "openspec" / "changes" / "add-foo"
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# Foo\n")
+    mocked_responses.post(ARTIFACTS_URL, json=_pushed_response(files=1), status=201)
+
+    code = cli.main(["spec", "push", "47", "--change", "add-foo"])
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body["artifacts"] == {"proposal.md": "# Foo\n"}
+
+
+def test_spec_push_missing_directory_is_nothing_to_push(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+
+    code = cli.main(["spec", "push", "47"])
+
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "nothing to push" in err
+    assert "pxtx-47" in err
+    assert len(mocked_responses.calls) == 0
+
+
+def test_spec_push_empty_directory_is_nothing_to_push(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    (_change_root(tmp_path) / "specs").mkdir(parents=True)
+
+    code = cli.main(["spec", "push", "47"])
+
+    assert code == 2
+    assert "nothing to push" in capsys.readouterr().err
+    assert len(mocked_responses.calls) == 0
+
+
+def test_spec_push_non_utf8_file_aborts_and_sends_nothing(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    (root / "diagram.png").write_bytes(b"\x89PNG\xff\xfe")
+
+    code = cli.main(["spec", "push", "47"])
+
+    assert code == 2
+    assert "diagram.png" in capsys.readouterr().err
+    assert len(mocked_responses.calls) == 0
+
+
+def test_spec_push_unchanged_exits_zero_reporting_stage(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    mocked_responses.post(
+        ARTIFACTS_URL, json={"issue": 47, "stage": "ready", "unchanged": True}
+    )
+
+    code = cli.main(["spec", "push", "47"])
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "nothing pushed" in out
+    assert "ready" in out
+
+
+def test_spec_push_conflict_409_surfaces_server_message(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    mocked_responses.post(
+        ARTIFACTS_URL,
+        json={"detail": "This spec is marked ready; pass reopen to push anyway."},
+        status=409,
+    )
+
+    code = cli.main(["spec", "push", "47"])
+
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "api error:" in err
+    assert "marked ready" in err
+
+
+def test_spec_push_validation_400_surfaces_server_message(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    mocked_responses.post(
+        ARTIFACTS_URL, json={"artifacts": ["too many files"]}, status=400
+    )
+
+    code = cli.main(["spec", "push", "47"])
+
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "api error:" in err
+    assert "too many files" in err
+
+
+def test_spec_push_json_output(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    response = _pushed_response(files=1)
+    mocked_responses.post(ARTIFACTS_URL, json=response, status=201)
+
+    code = cli.main(["--json", "spec", "push", "47"])
+
+    assert code == 0
+    assert json.loads(capsys.readouterr().out) == response
+
+
 class _FrozenDatetime:
     """Minimal drop-in that freezes ``datetime.now`` while preserving other attrs."""
 

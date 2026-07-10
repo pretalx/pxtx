@@ -263,6 +263,33 @@ def test_get_spec_artifacts(mocked_responses, client_plain):
     assert result["artifacts"] == {"proposal.md": "# P"}
 
 
+def test_push_spec_artifacts(mocked_responses, client_plain):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/spec/artifacts/",
+        json={
+            "issue": 47,
+            "stage": "propose",
+            "turn": 12,
+            "files": 1,
+            "created_session": True,
+            "unchanged": False,
+        },
+        status=201,
+    )
+    payload = {
+        "artifacts": {"proposal.md": "# P"},
+        "message": "note",
+        "ready": False,
+        "reopen": False,
+    }
+
+    result = client_plain.push_spec_artifacts(47, payload)
+
+    assert result["turn"] == 12
+    assert result["created_session"] is True
+    assert json.loads(mocked_responses.calls[0].request.body) == payload
+
+
 def test_activity_log(mocked_responses, client_plain):
     mocked_responses.get(
         f"{URL}/api/v1/activity/",

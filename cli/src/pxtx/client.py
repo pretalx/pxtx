@@ -133,6 +133,9 @@ class Client:
     def get_spec_artifacts(self, number):
         return self._request("GET", f"/issues/{number}/spec/artifacts/")
 
+    def push_spec_artifacts(self, number, payload):
+        return self._request("POST", f"/issues/{number}/spec/artifacts/", json=payload)
+
     def list_milestones(self):
         return self.paginate("/milestones/")
 

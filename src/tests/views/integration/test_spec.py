@@ -414,6 +414,150 @@ def test_error_turn_snapshot_advances_diff_baseline(auth_client):
     assert entries[1]["diffs"] == []
 
 
+# --- Push turns in the transcript (add-spec-push 4.x) ---
+
+
+@pytest.mark.django_db
+def test_push_turn_renders_distinctly_with_actor_file_count_and_note(auth_client):
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    SpecTurnFactory(
+        session=session,
+        kind=SpecTurnKind.PUSH,
+        status=SpecTurnStatus.COMPLETED,
+        actor="claude-add-foo",
+        message="local draft, please critique",
+        artifacts={"proposal.md": "# P", "design.md": "# D", "tasks.md": "# T"},
+    )
+
+    response = auth_client.get(_spec_url(session))
+
+    body = response.content.decode()
+    assert "spec-bubble-push" in body
+    assert "Spec pushed by claude-add-foo" in body
+    assert "3 files" in body
+    assert "local draft, please critique" in body
+    # The push diffs against the previous (here: empty) snapshot.
+    assert "3 files changed" in body
+    assert "+# P" in body
+
+
+@pytest.mark.django_db
+def test_push_turn_without_actor_or_note_renders_fallback_label_only(auth_client):
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    SpecTurnFactory(
+        session=session,
+        kind=SpecTurnKind.PUSH,
+        status=SpecTurnStatus.COMPLETED,
+        message="",
+        artifacts={"proposal.md": "# P"},
+    )
+
+    response = auth_client.get(_spec_url(session))
+
+    body = response.content.decode()
+    assert "unknown actor" in body
+    assert "1 file</span>" in body
+    # No note means no prose block inside the push entry (and the push is
+    # the only turn, so none anywhere).
+    assert 'class="prose"' not in body
+
+
+@pytest.mark.django_db
+def test_push_turn_offers_no_retry_or_forward_affordance(auth_client):
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    SpecTurnFactory(
+        session=session,
+        kind=SpecTurnKind.PUSH,
+        status=SpecTurnStatus.COMPLETED,
+        actor="claude-x",
+        artifacts={"proposal.md": "# P"},
+    )
+
+    body = auth_client.get(_spec_url(session)).content.decode()
+
+    assert "Retry" not in body
+    assert "Forward to spec agent" not in body
+
+
+@pytest.mark.django_db
+def test_push_diffs_against_previous_finished_snapshot(auth_client):
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        response="v1",
+        artifacts={"proposal.md": "old text"},
+    )
+    SpecTurnFactory(
+        session=session,
+        kind=SpecTurnKind.PUSH,
+        status=SpecTurnStatus.COMPLETED,
+        actor="claude-x",
+        artifacts={"proposal.md": "pushed text"},
+    )
+
+    response = auth_client.get(_spec_url(session))
+
+    entries = response.context["entries"]
+    assert [d["path"] for d in entries[1]["diffs"]] == ["proposal.md"]
+    body = response.content.decode()
+    assert "-old text" in body
+    assert "+pushed text" in body
+
+
+@pytest.mark.django_db
+def test_diff_baseline_advances_through_a_push(auth_client):
+    """The chat turn after a push diffs against the pushed snapshot, not
+    the pre-push one."""
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        response="v1",
+        artifacts={"proposal.md": "claude text"},
+    )
+    SpecTurnFactory(
+        session=session,
+        kind=SpecTurnKind.PUSH,
+        status=SpecTurnStatus.COMPLETED,
+        actor="claude-x",
+        artifacts={"proposal.md": "pushed text"},
+    )
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        response="v2",
+        artifacts={"proposal.md": "pushed text", "design.md": "new"},
+    )
+
+    response = auth_client.get(_spec_url(session))
+
+    entries = response.context["entries"]
+    # Only the file claude added after the push shows up — proposal.md is
+    # unchanged relative to the pushed state.
+    assert [d["path"] for d in entries[2]["diffs"]] == ["design.md"]
+
+
+@pytest.mark.django_db
+def test_spec_list_shows_waiting_after_push(auth_client):
+    """A completed push turn makes the session waiting-on-you: an unflagged
+    pushed spec is exactly what the user should review or mark ready."""
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    SpecTurnFactory(
+        session=session,
+        kind=SpecTurnKind.PUSH,
+        status=SpecTurnStatus.COMPLETED,
+        actor="claude-x",
+        artifacts={"proposal.md": "# P"},
+    )
+
+    response = auth_client.get("/specs/")
+
+    (listed,) = response.context["sessions"]
+    assert listed.state == "waiting"
+    assert "waiting on you" in response.content.decode()
+
+
 # --- Current spec view (3.4) ---
 
 

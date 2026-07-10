@@ -3,7 +3,7 @@
     {% if entry.turn.kind == "push" %}
     <div class="spec-bubble spec-bubble-push">
         <span class="spec-turn-label">Spec pushed by {{ entry.turn.actor|default:"unknown actor" }} — {{ entry.turn.artifacts|length }} file{{ entry.turn.artifacts|length|pluralize }}</span>
-        {% if entry.turn.message %}<div class="prose">{{ entry.turn.message|rich_text }}</div>{% endif %}
+        {% if entry.turn.message %}<div class="prose">{{ entry.turn.message|flowed_text }}</div>{% endif %}
         {% if entry.diffs %}
         <details class="spec-diff">
             <summary>{{ entry.diffs|length }} file{{ entry.diffs|length|pluralize }} changed</summary>
@@ -21,7 +21,7 @@
     {% if entry.turn.message %}
     <div class="spec-bubble spec-bubble-user{% if entry.turn.kind == 'critique' %} spec-bubble-critique{% endif %}">
         {% if entry.turn.kind == "critique" %}<span class="spec-turn-label">Critique requested</span>{% endif %}
-        <div class="prose">{{ entry.turn.message|rich_text }}</div>
+        <div class="prose">{{ entry.turn.message|flowed_text }}</div>
         <div class="spec-turn-meta"><span class="meta" title="{{ entry.turn.created_at|date:'Y-m-d H:i' }}">{{ entry.turn.created_at|timesince }} ago</span></div>
     </div>
     {% endif %}
@@ -52,7 +52,7 @@
     {% else %}
     <div class="spec-bubble spec-bubble-assistant{% if entry.turn.kind == 'critique' %} spec-bubble-critique{% endif %}">
         {% if entry.turn.kind == "critique" %}<span class="spec-turn-label">Critic</span>{% endif %}
-        <div class="prose">{{ entry.turn.response|rich_text }}</div>
+        <div class="prose">{{ entry.turn.response|flowed_text }}</div>
         {% if entry.diffs %}
         <details class="spec-diff">
             <summary>{{ entry.diffs|length }} file{{ entry.diffs|length|pluralize }} changed</summary>

@@ -1307,6 +1307,16 @@ def test_spec_list_shows_costs_and_issue_reference(auth_client):
 
 
 @pytest.mark.django_db
+def test_spec_list_shows_issue_status_badge(auth_client):
+    SpecSessionFactory(issue=IssueFactory(status=Status.BLOCKED))
+
+    response = auth_client.get("/specs/")
+
+    body = response.content.decode()
+    assert f'<span class="badge status-{Status.BLOCKED}">Blocked</span>' in body
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("item_count", (1, 3))
 def test_spec_list_query_count_is_constant(
     auth_client, django_assert_num_queries, item_count

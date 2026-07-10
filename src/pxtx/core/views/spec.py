@@ -292,7 +292,11 @@ class SpecCurrentView(LoginRequiredMixin, View):
                 "session": session,
                 "files": files,
                 "selected": selected,
-                "rendered": render_markdown(artifacts[selected]) if files else "",
+                "rendered": (
+                    render_markdown(artifacts[selected], hard_breaks=False)
+                    if files
+                    else ""
+                ),
             },
         )
 

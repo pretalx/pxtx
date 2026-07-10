@@ -57,6 +57,71 @@ def test_render_markdown_nl2br_turns_soft_breaks_into_br():
     assert "line two" in result
 
 
+def test_render_markdown_flowed_reflows_soft_breaks():
+    result = render_markdown("line one\nline two", hard_breaks=False)
+
+    assert "<br" not in result
+    assert result == "<p>line one\nline two</p>"
+
+
+def test_render_markdown_flowed_still_paragraphs_on_blank_lines():
+    result = render_markdown("one\n\ntwo", hard_breaks=False)
+
+    assert result == "<p>one</p>\n<p>two</p>"
+
+
+def test_render_markdown_flowed_opens_list_without_leading_blank_line():
+    result = render_markdown("Steps:\n- one\n- two", hard_breaks=False)
+
+    assert result == "<p>Steps:</p>\n<ul>\n<li>one</li>\n<li>two</li>\n</ul>"
+
+
+def test_render_markdown_flowed_opens_ordered_list_without_leading_blank_line():
+    result = render_markdown("Do:\n1. first\n2. second", hard_breaks=False)
+
+    assert result == "<p>Do:</p>\n<ol>\n<li>first</li>\n<li>second</li>\n</ol>"
+
+
+def test_render_markdown_flowed_leaves_non_list_markers_in_the_paragraph():
+    # "1)" is not a markdown list marker, so it must not open a list.
+    result = render_markdown("Do:\n1) first", hard_breaks=False)
+
+    assert result == "<p>Do:\n1) first</p>"
+
+
+def test_render_markdown_flowed_keeps_a_list_tight():
+    result = render_markdown("- one\n- two", hard_breaks=False)
+
+    assert result == "<ul>\n<li>one</li>\n<li>two</li>\n</ul>"
+    assert "<p>" not in result
+
+
+def test_render_markdown_flowed_keeps_lazy_continuation_in_its_item():
+    result = render_markdown("- one\nstill one", hard_breaks=False)
+
+    assert result == "<ul>\n<li>one\nstill one</li>\n</ul>"
+
+
+def test_render_markdown_flowed_reopens_list_after_paragraph_closes_it():
+    result = render_markdown("- one\n\npara\n- two", hard_breaks=False)
+
+    assert result == "<ul>\n<li>one</li>\n</ul>\n<p>para</p>\n<ul>\n<li>two</li>\n</ul>"
+
+
+def test_render_markdown_flowed_ignores_list_markers_inside_fenced_code():
+    result = render_markdown("Text:\n```\n- not a list\n```", hard_breaks=False)
+
+    assert "<li>" not in result
+    assert "- not a list" in result
+
+
+def test_render_markdown_flowed_does_not_treat_emphasis_as_a_list():
+    result = render_markdown("Text\n*emphasis* here", hard_breaks=False)
+
+    assert "<li>" not in result
+    assert "<em>emphasis</em>" in result
+
+
 def test_render_markdown_renders_lists():
     result = render_markdown("- a\n- b\n")
 
@@ -331,6 +396,16 @@ def test_rich_text_filter_handles_empty_input():
     rendered = tpl.render(Context({"body": ""}))
 
     assert rendered == "[]"
+
+
+def test_flowed_text_filter_renders_without_hard_breaks():
+    tpl = Template("{% load rich_text %}{{ body|flowed_text }}")
+
+    rendered = tpl.render(Context({"body": "Steps:\n- one\nsee PX-7"}))
+
+    assert "<br" not in rendered
+    assert "<li>one\nsee " in rendered
+    assert '<a href="/issues/7/">PX-7</a>' in rendered
 
 
 def _humanize(action_type):

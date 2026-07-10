@@ -1,3 +1,4 @@
+import re
 from functools import partial
 from xml.etree.ElementTree import Element
 
@@ -8,6 +9,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils.safestring import SafeString, mark_safe
 from markdown.inlinepatterns import InlineProcessor
+from markdown.preprocessors import Preprocessor
 
 ALLOWED_TAGS = frozenset(
     {
@@ -93,23 +95,67 @@ class PxtxRefsExtension(markdown.Extension):
         md.inlinePatterns.register(GhRefInlineProcessor(GH_REF_RE), "pxtx_ghref", 174)
 
 
-_md = markdown.Markdown(
-    extensions=[
-        "markdown.extensions.fenced_code",
-        "markdown.extensions.codehilite",
-        "markdown.extensions.tables",
-        "markdown.extensions.sane_lists",
-        "markdown.extensions.nl2br",
-        PxtxRefsExtension(),
-    ],
-    extension_configs={
-        "markdown.extensions.codehilite": {
-            "guess_lang": False,
-            "use_pygments": True,
-            "css_class": "codehilite",
-        }
-    },
-)
+# Mirrors python-markdown's own list markers — `1)` is not one of them.
+LIST_START_RE = re.compile(r"^ {0,3}(?:[*+-]|\d+\.)[ \t]+\S")
+
+
+class LazyListPreprocessor(Preprocessor):
+    """Insert the blank line markdown wants before a list that follows a
+    paragraph.
+
+    Agents routinely write ``Steps:`` and then dive straight into ``- one``,
+    which markdown renders as one more line of the paragraph. We only patch a
+    list that *starts* — a marker line while a list is already open needs no
+    blank line, and adding one would turn a tight list loose.
+    """
+
+    def run(self, lines):
+        out = []
+        in_list = False
+        for line in lines:
+            if not line.strip():
+                out.append(line)
+                continue
+            if LIST_START_RE.match(line):
+                if not in_list and out and out[-1].strip():
+                    out.append("")
+                in_list = True
+            elif in_list and not line.startswith((" ", "\t")) and not out[-1].strip():
+                # Unindented text after a blank line closes the list; without
+                # the blank line it is a lazy continuation of the last item.
+                in_list = False
+            out.append(line)
+        return out
+
+
+class LazyListsExtension(markdown.Extension):
+    def extendMarkdown(self, md):  # noqa: N802 - Python-Markdown API
+        # Below fenced_code (25), so fenced blocks are already stashed.
+        md.preprocessors.register(LazyListPreprocessor(md), "pxtx_lazy_lists", 22)
+
+
+def _build_markdown(*extra_extensions):
+    return markdown.Markdown(
+        extensions=[
+            "markdown.extensions.fenced_code",
+            "markdown.extensions.codehilite",
+            "markdown.extensions.tables",
+            "markdown.extensions.sane_lists",
+            PxtxRefsExtension(),
+            *extra_extensions,
+        ],
+        extension_configs={
+            "markdown.extensions.codehilite": {
+                "guess_lang": False,
+                "use_pygments": True,
+                "css_class": "codehilite",
+            }
+        },
+    )
+
+
+_md = _build_markdown("markdown.extensions.nl2br")
+_md_flowed = _build_markdown(LazyListsExtension())
 
 
 def _linkify_callback(attrs, new=False):
@@ -137,7 +183,7 @@ _cleaner = bleach.Cleaner(
 )
 
 
-def render_markdown(text):
+def render_markdown(text, *, hard_breaks=True):
     """Render markdown to sanitised HTML.
 
     - PX-<n> and GH-[<owner>/<repo>#]<n> tokens become links.
@@ -146,8 +192,14 @@ def render_markdown(text):
     - Fenced code blocks are highlighted via pygments.
     - Output is run through a strict bleach allowlist; <details>/<summary>
       survive because claude-code emits them in tool output.
+
+    ``hard_breaks=False`` renders agent-authored prose: single newlines reflow
+    instead of becoming <br>, and a list may follow a paragraph without the
+    blank line markdown normally demands. Both are things agents get wrong when
+    they hard-wrap their output.
     """
     if not text:
         return SafeString("")
-    html = _md.reset().convert(str(text))
+    md = _md if hard_breaks else _md_flowed
+    html = md.reset().convert(str(text))
     return mark_safe(_cleaner.clean(html))  # noqa: S308 - bleach sanitised

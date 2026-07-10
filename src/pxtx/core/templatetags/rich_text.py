@@ -11,6 +11,12 @@ def rich_text(value):
     return render_markdown(value)
 
 
+@register.filter(is_safe=True)
+def flowed_text(value):
+    """Markdown for agent-authored prose: soft line wraps reflow."""
+    return render_markdown(value, hard_breaks=False)
+
+
 _STATUS_LABELS = dict(Status.choices)
 
 _FIXED_ACTIONS = {

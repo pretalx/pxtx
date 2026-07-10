@@ -22,6 +22,7 @@ from pxtx.core.api.serializers import (
     IssueReferenceCreateSerializer,
     IssueSerializer,
     MilestoneSerializer,
+    SpecPushSerializer,
     SpecSessionSerializer,
     StatusActionSerializer,
 )
@@ -33,8 +34,10 @@ from pxtx.core.models import (
     Issue,
     IssueReference,
     Milestone,
+    SpecPushConflictError,
     SpecSession,
     Status,
+    push_spec_snapshot,
 )
 
 
@@ -295,10 +298,11 @@ class IssueReferenceDeleteView(APIView):
 class IssueSpecView(APIView):
     """Read-only spec session detail, keyed by issue number.
 
-    Spec sessions are driven exclusively through the UI; agents read specs
-    out, they never drive sessions — so there is no write surface at all
-    (any POST/PATCH/PUT/DELETE gets 405). 404 covers both an unknown issue
-    and an issue without a session.
+    ⁂ Spec sessions are driven through the UI; the API's only write surface
+    is the artifact push on the artifacts endpoint. The session detail
+    itself stays read-only (any POST/PATCH/PUT/DELETE gets 405) — nobody
+    edits transcripts, flips statuses, or deletes turns through the API.
+    404 covers both an unknown issue and an issue without a session.
     """
 
     http_method_names = ["get", "options", "head"]
@@ -315,20 +319,29 @@ class IssueSpecView(APIView):
 
 
 class IssueSpecArtifactsView(APIView):
-    """The latest non-empty artifact snapshot as a relative-path → content
-    mapping.
+    """The artifacts resource: GET pulls the latest snapshot, POST pushes one.
 
-    This is what ``pxtx spec pull`` materializes under
+    GET serves the latest non-empty artifact snapshot as a relative-path →
+    content mapping. This is what ``pxtx spec pull`` materializes under
     ``openspec/changes/pxtx-<n>/``; the issue number is echoed back so the
     target directory is unambiguous. Serving the latest *non-empty* snapshot
     matches the web UI's current-spec view: a crashed turn with a blank
     snapshot after a completed one must not make the pull come up empty.
     The mapping is empty only when no finished turn ever produced artifacts —
-    the CLI treats that as nothing to pull. Read-only, like the session
-    detail.
+    the CLI treats that as nothing to pull.
+
+    ⁂ POST is the API's single write operation: it lands a locally developed
+    snapshot as a born-completed push turn (``pxtx spec push``), creating
+    the session at stage propose when the issue has none. Payload validation
+    lives in SpecPushSerializer; guards, stage effects, idempotency, and the
+    turn insert live in the model-level push entry point, one atomic block.
+    Conflicts (an active turn, or a ready session without the reopen flag)
+    come back as 409; an idempotent re-push of identical content is 200 with
+    ``unchanged: true`` — stage flags still applied. PATCH/PUT/DELETE stay
+    405, like everywhere on the spec endpoints.
     """
 
-    http_method_names = ["get", "options", "head"]
+    http_method_names = ["get", "post", "options", "head"]
 
     def get(self, request, number):
         session = get_object_or_404(
@@ -340,6 +353,42 @@ class IssueSpecArtifactsView(APIView):
                 "stage": session.stage,
                 "artifacts": session.latest_nonempty_snapshot,
             }
+        )
+
+    def post(self, request, number):
+        issue = get_object_or_404(Issue, number=number)
+        payload = SpecPushSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        data = payload.validated_data
+        try:
+            result = push_spec_snapshot(
+                issue,
+                data["artifacts"],
+                message=data["message"],
+                ready=data["ready"],
+                reopen=data["reopen"],
+                actor=_actor(request),
+            )
+        except SpecPushConflictError as exc:
+            return Response({"detail": str(exc)}, status=http_status.HTTP_409_CONFLICT)
+        if result.unchanged:
+            return Response(
+                {
+                    "issue": issue.number,
+                    "stage": result.session.stage,
+                    "unchanged": True,
+                }
+            )
+        return Response(
+            {
+                "issue": issue.number,
+                "stage": result.session.stage,
+                "turn": result.turn.pk,
+                "files": len(result.turn.artifacts),
+                "created_session": result.created_session,
+                "unchanged": False,
+            },
+            status=http_status.HTTP_201_CREATED,
         )
 
 

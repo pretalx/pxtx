@@ -8,12 +8,14 @@ from django.utils import timezone
 
 from pxtx.core.models import (
     ActivityLog,
+    SpecPushConflictError,
     SpecSession,
     SpecStage,
     SpecTurn,
     SpecTurnKind,
     SpecTurnStatus,
     Status,
+    push_spec_snapshot,
 )
 from tests.factories import IssueFactory, SpecSessionFactory, SpecTurnFactory
 
@@ -209,6 +211,7 @@ def test_turn_defaults():
     assert turn.kind == SpecTurnKind.CHAT
     assert turn.status == SpecTurnStatus.QUEUED
     assert turn.stage == turn.session.stage
+    assert turn.actor == ""
     assert turn.claude_session_id is None
     assert turn.started_at is None
     assert turn.prompt_sent == ""
@@ -481,6 +484,12 @@ def test_queue_turn_rotation_keys_on_latest_chat_turn_only():
             {"exit_code": 1, "stderr": ""},
             False,
         ),
+        (
+            SpecTurnKind.PUSH,
+            SpecTurnStatus.ERROR,
+            {"exit_code": 1, "stderr": ""},
+            False,
+        ),
     ),
 )
 def test_is_session_gone_matrix(kind, status, raw_result, expected):
@@ -546,3 +555,279 @@ def test_latest_nonempty_snapshot_empty_when_no_turn_produced_artifacts():
     SpecTurnFactory(session=session, status=SpecTurnStatus.COMPLETED, artifacts={})
 
     assert session.latest_nonempty_snapshot == {}
+
+
+@pytest.mark.django_db
+def test_push_snapshot_creates_completed_push_turn():
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    ActivityLog.objects.all().delete()
+    artifacts = {"proposal.md": "# P", "specs/api/spec.md": "# A"}
+
+    result = push_spec_snapshot(
+        session.issue, artifacts, message="drafted locally", actor="claude-push"
+    )
+
+    assert result.session == session
+    assert result.created_session is False
+    assert result.unchanged is False
+    turn = result.turn
+    assert turn.session == session
+    assert turn.kind == SpecTurnKind.PUSH
+    assert turn.status == SpecTurnStatus.COMPLETED
+    assert turn.stage == SpecStage.PROPOSE
+    assert turn.message == "drafted locally"
+    assert turn.actor == "claude-push"
+    assert turn.artifacts == artifacts
+    assert turn.claude_session_id is None
+    assert turn.cost_usd is None
+    assert turn.prompt_sent == ""
+    assert turn.response == ""
+    assert turn.started_at is None
+    # Born completed: exactly one creation entry, no status event.
+    entry = ActivityLog.objects.get()
+    assert entry.action_type == "pxtx.spec.turn.create"
+    assert entry.actor == "claude-push"
+    assert entry.data["after"]["kind"] == "push"
+    assert entry.data["after"]["status"] == "completed"
+    assert entry.data["after"]["actor"] == "claude-push"
+
+
+@pytest.mark.django_db
+def test_push_creates_missing_session_at_propose():
+    issue = IssueFactory()
+    ActivityLog.objects.all().delete()
+
+    result = push_spec_snapshot(issue, {"proposal.md": "# P"}, actor="claude-push")
+
+    assert result.created_session is True
+    session = result.session
+    assert session.issue == issue
+    assert session.stage == SpecStage.PROPOSE
+    assert isinstance(session.claude_session_id, uuid.UUID)
+    assert list(session.turns.all()) == [result.turn]
+    create_entry = ActivityLog.objects.get(action_type="pxtx.spec.session.create")
+    assert create_entry.actor == "claude-push"
+    assert create_entry.data["after"]["stage"] == "propose"
+
+
+@pytest.mark.django_db
+def test_push_without_actor_records_blank_actor():
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+
+    turn = session.push_snapshot({"proposal.md": "# P"})
+
+    assert turn.actor == ""
+
+
+@pytest.mark.django_db
+def test_push_to_explore_session_normalizes_stage_to_propose():
+    session = SpecSessionFactory(stage=SpecStage.EXPLORE)
+    ActivityLog.objects.all().delete()
+
+    turn = session.push_snapshot({"proposal.md": "# P"}, actor="claude-push")
+
+    session.refresh_from_db()
+    assert session.stage == SpecStage.PROPOSE
+    assert turn.stage == SpecStage.PROPOSE
+    stage_entry = session.logged_actions().get()
+    assert stage_entry.action_type == "pxtx.spec.session.stage.propose"
+    assert stage_entry.actor == "claude-push"
+
+
+@pytest.mark.django_db
+def test_push_to_propose_session_keeps_stage():
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    ActivityLog.objects.all().delete()
+
+    session.push_snapshot({"proposal.md": "# P"})
+
+    session.refresh_from_db()
+    assert session.stage == SpecStage.PROPOSE
+    assert not session.logged_actions().exists()
+
+
+@pytest.mark.django_db
+def test_push_to_ready_session_conflicts_without_reopen():
+    session = SpecSessionFactory(stage=SpecStage.READY)
+    ActivityLog.objects.all().delete()
+
+    with pytest.raises(SpecPushConflictError):
+        session.push_snapshot({"proposal.md": "# P"})
+
+    session.refresh_from_db()
+    assert session.stage == SpecStage.READY
+    assert session.turns.count() == 0
+    assert not ActivityLog.objects.exists()
+
+
+@pytest.mark.django_db
+def test_push_reopen_flag_reopens_ready_session():
+    session = SpecSessionFactory(stage=SpecStage.READY)
+    ActivityLog.objects.all().delete()
+
+    turn = session.push_snapshot(
+        {"proposal.md": "# P"}, reopen=True, actor="claude-push"
+    )
+
+    session.refresh_from_db()
+    assert session.stage == SpecStage.PROPOSE
+    assert turn.stage == SpecStage.PROPOSE
+    assert [e.action_type for e in ActivityLog.objects.order_by("pk")] == [
+        "pxtx.spec.session.stage.propose",
+        "pxtx.spec.turn.create",
+    ]
+
+
+@pytest.mark.django_db
+def test_push_ready_flag_marks_ready_after_push():
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    ActivityLog.objects.all().delete()
+
+    turn = session.push_snapshot(
+        {"proposal.md": "# P"}, ready=True, actor="claude-push"
+    )
+
+    session.refresh_from_db()
+    assert session.stage == SpecStage.READY
+    # The turn records propose: the ready flag applies after the insert.
+    assert turn.stage == SpecStage.PROPOSE
+    assert [e.action_type for e in ActivityLog.objects.order_by("pk")] == [
+        "pxtx.spec.turn.create",
+        "pxtx.spec.session.stage.ready",
+    ]
+
+
+@pytest.mark.django_db
+def test_push_reopen_and_ready_flags_compose():
+    session = SpecSessionFactory(stage=SpecStage.READY)
+    ActivityLog.objects.all().delete()
+
+    turn = session.push_snapshot(
+        {"proposal.md": "# P"}, ready=True, reopen=True, actor="claude-push"
+    )
+
+    session.refresh_from_db()
+    assert session.stage == SpecStage.READY
+    assert turn.stage == SpecStage.PROPOSE
+    assert [e.action_type for e in ActivityLog.objects.order_by("pk")] == [
+        "pxtx.spec.session.stage.propose",
+        "pxtx.spec.turn.create",
+        "pxtx.spec.session.stage.ready",
+    ]
+
+
+@pytest.mark.parametrize("status", (SpecTurnStatus.QUEUED, SpecTurnStatus.RUNNING))
+@pytest.mark.django_db
+def test_push_conflicts_while_a_turn_is_active(status):
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    SpecTurnFactory(session=session, status=status)
+    ActivityLog.objects.all().delete()
+
+    with pytest.raises(SpecPushConflictError):
+        session.push_snapshot({"proposal.md": "# P"})
+
+    assert session.turns.count() == 1
+    assert not ActivityLog.objects.exists()
+
+
+@pytest.mark.django_db
+def test_push_identical_content_creates_no_turn_and_logs_nothing():
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    artifacts = {"proposal.md": "# P"}
+    session.push_snapshot(artifacts)
+    ActivityLog.objects.all().delete()
+
+    result = push_spec_snapshot(session.issue, dict(artifacts))
+
+    assert result.unchanged is True
+    assert result.turn is None
+    assert result.created_session is False
+    assert session.turns.count() == 1
+    assert not ActivityLog.objects.exists()
+
+
+@pytest.mark.django_db
+def test_push_identical_content_with_ready_flag_still_transitions():
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    artifacts = {"proposal.md": "# P"}
+    session.push_snapshot(artifacts)
+    ActivityLog.objects.all().delete()
+
+    result = push_spec_snapshot(
+        session.issue, dict(artifacts), ready=True, actor="claude-push"
+    )
+
+    assert result.unchanged is True
+    session.refresh_from_db()
+    assert session.stage == SpecStage.READY
+    assert session.turns.count() == 1
+    entry = ActivityLog.objects.get()
+    assert entry.action_type == "pxtx.spec.session.stage.ready"
+    assert entry.actor == "claude-push"
+
+
+@pytest.mark.django_db
+def test_push_rolls_back_stage_effects_when_the_turn_insert_fails():
+    """The guard checks, stage effects, and turn insert share one atomic
+    block: a turn insert blowing up (here: a non-JSON-serializable value
+    that only fails at save time) must also undo the explore → propose
+    normalization that already ran."""
+    session = SpecSessionFactory(stage=SpecStage.EXPLORE)
+    ActivityLog.objects.all().delete()
+
+    with pytest.raises(TypeError):
+        session.push_snapshot({"proposal.md": object()})
+
+    session.refresh_from_db()
+    assert session.stage == SpecStage.EXPLORE
+    assert session.turns.count() == 0
+    assert not ActivityLog.objects.exists()
+
+
+@pytest.mark.django_db
+def test_push_turn_marks_session_waiting_on_user():
+    session = SpecSessionFactory()
+
+    session.push_snapshot({"proposal.md": "# P"})
+
+    session.refresh_from_db()
+    assert session.is_waiting_on_user is True
+    annotated = SpecSession.objects.with_waiting_on_user().get(pk=session.pk)
+    assert bool(annotated.waiting_on_user) is True
+
+
+@pytest.mark.django_db
+def test_push_turn_feeds_snapshot_properties():
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        artifacts={"proposal.md": "# Old"},
+    )
+    artifacts = {"proposal.md": "# New"}
+
+    session.push_snapshot(artifacts)
+
+    assert session.latest_snapshot == artifacts
+    assert session.latest_nonempty_snapshot == artifacts
+
+
+@pytest.mark.django_db
+def test_queue_turn_rotation_ignores_push_turns():
+    """Fresh-session recovery keys on the latest *chat* turn; a push landing
+    after a session-gone chat failure must not mask the needed rotation."""
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    original = session.claude_session_id
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.ERROR,
+        started_at=timezone.now(),
+        claude_session_id=original,
+        raw_result={"exit_code": 1, "stderr": "gone"},
+    )
+    session.push_snapshot({"proposal.md": "# P"})
+
+    session.queue_turn("Continue from the pushed spec")
+
+    session.refresh_from_db()
+    assert session.claude_session_id != original

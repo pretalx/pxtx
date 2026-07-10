@@ -191,9 +191,9 @@ class IssueSerializer(serializers.ModelSerializer):
 class SpecTurnSerializer(serializers.ModelSerializer):
     """One transcript entry, everything an agent needs to follow the
     exchange: the queue-time message, the composed prompt actually sent, the
-    response, cost, and — for failed turns — error_detail plus the raw result
-    payload. Per-turn artifact snapshots are deliberately absent; the latest
-    snapshot has its own endpoint."""
+    response, cost, ⁂ the actor (set for push turns), and — for failed turns —
+    error_detail plus the raw result payload. Per-turn artifact snapshots are
+    deliberately absent; the latest snapshot has its own endpoint."""
 
     class Meta:
         model = SpecTurn
@@ -203,6 +203,7 @@ class SpecTurnSerializer(serializers.ModelSerializer):
             "stage",
             "status",
             "message",
+            "actor",
             "prompt_sent",
             "response",
             "cost_usd",
@@ -239,6 +240,68 @@ class SpecSessionSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = fields
+
+
+# ⁂ Size sanity caps for pushed snapshots: a spec is a few dozen KB of
+# text, so these are tripwires against runaway payloads, not quotas.
+SPEC_PUSH_MAX_FILES = 64
+SPEC_PUSH_MAX_FILE_BYTES = 512 * 1024
+SPEC_PUSH_MAX_TOTAL_BYTES = 2 * 1024 * 1024
+
+
+class SpecPushSerializer(serializers.Serializer):
+    """⁂ Payload of a spec artifact push: the path → content mapping plus
+    the optional transcript note and stage flags. Validation is
+    all-or-nothing — any violation rejects the whole push with the offending
+    path, and nothing is stored. Keys must equal their canonical POSIX form
+    (no ``.``/``..`` segments, absolute forms, doubled or trailing slashes,
+    null bytes): they are stored verbatim, so a non-canonical spelling would
+    break idempotency comparison and produce snapshots that don't round-trip
+    through pull. No key may be a directory prefix of another — such a
+    mapping cannot be written to any filesystem, and it must fail at push
+    time, not at materialization or pull time."""
+
+    artifacts = serializers.DictField()
+    message = serializers.CharField(required=False, allow_blank=True, default="")
+    ready = serializers.BooleanField(required=False, default=False)
+    reopen = serializers.BooleanField(required=False, default=False)
+
+    def validate_artifacts(self, value):
+        if not value:
+            raise serializers.ValidationError("⁂ push at least one file")
+        if len(value) > SPEC_PUSH_MAX_FILES:
+            raise serializers.ValidationError(
+                f"⁂ too many files (max {SPEC_PUSH_MAX_FILES})"
+            )
+        total_bytes = 0
+        for path, content in value.items():
+            if not isinstance(content, str):
+                raise serializers.ValidationError(f"⁂ {path}: content must be a string")
+            if "\x00" in path or any(
+                part in ("", ".", "..") for part in path.split("/")
+            ):
+                raise serializers.ValidationError(
+                    f"⁂ {path}: paths must be relative, canonical POSIX form"
+                )
+            size = len(content.encode())
+            if size > SPEC_PUSH_MAX_FILE_BYTES:
+                raise serializers.ValidationError(
+                    f"⁂ {path}: file exceeds {SPEC_PUSH_MAX_FILE_BYTES} bytes"
+                )
+            total_bytes += size
+        if total_bytes > SPEC_PUSH_MAX_TOTAL_BYTES:
+            raise serializers.ValidationError(
+                f"⁂ push exceeds {SPEC_PUSH_MAX_TOTAL_BYTES} bytes in total"
+            )
+        for path in value:
+            parts = path.split("/")
+            for index in range(1, len(parts)):
+                prefix = "/".join(parts[:index])
+                if prefix in value:
+                    raise serializers.ValidationError(
+                        f"⁂ {prefix} is both a file and a directory (of {path})"
+                    )
+        return value
 
 
 class IssueReferenceCreateSerializer(serializers.Serializer):

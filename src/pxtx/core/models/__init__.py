@@ -15,11 +15,13 @@ from pxtx.core.models.issue_reference import IssueReference
 from pxtx.core.models.milestone import Milestone
 from pxtx.core.models.spec import (
     SPEC_STAGE_TRANSITIONS,
+    SpecPushConflictError,
     SpecSession,
     SpecStage,
     SpecTurn,
     SpecTurnKind,
     SpecTurnStatus,
+    push_spec_snapshot,
 )
 from pxtx.core.models.user import User
 
@@ -38,6 +40,7 @@ __all__ = [
     "Milestone",
     "Priority",
     "Source",
+    "SpecPushConflictError",
     "SpecSession",
     "SpecStage",
     "SpecTurn",
@@ -45,4 +48,5 @@ __all__ = [
     "SpecTurnStatus",
     "Status",
     "User",
+    "push_spec_snapshot",
 ]

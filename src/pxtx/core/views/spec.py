@@ -3,7 +3,8 @@ import json
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
-from django.db.models import Exists, OuterRef, Sum
+from django.db.models import Exists, F, Max, OuterRef, Sum
+from django.db.models.functions import Coalesce
 from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -319,7 +320,7 @@ def _session_state(session):
 
 class SpecListView(LoginRequiredMixin, View):
     """The travel inbox: every spec session with stage, state badge, and
-    cost, waiting-on-you sessions first."""
+    cost, waiting-on-you sessions first, freshest activity on top."""
 
     def get(self, request):
         turns = SpecTurn.objects.filter(session=OuterRef("pk"))
@@ -329,8 +330,12 @@ class SpecListView(LoginRequiredMixin, View):
             .annotate(
                 total_cost=Sum("turns__cost_usd"),
                 has_running_turn=Exists(turns.filter(status=SpecTurnStatus.RUNNING)),
+                # A finished turn bumps only the turn's row, so the session's
+                # own timestamps say nothing about when claude last did work.
+                # Fall back to them for sessions that have no turns yet.
+                last_activity=Coalesce(Max("turns__updated_at"), F("updated_at")),
             )
-            .order_by("-waiting_on_user", "-created_at")
+            .order_by("-waiting_on_user", "-last_activity", "-created_at")
         )
         for session in sessions:
             session.state = _session_state(session)

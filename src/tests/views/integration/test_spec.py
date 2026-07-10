@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 import pytest
+from freezegun import freeze_time
 
 from pxtx.core.models import (
     SpecSession,
@@ -1245,6 +1246,33 @@ def test_spec_list_orders_waiting_sessions_first(auth_client):
     response = auth_client.get("/specs/")
 
     assert [s.pk for s in response.context["sessions"]] == [waiting.pk, running.pk]
+
+
+@pytest.mark.django_db
+def test_spec_list_orders_by_latest_turn_within_group(auth_client):
+    """A completing turn floats its session to the top of its group."""
+    with freeze_time("2026-04-22 12:00:00"):
+        stale = SpecSessionFactory()
+        SpecTurnFactory(session=stale, status=SpecTurnStatus.COMPLETED)
+        fresh = SpecSessionFactory()
+    with freeze_time("2026-04-22 13:00:00"):
+        SpecTurnFactory(session=fresh, status=SpecTurnStatus.COMPLETED)
+
+    response = auth_client.get("/specs/")
+
+    assert [s.pk for s in response.context["sessions"]] == [fresh.pk, stale.pk]
+
+
+@pytest.mark.django_db
+def test_spec_list_orders_turnless_sessions_by_own_timestamp(auth_client):
+    with freeze_time("2026-04-22 12:00:00"):
+        older = SpecSessionFactory()
+    with freeze_time("2026-04-22 13:00:00"):
+        newer = SpecSessionFactory()
+
+    response = auth_client.get("/specs/")
+
+    assert [s.pk for s in response.context["sessions"]] == [newer.pk, older.pk]
 
 
 @pytest.mark.django_db

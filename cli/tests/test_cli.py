@@ -1388,6 +1388,30 @@ def test_spec_push_non_utf8_file_aborts_and_sends_nothing(
     assert len(mocked_responses.calls) == 0
 
 
+def test_spec_push_non_utf8_filename_aborts_and_sends_nothing(
+    cli_config, mocked_responses, tmp_path, monkeypatch, capsys
+):
+    # ⁂ A non-UTF-8 filename reaches Python as lone surrogates via
+    # surrogateescape; letting it through would blow up JSON serialization
+    # (or worse, land surrogates on the server), so the push must abort
+    # before anything is sent.
+    monkeypatch.chdir(tmp_path)
+    root = _change_root(tmp_path)
+    root.mkdir(parents=True)
+    (root / "proposal.md").write_text("# P\n")
+    bad_name = b"bad\xffname.md".decode("utf-8", "surrogateescape")
+    (root / bad_name).write_text("content\n")
+
+    code = cli.main(["spec", "push", "47"])
+
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "not a UTF-8 file name" in err
+    # ⁂ The offending name appears escaped — surrogates must never hit stderr raw.
+    assert "bad\\udcffname.md" in err
+    assert len(mocked_responses.calls) == 0
+
+
 def test_spec_push_unchanged_exits_zero_reporting_stage(
     cli_config, mocked_responses, tmp_path, monkeypatch, capsys
 ):

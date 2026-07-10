@@ -15,7 +15,7 @@
             {% endfor %}
         </details>
         {% endif %}
-        <div class="spec-turn-meta"><span class="meta" title="{{ entry.turn.created_at|date:'Y-m-d H:i' }}">{{ entry.turn.created_at|timesince }} ago</span></div>
+        <div class="spec-turn-meta"><span class="meta" title="{{ entry.turn.updated_at|date:'Y-m-d H:i' }}">{{ entry.turn.updated_at|timesince }} ago</span></div>
     </div>
     {% else %}
     {% if entry.turn.message %}

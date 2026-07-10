@@ -257,7 +257,8 @@ class SpecPushSerializer(serializers.Serializer):
     (no ``.``/``..`` segments, absolute forms, doubled or trailing slashes,
     null bytes): they are stored verbatim, so a non-canonical spelling would
     break idempotency comparison and produce snapshots that don't round-trip
-    through pull. No key may be a directory prefix of another — such a
+    through pull. Keys and contents must be valid UTF-8 text (no lone
+    surrogates). No key may be a directory prefix of another — such a
     mapping cannot be written to any filesystem, and it must fail at push
     time, not at materialization or pull time."""
 
@@ -277,13 +278,22 @@ class SpecPushSerializer(serializers.Serializer):
         for path, content in value.items():
             if not isinstance(content, str):
                 raise serializers.ValidationError(f"⁂ {path}: content must be a string")
+            # ⁂ Lone surrogates (JSON "\ud800" escapes) survive parsing as
+            # Python str but cannot be encoded: stored, they would crash the
+            # worker's materialization long after the push returned 201.
+            try:
+                path.encode("utf-8")
+                size = len(content.encode("utf-8"))
+            except UnicodeEncodeError as exc:
+                raise serializers.ValidationError(
+                    f"⁂ {path!r}: path and content must be valid UTF-8 text"
+                ) from exc
             if "\x00" in path or any(
                 part in ("", ".", "..") for part in path.split("/")
             ):
                 raise serializers.ValidationError(
                     f"⁂ {path}: paths must be relative, canonical POSIX form"
                 )
-            size = len(content.encode())
             if size > SPEC_PUSH_MAX_FILE_BYTES:
                 raise serializers.ValidationError(
                     f"⁂ {path}: file exceeds {SPEC_PUSH_MAX_FILE_BYTES} bytes"

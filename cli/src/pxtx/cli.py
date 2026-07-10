@@ -449,12 +449,21 @@ def cmd_spec_pull(args, client, config):
 def collect_push_files(root):
     """⁂ Read every regular file under ``root`` into a path → content
     mapping, dotfiles included — mirroring the worker's snapshot semantics
-    so pull and push round-trip. Every file must decode as UTF-8: a spec
-    directory containing binaries is a mistake to surface, not to mangle,
-    so the first non-decodable file aborts with nothing collected."""
+    so pull and push round-trip. Every file NAME and every file's content
+    must be UTF-8: a spec directory containing binaries or mojibake names
+    is a mistake to surface, not to mangle, so the first offender aborts
+    with nothing collected (a non-UTF-8 filename reaches Python as lone
+    surrogates via surrogateescape and would be unserializable as JSON)."""
     artifacts = {}
     for path in sorted(p for p in root.rglob("*") if p.is_file()):
         relpath = path.relative_to(root).as_posix()
+        try:
+            relpath.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise CliError(
+                f"⁂ {str(path)!r} is not a UTF-8 file name — "
+                "a spec push carries text files only"
+            ) from exc
         try:
             artifacts[relpath] = path.read_text(encoding="utf-8")
         except UnicodeDecodeError as exc:

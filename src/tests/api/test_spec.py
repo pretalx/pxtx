@@ -402,6 +402,40 @@ def test_spec_push_rejects_unsafe_and_non_canonical_paths(token_client, path):
     assert SpecSession.objects.count() == 0
 
 
+# ⁂ Raw bodies, not format="json": lone surrogates from JSON "\ud800"
+# escapes survive parsing as Python str but cannot be UTF-8-encoded, so the
+# test client's own JSON renderer would choke on them before the request
+# ever left — exactly the crash the serializer must catch server-side.
+@pytest.mark.django_db
+def test_spec_push_rejects_surrogate_in_path(token_client):
+    issue = IssueFactory()
+
+    response = token_client.post(
+        f"/api/v1/issues/{issue.number}/spec/artifacts/",
+        data='{"artifacts": {"bad\\ud800.md": "content", "ok.md": "fine"}}',
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert "artifacts" in response.json()
+    assert SpecSession.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_spec_push_rejects_surrogate_in_content(token_client):
+    issue = IssueFactory()
+
+    response = token_client.post(
+        f"/api/v1/issues/{issue.number}/spec/artifacts/",
+        data='{"artifacts": {"ok.md": "bad \\udfff content"}}',
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert "artifacts" in response.json()
+    assert SpecSession.objects.count() == 0
+
+
 @pytest.mark.django_db
 def test_spec_push_rejects_prefix_collisions(token_client):
     issue = IssueFactory()
@@ -480,6 +514,36 @@ def test_spec_push_identical_content_with_ready_flag_still_transitions(token_cli
     assert session.turns.count() == 1
     stage_entry = ActivityLog.objects.get(action_type="pxtx.spec.session.stage.ready")
     assert stage_entry.actor == "claude-push"
+
+
+@pytest.mark.django_db
+def test_spec_push_unchanged_content_to_explore_session_still_normalizes_stage(
+    token_client,
+):
+    # ⁂ The explore → propose normalization is a stage effect, not a
+    # content effect: it must apply even when the pushed content matches
+    # the latest finished snapshot and no turn is created.
+    session = SpecSessionFactory()
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        artifacts={"proposal.md": "# P"},
+    )
+    assert session.stage == SpecStage.EXPLORE
+
+    response = _push(
+        token_client, session.issue.number, {"artifacts": {"proposal.md": "# P"}}
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "issue": session.issue.number,
+        "stage": "propose",
+        "unchanged": True,
+    }
+    session.refresh_from_db()
+    assert session.stage == SpecStage.PROPOSE
+    assert session.turns.count() == 1
 
 
 @pytest.mark.parametrize("status", (SpecTurnStatus.QUEUED, SpecTurnStatus.RUNNING))

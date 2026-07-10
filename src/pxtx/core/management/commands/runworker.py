@@ -392,8 +392,10 @@ class Command(BaseCommand):
         that no *other* turn started under the current id — a requeued first
         turn resumes, but re-sends its composed prompt. ⁂ When a pushed
         snapshot was just materialized (push_turn is set), verbatim prompts
-        get the materialization note prepended and composed first prompts
-        use the push framing."""
+        carry the materialization note and composed first prompts use the
+        push framing. A bare /opsx: stage command only expands when it
+        starts the prompt, so there the note follows the command; any other
+        verbatim message gets the note first."""
         session = turn.session
         started = session.turns.filter(
             kind=SpecTurnKind.CHAT,
@@ -408,7 +410,11 @@ class Command(BaseCommand):
         if started.exclude(pk=turn.pk).exists():
             prompt = turn.message
             if push_turn is not None:
-                prompt = f"{compose_push_note(turn, push_turn)}\n\n{prompt}"
+                note = compose_push_note(turn, push_turn)
+                if prompt.startswith("/opsx:"):
+                    prompt = f"{prompt}\n\n{note}"
+                else:
+                    prompt = f"{note}\n\n{prompt}"
         else:
             prompt = compose_first_prompt(turn, push_turn)
         # Audit-grade record: the id this run actually uses. The session-

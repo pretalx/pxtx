@@ -847,7 +847,31 @@ def test_runworker_resumed_chat_after_push_carries_materialization_note(
     assert "claude-dev" in prompt
     assert "re-read" in prompt
     assert ("wip draft, needs a critique" in prompt) == bool(push_message)
+    # ⁂ For plain user text the note leads and the queued message closes.
     assert prompt.endswith("\n\nTighten section X")
+    turn.refresh_from_db()
+    assert turn.prompt_sent == prompt
+
+
+@pytest.mark.django_db
+def test_runworker_stage_command_after_push_keeps_command_first(checkout, monkeypatch):
+    """⁂ A bare /opsx: stage command only expands when it starts the
+    prompt: after a push, the materialization note must follow the
+    command, not displace it."""
+    session = SpecSessionFactory()
+    _started_turn(session, message="explore this", response="explored")
+    session.push_snapshot(PUSHED, actor="claude-dev")
+    turn = session.queue_turn("/opsx:propose")
+    change_dir = runworker_module.change_dir_for(checkout, session.issue.number)
+    calls, seen = _capture_dir(monkeypatch, [_success_proc()], change_dir)
+
+    _run_worker()
+
+    assert seen == [PUSHED]
+    prompt = calls[0]["cmd"][2]
+    assert prompt.startswith("/opsx:propose\n\n")
+    assert "claude-dev" in prompt
+    assert "re-read" in prompt
     turn.refresh_from_db()
     assert turn.prompt_sent == prompt
 

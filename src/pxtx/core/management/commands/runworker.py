@@ -1,5 +1,6 @@
 import json
 import logging
+import shutil
 import subprocess
 import time
 from decimal import Decimal
@@ -10,7 +11,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from pxtx.core.models import SpecStage, SpecTurn, SpecTurnKind, SpecTurnStatus
-from pxtx.core.models.spec import ACTIVE_TURN_STATUSES
+from pxtx.core.models.spec import ACTIVE_TURN_STATUSES, FINISHED_TURN_STATUSES
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +49,99 @@ def snapshot_change_dir(change_dir):
     }
 
 
+def latest_finished_push(session):
+    """⁂ The push turn whose snapshot must be materialized before a run:
+    the session's most recent finished turn, when that turn is a push —
+    exactly the case where the DB is ahead of the checkout. None otherwise;
+    claude-produced snapshots never flow back to disk, because for those
+    disk is the source of truth and the snapshot its mirror."""
+    latest = (
+        session.turns.filter(status__in=FINISHED_TURN_STATUSES)
+        .order_by("-created_at", "-pk")
+        .first()
+    )
+    if latest is not None and latest.kind == SpecTurnKind.PUSH:
+        return latest
+    return None
+
+
+def materialize_snapshot(change_dir, artifacts):
+    """⁂ Wholesale-replace the change directory with a pushed snapshot:
+    files on disk but absent from the snapshot are removed — the push
+    semantic is "this snapshot becomes the change directory". The paths
+    were validated at push time and the directory is derived from the
+    issue number, so nothing here trusts client naming at write time."""
+    if change_dir.is_dir():
+        shutil.rmtree(change_dir)
+    for relpath, content in artifacts.items():
+        path = change_dir / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+
+def describe_push(push_turn):
+    """⁂ The push's note as its own prompt paragraph, empty when the push
+    carried none — kept out of the surrounding instructions so the pusher's
+    words never blur into the worker's."""
+    if not push_turn.message:
+        return ""
+    return f"⁂ Note from the push: {push_turn.message}"
+
+
+def compose_push_note(turn, push_turn):
+    """⁂ The materialization note carried by any chat prompt sent after
+    the worker replaced the change directory with a pushed snapshot: a
+    resumed session's in-context memory of the files is stale, so the
+    agent must re-read before continuing."""
+    issue = turn.session.issue
+    parts = [
+        f"⁂ Note: `openspec/changes/pxtx-{issue.number}/` was replaced "
+        f"with files pushed by {push_turn.actor}. Any version of these "
+        "files you remember is stale — re-read the change directory "
+        "before continuing."
+    ]
+    if description := describe_push(push_turn):
+        parts.append(description)
+    return "\n\n".join(parts)
+
+
+def compose_push_framing(turn, push_turn):
+    """⁂ First-prompt task framing when the latest finished turn is a
+    push: the /opsx: commands are creation scaffolding — undefined against
+    the already-materialized change directory — so the task is framed
+    directly around the existing change instead."""
+    issue = turn.session.issue
+    parts = [
+        f"⁂ An OpenSpec change for this issue already exists at "
+        f"`openspec/changes/pxtx-{issue.number}/`, materialized from files "
+        f"pushed by {push_turn.actor}. Read those files first, then work "
+        f"on that existing change — keep the name `pxtx-{issue.number}`, "
+        "never create a differently named change."
+    ]
+    if description := describe_push(push_turn):
+        parts.append(description)
+    return "\n\n".join(parts)
+
+
 def compose_transcript(turn):
     """Render the session's stored transcript (prior turns' messages and
     responses) for fresh-session recovery — exploration that never reached
     disk survives only here."""
     parts = []
     for prior in turn.session.turns.exclude(pk=turn.pk):
+        if prior.kind == SpecTurnKind.PUSH:
+            # ⁂ A push is neither a chat nor a critique message: it renders
+            # as a single pushed-files line, never inlining contents — the
+            # pushed snapshot is the on-disk change directory, which
+            # materialization keeps current for the recovered session.
+            line = (
+                f"⁂ [{prior.actor} pushed spec files; the pushed content "
+                "is the on-disk change directory.]"
+            )
+            if description := describe_push(prior):
+                line += f"\n{description}"
+            parts.append(line)
+            continue
         is_chat = prior.kind == SpecTurnKind.CHAT
         if prior.message:
             speaker = "User" if is_chat else "User (critique request)"
@@ -64,17 +152,24 @@ def compose_transcript(turn):
     return "\n\n".join(parts)
 
 
-def compose_first_prompt(turn):
+def compose_first_prompt(turn, push_turn=None):
     """A session's first prompt under its current claude session id: the
-    stage's /opsx: command, the required change name, the issue context,
-    and — after fresh-session recovery — the stored transcript."""
+    task framing, the required change name, the issue context, and — after
+    fresh-session recovery — the stored transcript. ⁂ The framing is the
+    stage's /opsx: command, unless the latest finished turn is a push (the
+    worker has just materialized its snapshot — this covers push-created
+    sessions): then the prompt frames the existing on-disk change directly,
+    with no /opsx: scaffolding."""
     issue = turn.session.issue
-    parts = [
-        f"{OPSX_COMMANDS[turn.stage]} pxtx-{issue.number}",
-        f"Name the OpenSpec change exactly `pxtx-{issue.number}` — never "
-        "pick a different change name.",
-        f"# Issue {issue.slug}: {issue.title}",
-    ]
+    if push_turn is None:
+        parts = [
+            f"{OPSX_COMMANDS[turn.stage]} pxtx-{issue.number}",
+            f"Name the OpenSpec change exactly `pxtx-{issue.number}` — never "
+            "pick a different change name.",
+        ]
+    else:
+        parts = [compose_push_framing(turn, push_turn)]
+    parts.append(f"# Issue {issue.slug}: {issue.title}")
     if issue.description:
         parts.append(issue.description)
     comments = list(issue.comments.all())
@@ -218,13 +313,25 @@ class Command(BaseCommand):
 
     def _process_turn(self, turn):
         session = turn.session
+        push_turn = latest_finished_push(session)
+        if push_turn is not None:
+            # ⁂ A pushed snapshot is born in the DB, so until it is
+            # materialized the checkout is stale: the agent would never see
+            # the pushed spec, and the post-run snapshot would appear to
+            # delete it. Repeating this before every run while the condition
+            # holds makes interrupted runs self-healing.
+            materialize_snapshot(
+                change_dir_for(self.checkout, session.issue.number), push_turn.artifacts
+            )
         if turn.kind == SpecTurnKind.CRITIQUE:
             # Critiques are sessionless one-shots: fresh context is the
             # point, so neither --session-id nor --resume is passed and the
-            # session's own claude_session_id is never touched.
+            # session's own claude_session_id is never touched. ⁂ No
+            # materialization note either — a critique reads the freshly
+            # materialized disk anyway.
             prompt, session_flags = compose_critique_prompt(turn), []
         else:
-            prompt, session_flags = self._prepare_chat_turn(turn)
+            prompt, session_flags = self._prepare_chat_turn(turn, push_turn)
         turn.prompt_sent = prompt
         turn.started_at = timezone.now()
         # skip_log: the attempt marker must be durable before claude runs
@@ -277,13 +384,16 @@ class Command(BaseCommand):
         turn.save(actor=ACTOR)
         logger.info("Turn %s finished with status %s.", turn.pk, turn.status)
 
-    def _prepare_chat_turn(self, turn):
+    def _prepare_chat_turn(self, turn, push_turn=None):
         """Decide prompt and session flags for a chat turn. --session-id
         registers a new claude session and fails hard on reuse, so it is
         passed only when no attempt ever started under the session's current
         id; everything else resumes. Context injection additionally requires
         that no *other* turn started under the current id — a requeued first
-        turn resumes, but re-sends its composed prompt."""
+        turn resumes, but re-sends its composed prompt. ⁂ When a pushed
+        snapshot was just materialized (push_turn is set), verbatim prompts
+        get the materialization note prepended and composed first prompts
+        use the push framing."""
         session = turn.session
         started = session.turns.filter(
             kind=SpecTurnKind.CHAT,
@@ -297,8 +407,10 @@ class Command(BaseCommand):
             session_flags = ["--session-id", session_id]
         if started.exclude(pk=turn.pk).exists():
             prompt = turn.message
+            if push_turn is not None:
+                prompt = f"{compose_push_note(turn, push_turn)}\n\n{prompt}"
         else:
-            prompt = compose_first_prompt(turn)
+            prompt = compose_first_prompt(turn, push_turn)
         # Audit-grade record: the id this run actually uses. The session-
         # level id mutates via fresh-session recovery.
         turn.claude_session_id = session.claude_session_id

@@ -11,7 +11,13 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from pxtx.core.management.commands import runworker as runworker_module
-from pxtx.core.models import SpecStage, SpecTurn, SpecTurnKind, SpecTurnStatus
+from pxtx.core.models import (
+    SpecStage,
+    SpecTurn,
+    SpecTurnKind,
+    SpecTurnStatus,
+    push_spec_snapshot,
+)
 from tests.factories import (
     CommentFactory,
     IssueFactory,
@@ -75,9 +81,11 @@ def _success_proc(**kwargs):
     return _proc(stdout=json.dumps(_success_payload(**kwargs)))
 
 
-def _patch_run(monkeypatch, outcomes):
+def _patch_run(monkeypatch, outcomes, on_call=None):
     """Patch subprocess.run in the worker module, replaying one outcome
-    (a fake process or an exception to raise) per call."""
+    (a fake process or an exception to raise) per call. ⁂ on_call runs at
+    invocation time, before the outcome is produced — the hook by which
+    materialization tests observe the checkout exactly as claude would."""
     calls = []
     iterator = iter(outcomes)
 
@@ -85,6 +93,8 @@ def _patch_run(monkeypatch, outcomes):
         cmd, cwd=None, capture_output=False, text=False, timeout=None, check=False
     ):
         calls.append({"cmd": list(cmd), "cwd": cwd, "timeout": timeout, "check": check})
+        if on_call is not None:
+            on_call()
         value = next(iterator)
         if isinstance(value, Exception):
             raise value
@@ -116,6 +126,22 @@ def _started_turn(session, **kwargs):
     }
     defaults.update(kwargs)
     return SpecTurnFactory(session=session, **defaults)
+
+
+PUSHED = {"proposal.md": "# Pushed proposal", "specs/feature/spec.md": "# Pushed delta"}
+
+
+def _capture_dir(monkeypatch, outcomes, change_dir):
+    """⁂ Like _patch_run, but additionally record the change directory's
+    contents at every claude invocation: materialization must be complete
+    before the run starts, so this capture is the assertion point for it."""
+    seen = []
+    calls = _patch_run(
+        monkeypatch,
+        outcomes,
+        on_call=lambda: seen.append(runworker_module.snapshot_change_dir(change_dir)),
+    )
+    return calls, seen
 
 
 def _propagate_pxtx_logs(monkeypatch):
@@ -732,6 +758,267 @@ def test_runworker_critique_without_focus_omits_focus_section(checkout, monkeypa
     assert "Focus" not in prompt
     turn.refresh_from_db()
     assert turn.prompt_sent == prompt
+
+
+# --- pushed snapshot materialization -------------------------------------------
+
+
+@pytest.mark.django_db
+def test_runworker_first_chat_after_push_materializes_and_frames_existing_change(
+    checkout, monkeypatch
+):
+    issue = IssueFactory(title="Feedback exports", description="Users want CSV.")
+    session = push_spec_snapshot(issue, PUSHED, actor="claude-dev").session
+    _write_change_file(checkout, issue.number, "stale.md", "left over on disk")
+    turn = session.queue_turn("Tighten the API section")
+    change_dir = runworker_module.change_dir_for(checkout, issue.number)
+    calls, seen = _capture_dir(
+        monkeypatch,
+        [_success_proc(session_id=str(session.claude_session_id))],
+        change_dir,
+    )
+
+    _run_worker()
+
+    # ⁂ The stale file is gone and the nested pushed file exists before
+    # claude runs — wholesale replacement, not a merge.
+    assert seen == [PUSHED]
+    cmd = calls[0]["cmd"]
+    assert cmd[-2:] == ["--session-id", str(session.claude_session_id)]
+    prompt = cmd[2]
+    assert "/opsx" not in prompt
+    assert f"openspec/changes/pxtx-{issue.number}/" in prompt
+    assert "claude-dev" in prompt
+    assert "Note from the push" not in prompt
+    assert f"Issue PX-{issue.number}: Feedback exports" in prompt
+    assert "Users want CSV." in prompt
+    assert prompt.endswith("## Your task\n\nTighten the API section")
+    turn.refresh_from_db()
+    assert turn.prompt_sent == prompt
+    assert turn.status == SpecTurnStatus.COMPLETED
+    assert turn.artifacts == PUSHED
+
+
+@pytest.mark.django_db
+def test_runworker_critique_after_push_reviews_materialized_spec_without_note(
+    checkout, monkeypatch
+):
+    issue = IssueFactory(title="Terse issue", description="")
+    session = push_spec_snapshot(
+        issue, PUSHED, message="please review", actor="claude-dev"
+    ).session
+    turn = session.queue_turn("", kind=SpecTurnKind.CRITIQUE)
+    change_dir = runworker_module.change_dir_for(checkout, issue.number)
+    calls, seen = _capture_dir(monkeypatch, [_success_proc()], change_dir)
+
+    _run_worker()
+
+    assert seen == [PUSHED]
+    prompt = calls[0]["cmd"][2]
+    assert "adversarial" in prompt
+    # ⁂ Critiques are sessionless one-shots reading fresh disk: no
+    # materialization note, no push provenance in the prompt.
+    assert "claude-dev" not in prompt
+    assert "re-read" not in prompt
+    turn.refresh_from_db()
+    assert turn.status == SpecTurnStatus.COMPLETED
+    assert turn.artifacts == PUSHED
+
+
+@pytest.mark.parametrize("push_message", ("", "wip draft, needs a critique"))
+@pytest.mark.django_db
+def test_runworker_resumed_chat_after_push_carries_materialization_note(
+    checkout, monkeypatch, push_message
+):
+    session = SpecSessionFactory()
+    _started_turn(session, message="explore this", response="explored")
+    session.push_snapshot(PUSHED, message=push_message, actor="claude-dev")
+    turn = session.queue_turn("Tighten section X")
+    change_dir = runworker_module.change_dir_for(checkout, session.issue.number)
+    calls, seen = _capture_dir(monkeypatch, [_success_proc()], change_dir)
+
+    _run_worker()
+
+    assert seen == [PUSHED]
+    cmd = calls[0]["cmd"]
+    assert cmd[-2:] == ["--resume", str(session.claude_session_id)]
+    prompt = cmd[2]
+    assert f"openspec/changes/pxtx-{session.issue.number}/" in prompt
+    assert "claude-dev" in prompt
+    assert "re-read" in prompt
+    assert ("wip draft, needs a critique" in prompt) == bool(push_message)
+    assert prompt.endswith("\n\nTighten section X")
+    turn.refresh_from_db()
+    assert turn.prompt_sent == prompt
+
+
+@pytest.mark.django_db
+def test_runworker_claude_snapshot_never_materializes(checkout, monkeypatch):
+    session = SpecSessionFactory()
+    number = session.issue.number
+    _started_turn(
+        session,
+        message="draft it",
+        response="drafted",
+        artifacts={"proposal.md": "db copy that must never reach disk"},
+    )
+    _write_change_file(checkout, number, "proposal.md", "disk copy")
+    turn = session.queue_turn("continue")
+    change_dir = runworker_module.change_dir_for(checkout, number)
+    calls, seen = _capture_dir(monkeypatch, [_success_proc()], change_dir)
+
+    _run_worker()
+
+    assert seen == [{"proposal.md": "disk copy"}]
+    assert calls[0]["cmd"][2] == "continue"
+    turn.refresh_from_db()
+    assert turn.artifacts == {"proposal.md": "disk copy"}
+
+
+@pytest.mark.django_db
+def test_runworker_retry_after_errored_chat_does_not_rematerialize(
+    checkout, monkeypatch
+):
+    issue = IssueFactory()
+    session = push_spec_snapshot(issue, PUSHED, actor="claude-dev").session
+    first = session.queue_turn("draft it")
+    change_dir = runworker_module.change_dir_for(checkout, issue.number)
+    calls, seen = _capture_dir(
+        monkeypatch,
+        [_proc(returncode=1, stdout=json.dumps(_error_payload())), _success_proc()],
+        change_dir,
+    )
+
+    _run_worker()
+
+    first.refresh_from_db()
+    assert first.status == SpecTurnStatus.ERROR
+    assert first.artifacts == PUSHED
+
+    # ⁂ The errored chat turn is now the latest finished turn and its
+    # snapshot mirrors disk, so the retry must not rewrite the checkout.
+    _write_change_file(checkout, issue.number, "notes.md", "written after the error")
+    retry = session.queue_turn("try again")
+
+    _run_worker()
+
+    assert seen[1] == {**PUSHED, "notes.md": "written after the error"}
+    assert calls[1]["cmd"][2] == "try again"
+    retry.refresh_from_db()
+    assert retry.status == SpecTurnStatus.COMPLETED
+
+
+@pytest.mark.django_db
+def test_runworker_second_push_supersedes_first(checkout, monkeypatch):
+    issue = IssueFactory()
+    session = push_spec_snapshot(issue, {"proposal.md": "v1"}, actor="claude-a").session
+    session.push_snapshot({"proposal.md": "v2"}, actor="claude-b")
+    session.queue_turn("go")
+    change_dir = runworker_module.change_dir_for(checkout, issue.number)
+    calls, seen = _capture_dir(monkeypatch, [_success_proc()], change_dir)
+
+    _run_worker()
+
+    assert seen == [{"proposal.md": "v2"}]
+    prompt = calls[0]["cmd"][2]
+    assert "claude-b" in prompt
+    # ⁂ The superseded push still shows in the injected transcript as a
+    # pushed-files line, but its content reaches neither disk nor prompt.
+    assert "claude-a pushed spec files" in prompt
+    assert "v1" not in prompt
+
+
+@pytest.mark.django_db
+def test_runworker_requeued_turn_after_push_rematerializes(checkout, monkeypatch):
+    issue = IssueFactory()
+    session = push_spec_snapshot(issue, PUSHED, actor="claude-dev").session
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.RUNNING,
+        started_at=timezone.now(),
+        claude_session_id=session.claude_session_id,
+        message="draft it",
+    )
+    # ⁂ The interrupted attempt may have half-run and left the change
+    # directory diverged; the re-run must converge it back to the push.
+    _write_change_file(checkout, issue.number, "proposal.md", "half-clobbered")
+    change_dir = runworker_module.change_dir_for(checkout, issue.number)
+    calls, seen = _capture_dir(monkeypatch, [_success_proc()], change_dir)
+
+    out = _run_worker()
+
+    assert "Requeued 1 stale running turn(s)" in out
+    assert seen == [PUSHED]
+    cmd = calls[0]["cmd"]
+    assert cmd[-2:] == ["--resume", str(session.claude_session_id)]
+    assert "/opsx" not in cmd[2]
+    assert "claude-dev" in cmd[2]
+
+
+@pytest.mark.django_db
+def test_runworker_fresh_recovery_after_push_injects_push_line(checkout, monkeypatch):
+    issue = IssueFactory(title="Rework exports")
+    session = SpecSessionFactory(issue=issue)
+    old_session_id = session.claude_session_id
+    _started_turn(session, message="Explore the exporters", response="I explored them")
+    _started_turn(
+        session,
+        status=SpecTurnStatus.ERROR,
+        message="Go deeper",
+        response="",
+        raw_result={"exit_code": 1, "stderr": "No conversation found"},
+    )
+    session.push_snapshot(
+        PUSHED, message="rescued the draft locally", actor="claude-dev"
+    )
+    session.queue_turn("Continue from the pushed draft")
+    session.refresh_from_db()
+    assert session.claude_session_id != old_session_id
+    change_dir = runworker_module.change_dir_for(checkout, issue.number)
+    calls, seen = _capture_dir(
+        monkeypatch,
+        [_success_proc(session_id=str(session.claude_session_id))],
+        change_dir,
+    )
+
+    _run_worker()
+
+    assert seen == [PUSHED]
+    cmd = calls[0]["cmd"]
+    assert cmd[-2:] == ["--session-id", str(session.claude_session_id)]
+    prompt = cmd[2]
+    assert "/opsx" not in prompt
+    assert "claude-dev pushed spec files" in prompt
+    assert "rescued the draft locally" in prompt
+    # ⁂ Pushed file contents never inline into the recovery prompt, and the
+    # push line carries no chat or critique speaker label.
+    assert "# Pushed proposal" not in prompt
+    assert "User:\nrescued the draft locally" not in prompt
+    assert "Explore the exporters" in prompt
+    assert "I explored them" in prompt
+    assert prompt.endswith("## Your task\n\nContinue from the pushed draft")
+
+
+@pytest.mark.django_db
+def test_compose_transcript_renders_push_without_note_as_single_line():
+    session = SpecSessionFactory()
+    SpecTurnFactory(
+        session=session,
+        kind=SpecTurnKind.PUSH,
+        status=SpecTurnStatus.COMPLETED,
+        message="",
+        actor="claude-dev",
+        artifacts=PUSHED,
+    )
+    current = SpecTurnFactory(session=session, message="follow up")
+
+    rendered = runworker_module.compose_transcript(current)
+
+    assert "claude-dev pushed spec files" in rendered
+    assert "Note from the push" not in rendered
+    assert "# Pushed proposal" not in rendered
+    assert "User" not in rendered
+    assert "Critic" not in rendered
 
 
 # --- settings file validation ---------------------------------------------------

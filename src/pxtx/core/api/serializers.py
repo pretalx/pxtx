@@ -189,7 +189,7 @@ class IssueSerializer(serializers.ModelSerializer):
 
 
 class SpecTurnSerializer(serializers.ModelSerializer):
-    """⁂ One transcript entry, everything an agent needs to follow the
+    """One transcript entry, everything an agent needs to follow the
     exchange: the queue-time message, the composed prompt actually sent, the
     response, cost, and — for failed turns — error_detail plus the raw result
     payload. Per-turn artifact snapshots are deliberately absent; the latest
@@ -216,7 +216,7 @@ class SpecTurnSerializer(serializers.ModelSerializer):
 
 
 class SpecSessionSerializer(serializers.ModelSerializer):
-    """⁂ Read-only session detail keyed by issue number: stage, the derived
+    """Read-only session detail keyed by issue number: stage, the derived
     waiting-on-user state, total cost, and the full turn list. The view
     supplies ``waiting_on_user`` and ``total_cost_usd`` as annotations."""
 

@@ -22,7 +22,7 @@
         </a>
         <a href="{% url 'core:issue-list' %}" {% if 'issues' in request.path %}class="active"{% endif %}>Issues</a>
         <a href="{% url 'core:milestone-list' %}" {% if 'milestones' in request.path %}class="active"{% endif %}>Releases</a>
-        <a href="{% url 'core:spec-list' %}" {% if request.path == '/specs/' %}class="active"{% endif %}>⁂ Specs</a>
+        <a href="{% url 'core:spec-list' %}" {% if request.path == '/specs/' %}class="active"{% endif %}>Specs</a>
         <a href="{% url 'core:activity' %}" {% if 'activity' in request.path %}class="active"{% endif %}>Activity</a>
         <a href="{% url 'core:issue-new' %}" class="new-issue" title="New issue (c)"
            hx-get="{% url 'core:issue-modal-new' %}"

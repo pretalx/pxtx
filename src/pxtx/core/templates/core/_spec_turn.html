@@ -2,23 +2,23 @@
 <article class="spec-turn spec-turn-{{ entry.turn.kind }} spec-turn-{{ entry.turn.status }}">
     {% if entry.turn.message %}
     <div class="spec-bubble spec-bubble-user{% if entry.turn.kind == 'critique' %} spec-bubble-critique{% endif %}">
-        {% if entry.turn.kind == "critique" %}<span class="spec-turn-label">⁂ Critique requested</span>{% endif %}
+        {% if entry.turn.kind == "critique" %}<span class="spec-turn-label">Critique requested</span>{% endif %}
         <div class="prose">{{ entry.turn.message|rich_text }}</div>
         <div class="spec-turn-meta"><span class="meta" title="{{ entry.turn.created_at|date:'Y-m-d H:i' }}">{{ entry.turn.created_at|timesince }} ago</span></div>
     </div>
     {% endif %}
     {% if entry.turn.status == "queued" or entry.turn.status == "running" %}
     <div class="spec-bubble spec-bubble-assistant spec-bubble-pending{% if entry.turn.kind == 'critique' %} spec-bubble-critique{% endif %}">
-        <span class="meta">⁂ {{ entry.turn.get_status_display }}…</span>
+        <span class="meta">{{ entry.turn.get_status_display }}…</span>
     </div>
     {% elif entry.turn.status == "error" %}
     <div class="spec-bubble spec-bubble-assistant spec-bubble-error">
-        <p class="spec-error-mark">⁂ This turn failed.</p>
+        <p class="spec-error-mark">This turn failed.</p>
         {% if entry.turn.is_session_gone %}
-        <p class="meta">⁂ The claude session was lost — retrying starts a fresh session with the stored transcript injected.</p>
+        <p class="meta">The claude session was lost — retrying starts a fresh session with the stored transcript injected.</p>
         {% endif %}
         <details class="spec-diagnostics">
-            <summary>⁂ Diagnostics</summary>
+            <summary>Diagnostics</summary>
             {% if entry.turn.error_detail %}<pre>{{ entry.turn.error_detail }}</pre>{% endif %}
             {% if entry.raw_json %}<pre>{{ entry.raw_json }}</pre>{% endif %}
         </details>
@@ -27,17 +27,17 @@
               hx-post="{% url 'core:spec-retry' number=issue.number pk=entry.turn.pk %}"
               hx-target="#spec-session" hx-swap="outerHTML">
             {% csrf_token %}
-            <button type="submit" class="secondary">⁂ Retry</button>
+            <button type="submit" class="secondary">Retry</button>
         </form>
         {% endif %}
     </div>
     {% else %}
     <div class="spec-bubble spec-bubble-assistant{% if entry.turn.kind == 'critique' %} spec-bubble-critique{% endif %}">
-        {% if entry.turn.kind == "critique" %}<span class="spec-turn-label">⁂ Critic</span>{% endif %}
+        {% if entry.turn.kind == "critique" %}<span class="spec-turn-label">Critic</span>{% endif %}
         <div class="prose">{{ entry.turn.response|rich_text }}</div>
         {% if entry.diffs %}
         <details class="spec-diff">
-            <summary>⁂ {{ entry.diffs|length }} file{{ entry.diffs|length|pluralize }} changed</summary>
+            <summary>{{ entry.diffs|length }} file{{ entry.diffs|length|pluralize }} changed</summary>
             {% for diff in entry.diffs %}
             <div class="spec-diff-file">
                 <span class="spec-diff-path">{{ diff.path }}</span>
@@ -53,7 +53,7 @@
         {% if entry.turn.kind == "critique" %}
         <form class="spec-turn-action" method="post" action="{% url 'core:spec-forward' number=issue.number pk=entry.turn.pk %}">
             {% csrf_token %}
-            <button type="submit" class="secondary">⁂ Forward to spec agent</button>
+            <button type="submit" class="secondary">Forward to spec agent</button>
         </form>
         {% endif %}
     </div>

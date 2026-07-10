@@ -19,7 +19,7 @@ POLL_INTERVAL_SECONDS = 5
 IDLE_PULL_INTERVAL_SECONDS = 300
 GIT_PULL_TIMEOUT_SECONDS = 120
 
-# ⁂ The /opsx: command that drives a session in each stage. The UI never
+# The /opsx: command that drives a session in each stage. The UI never
 # queues chat turns in ready (it reopens to propose first); propose is the
 # safe reading if one slips through anyway.
 OPSX_COMMANDS = {
@@ -30,12 +30,12 @@ OPSX_COMMANDS = {
 
 
 def change_dir_for(checkout, issue_number):
-    # ⁂ Always derived from the issue number, never from agent output.
+    # Always derived from the issue number, never from agent output.
     return Path(checkout) / "openspec" / "changes" / f"pxtx-{issue_number}"
 
 
 def snapshot_change_dir(change_dir):
-    """⁂ Copy the change directory into a {relative path: content} mapping.
+    """Copy the change directory into a {relative path: content} mapping.
     Empty when the directory does not exist, which is normal in explore."""
     if not change_dir.is_dir():
         return {}
@@ -49,29 +49,29 @@ def snapshot_change_dir(change_dir):
 
 
 def compose_transcript(turn):
-    """⁂ Render the session's stored transcript (prior turns' messages and
+    """Render the session's stored transcript (prior turns' messages and
     responses) for fresh-session recovery — exploration that never reached
     disk survives only here."""
     parts = []
     for prior in turn.session.turns.exclude(pk=turn.pk):
         is_chat = prior.kind == SpecTurnKind.CHAT
         if prior.message:
-            speaker = "⁂ User" if is_chat else "⁂ User (critique request)"
+            speaker = "User" if is_chat else "User (critique request)"
             parts.append(f"{speaker}:\n{prior.message}")
         if prior.response:
-            speaker = "⁂ Assistant" if is_chat else "⁂ Critic"
+            speaker = "Assistant" if is_chat else "Critic"
             parts.append(f"{speaker}:\n{prior.response}")
     return "\n\n".join(parts)
 
 
 def compose_first_prompt(turn):
-    """⁂ A session's first prompt under its current claude session id: the
+    """A session's first prompt under its current claude session id: the
     stage's /opsx: command, the required change name, the issue context,
     and — after fresh-session recovery — the stored transcript."""
     issue = turn.session.issue
     parts = [
         f"{OPSX_COMMANDS[turn.stage]} pxtx-{issue.number}",
-        f"⁂ Name the OpenSpec change exactly `pxtx-{issue.number}` — never "
+        f"Name the OpenSpec change exactly `pxtx-{issue.number}` — never "
         "pick a different change name.",
         f"# Issue {issue.slug}: {issue.title}",
     ]
@@ -79,28 +79,28 @@ def compose_first_prompt(turn):
         parts.append(issue.description)
     comments = list(issue.comments.all())
     if comments:
-        parts.append("## ⁂ Comments")
+        parts.append("## Comments")
         parts.extend(f"### {comment.author}\n\n{comment.body}" for comment in comments)
     transcript = compose_transcript(turn)
     if transcript:
         parts.append(
-            "## ⁂ Earlier conversation\n\n"
-            "⁂ This session replaces an earlier one whose claude-side state "
+            "## Earlier conversation\n\n"
+            "This session replaces an earlier one whose claude-side state "
             "was lost; the conversation so far:"
         )
         parts.append(transcript)
-    # ⁂ Stage-command bootstrap turns queue the bare /opsx: command; the
+    # Stage-command bootstrap turns queue the bare /opsx: command; the
     # header above already carries it, so echoing it as a task would send
     # the command twice.
     if turn.message and turn.message != OPSX_COMMANDS[turn.stage]:
-        parts.append(f"## ⁂ Your task\n\n{turn.message}")
+        parts.append(f"## Your task\n\n{turn.message}")
     return "\n\n".join(parts)
 
 
 def compose_critique_prompt(turn):
     issue = turn.session.issue
     parts = [
-        "⁂ You are an adversarial spec reviewer with fresh eyes. Read the "
+        "You are an adversarial spec reviewer with fresh eyes. Read the "
         f"OpenSpec change in `openspec/changes/pxtx-{issue.number}/` and "
         "critique it against this codebase: hunt for requirements that "
         "contradict existing behaviour, missing or underspecified scenarios, "
@@ -112,13 +112,13 @@ def compose_critique_prompt(turn):
     if issue.description:
         parts.append(issue.description)
     if turn.message:
-        parts.append(f"## ⁂ Focus\n\n{turn.message}")
+        parts.append(f"## Focus\n\n{turn.message}")
     return "\n\n".join(parts)
 
 
 class Command(BaseCommand):
     help = (
-        "⁂ Spec worker: poll for queued spec turns, run each via `claude -p` "
+        "Spec worker: poll for queued spec turns, run each via `claude -p` "
         "in the configured pretalx checkout, and store results and artifact "
         "snapshots on the turn. Serial and single-instance by contract (the "
         "startup requeue would clobber a second live worker). Configure via "
@@ -131,7 +131,7 @@ class Command(BaseCommand):
             type=int,
             default=None,
             help=(
-                "⁂ Exit after this many poll iterations instead of running "
+                "Exit after this many poll iterations instead of running "
                 "forever. Mainly for tests and one-shot runs."
             ),
         )
@@ -139,12 +139,12 @@ class Command(BaseCommand):
     def handle(self, *args, max_iterations=None, **options):
         if not settings.SPEC_CHECKOUT_PATH:
             self.stdout.write(
-                "⁂ No [spec] checkout_path configured in pxtx.toml; the spec "
+                "No [spec] checkout_path configured in pxtx.toml; the spec "
                 "worker has nothing to do. See pxtx.toml.example."
             )
             return
         self.checkout = Path(settings.SPEC_CHECKOUT_PATH)
-        # ⁂ -inf so the first idle poll pulls immediately.
+        # -inf so the first idle poll pulls immediately.
         self._last_pull = float("-inf")
 
         requeued = SpecTurn.objects.filter(status=SpecTurnStatus.RUNNING).update(
@@ -152,7 +152,7 @@ class Command(BaseCommand):
         )
         if requeued:
             self.stdout.write(
-                f"⁂ Requeued {requeued} stale running turn(s) from an "
+                f"Requeued {requeued} stale running turn(s) from an "
                 "interrupted worker; they will re-run via --resume."
             )
 
@@ -163,10 +163,10 @@ class Command(BaseCommand):
                 if not self._poll_once():
                     time.sleep(POLL_INTERVAL_SECONDS)
         except KeyboardInterrupt:
-            self.stdout.write("⁂ Interrupted; exiting.")
+            self.stdout.write("Interrupted; exiting.")
 
     def _poll_once(self):
-        """⁂ Process at most one queued turn. Returns True when a turn was
+        """Process at most one queued turn. Returns True when a turn was
         run (poll again immediately), False when the worker should sleep."""
         candidate = (
             SpecTurn.objects.filter(status=SpecTurnStatus.QUEUED)
@@ -177,14 +177,14 @@ class Command(BaseCommand):
             self._refresh_checkout()
             return False
         if not self._claim(candidate):
-            # ⁂ Another worker won the race; leave the turn to it.
+            # Another worker won the race; leave the turn to it.
             return False
         candidate.refresh_from_db()
         self._process_turn(candidate)
         return True
 
     def _claim(self, candidate):
-        # ⁂ Atomic conditional update: only one worker can flip a turn from
+        # Atomic conditional update: only one worker can flip a turn from
         # queued to running. Bypasses activity logging on purpose — claims
         # are bookkeeping, not audit events.
         return (
@@ -195,7 +195,7 @@ class Command(BaseCommand):
         )
 
     def _refresh_checkout(self):
-        """⁂ Keep the checkout fresh while idle. The agent is denied git
+        """Keep the checkout fresh while idle. The agent is denied git
         writes, so this pull is the only path by which the checkout
         advances; failures are logged and never fatal."""
         if SpecTurn.objects.filter(status__in=ACTIVE_TURN_STATUSES).exists():
@@ -214,12 +214,12 @@ class Command(BaseCommand):
                 timeout=GIT_PULL_TIMEOUT_SECONDS,
             )
         except (OSError, subprocess.SubprocessError) as exc:
-            logger.warning("⁂ Idle git pull in %s failed: %s", self.checkout, exc)
+            logger.warning("Idle git pull in %s failed: %s", self.checkout, exc)
 
     def _process_turn(self, turn):
         session = turn.session
         if turn.kind == SpecTurnKind.CRITIQUE:
-            # ⁂ Critiques are sessionless one-shots: fresh context is the
+            # Critiques are sessionless one-shots: fresh context is the
             # point, so neither --session-id nor --resume is passed and the
             # session's own claude_session_id is never touched.
             prompt, session_flags = compose_critique_prompt(turn), []
@@ -227,7 +227,7 @@ class Command(BaseCommand):
             prompt, session_flags = self._prepare_chat_turn(turn)
         turn.prompt_sent = prompt
         turn.started_at = timezone.now()
-        # ⁂ skip_log: the attempt marker must be durable before claude runs
+        # skip_log: the attempt marker must be durable before claude runs
         # (a requeued turn must resume, never re-register its session id),
         # but it is bookkeeping — the single finalization entry below is the
         # audit event.
@@ -247,14 +247,14 @@ class Command(BaseCommand):
         except subprocess.TimeoutExpired:
             turn.status = SpecTurnStatus.ERROR
             turn.error_detail = (
-                f"⁂ claude was killed after exceeding the "
+                f"claude was killed after exceeding the "
                 f"{settings.SPEC_TIMEOUT_SECONDS}s timeout. The session is "
                 "almost certainly still alive; a retry resumes it."
             )
         else:
             self._classify_result(turn, proc)
 
-        # ⁂ Snapshot on every outcome: the checkout is readable regardless
+        # Snapshot on every outcome: the checkout is readable regardless
         # of how claude died, and files are often written before budget,
         # max-turns, or timeout kills.
         change_dir = change_dir_for(self.checkout, session.issue.number)
@@ -265,20 +265,20 @@ class Command(BaseCommand):
             and turn.stage == SpecStage.PROPOSE
             and not change_dir.is_dir()
         ):
-            # ⁂ In propose, producing the change directory is the whole job.
+            # In propose, producing the change directory is the whole job.
             # Judged against the queue-time stage on the turn, never the
             # session's current stage.
             turn.status = SpecTurnStatus.ERROR
             turn.error_detail = (
-                f"⁂ The run finished without creating {change_dir.name}/ in "
+                f"The run finished without creating {change_dir.name}/ in "
                 "the checkout; a propose turn must produce the change "
                 "directory. The raw result is attached."
             )
         turn.save(actor=ACTOR)
-        logger.info("⁂ Turn %s finished with status %s.", turn.pk, turn.status)
+        logger.info("Turn %s finished with status %s.", turn.pk, turn.status)
 
     def _prepare_chat_turn(self, turn):
-        """⁂ Decide prompt and session flags for a chat turn. --session-id
+        """Decide prompt and session flags for a chat turn. --session-id
         registers a new claude session and fails hard on reuse, so it is
         passed only when no attempt ever started under the session's current
         id; everything else resumes. Context injection additionally requires
@@ -299,7 +299,7 @@ class Command(BaseCommand):
             prompt = turn.message
         else:
             prompt = compose_first_prompt(turn)
-        # ⁂ Audit-grade record: the id this run actually uses. The session-
+        # Audit-grade record: the id this run actually uses. The session-
         # level id mutates via fresh-session recovery.
         turn.claude_session_id = session.claude_session_id
         return prompt, session_flags
@@ -317,7 +317,7 @@ class Command(BaseCommand):
         path = settings.SPEC_CLAUDE_SETTINGS_FILE
         if not path:
             logger.warning(
-                "⁂ No [spec] claude settings file configured in pxtx.toml; "
+                "No [spec] claude settings file configured in pxtx.toml; "
                 "the agent runs without the deployed guardrails and only the "
                 "budget cap applies."
             )
@@ -326,7 +326,7 @@ class Command(BaseCommand):
             json.loads(Path(path).read_text())
         except (OSError, ValueError):
             logger.warning(
-                "⁂ Claude settings file %s is missing or not valid JSON; "
+                "Claude settings file %s is missing or not valid JSON; "
                 "claude silently ignores broken settings files, so this run "
                 "proceeds without the deployed guardrails.",
                 path,
@@ -338,13 +338,13 @@ class Command(BaseCommand):
         except ValueError:
             payload = None
         if not isinstance(payload, dict):
-            # ⁂ Claude exited on its own without a JSON result — the only
+            # Claude exited on its own without a JSON result — the only
             # outcome after which the session is gone. The exit code in
             # raw_result is the marker SpecTurn.is_session_gone keys on.
             turn.status = SpecTurnStatus.ERROR
             turn.raw_result = {"exit_code": proc.returncode, "stderr": proc.stderr}
             turn.error_detail = (
-                f"⁂ claude exited with code {proc.returncode} without a JSON "
+                f"claude exited with code {proc.returncode} without a JSON "
                 "result; the session is likely gone, and retrying will start "
                 f"a fresh session.\n\nstderr:\n{proc.stderr}"
             )
@@ -358,7 +358,7 @@ class Command(BaseCommand):
             turn.claude_session_id = session_id
         turn.response = payload.get("result") or ""
         if payload.get("is_error"):
-            # ⁂ In-run failure (budget, max turns, execution error): the
+            # In-run failure (budget, max turns, execution error): the
             # session id remains resumable.
             turn.status = SpecTurnStatus.ERROR
         else:

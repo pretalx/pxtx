@@ -58,7 +58,7 @@ def _success_payload(session_id=None, result="Spec drafted.", cost=0.123456):
 
 
 def _error_payload(cost=0.05):
-    # ⁂ No session_id on purpose: it doubles as the sid-absent branch check —
+    # No session_id on purpose: it doubles as the sid-absent branch check —
     # the a-priori id recorded at attempt start must remain on the turn.
     return {
         "type": "result",
@@ -76,7 +76,7 @@ def _success_proc(**kwargs):
 
 
 def _patch_run(monkeypatch, outcomes):
-    """⁂ Patch subprocess.run in the worker module, replaying one outcome
+    """Patch subprocess.run in the worker module, replaying one outcome
     (a fake process or an exception to raise) per call."""
     calls = []
     iterator = iter(outcomes)
@@ -107,7 +107,7 @@ def _write_change_file(checkout, number, relpath, content):
 
 
 def _started_turn(session, **kwargs):
-    """⁂ A turn whose invocation attempt already began under the session's
+    """A turn whose invocation attempt already began under the session's
     current claude session id, as the worker would have recorded it."""
     defaults = {
         "status": SpecTurnStatus.COMPLETED,
@@ -119,7 +119,7 @@ def _started_turn(session, **kwargs):
 
 
 def _propagate_pxtx_logs(monkeypatch):
-    # ⁂ The "pxtx" logger runs with propagate=False in settings, so caplog's
+    # The "pxtx" logger runs with propagate=False in settings, so caplog's
     # root handler never sees records unless we re-enable propagation.
     monkeypatch.setattr(logging.getLogger("pxtx"), "propagate", True)
 
@@ -163,7 +163,7 @@ def test_runworker_requeues_stale_running_turn_and_resumes_it(checkout, monkeypa
     turn.refresh_from_db()
     assert turn.status == SpecTurnStatus.COMPLETED
     cmd = calls[0]["cmd"]
-    # ⁂ A crashed first attempt may already have registered the session id, so
+    # A crashed first attempt may already have registered the session id, so
     # the re-run must resume, never re-register — but it re-sends the
     # composed first prompt (worst case: a duplicate prompt in the session).
     assert cmd[-2:] == ["--resume", str(session.claude_session_id)]
@@ -199,7 +199,7 @@ def test_runworker_claim_race_leaves_turn_to_other_worker(checkout, monkeypatch)
     original_claim = runworker_module.Command._claim
 
     def racing_claim(self, candidate):
-        # ⁂ Simulate a concurrent worker winning inside the select->update
+        # Simulate a concurrent worker winning inside the select->update
         # window; the real conditional update must then lose.
         SpecTurn.objects.filter(pk=candidate.pk).update(status=SpecTurnStatus.RUNNING)
         return original_claim(self, candidate)
@@ -210,7 +210,7 @@ def test_runworker_claim_race_leaves_turn_to_other_worker(checkout, monkeypatch)
 
     turn.refresh_from_db()
     assert turn.status == SpecTurnStatus.RUNNING
-    # ⁂ No claude invocation, and no idle pull either: the second poll sees the
+    # No claude invocation, and no idle pull either: the second poll sees the
     # other worker's running turn and skips the checkout refresh.
     assert calls == []
 
@@ -335,7 +335,7 @@ def test_runworker_first_turn_omits_empty_sections(checkout, monkeypatch):
 def test_runworker_first_turn_with_bare_stage_command_sends_it_once(
     checkout, monkeypatch
 ):
-    """⁂ The bootstrap queues the stage's /opsx: command verbatim; the
+    """The bootstrap queues the stage's /opsx: command verbatim; the
     composed first prompt already opens with it, so the Your-task echo must
     be skipped instead of sending the command twice."""
     session = SpecSessionFactory()
@@ -519,7 +519,7 @@ def test_runworker_error_json_keeps_session_resumable(checkout, monkeypatch):
     assert turn.cost_usd == Decimal("0.05")
     assert turn.response == ""
     assert turn.artifacts == {"proposal.md": "half-finished"}
-    # ⁂ No session_id in the error payload: the a-priori id remains the record.
+    # No session_id in the error payload: the a-priori id remains the record.
     assert turn.claude_session_id == original_session_id
     assert session.claude_session_id == original_session_id
     assert turn.is_session_gone is False
@@ -678,13 +678,13 @@ def test_runworker_critique_runs_sessionless_with_template_prompt(
     assert f"Issue PX-{issue.number}: Add feedback exports" in prompt
     assert "Users want CSV exports." in prompt
     assert "focus on the API surface" in prompt
-    # ⁂ Missing change directory is never an error for critiques.
+    # Missing change directory is never an error for critiques.
     assert turn.artifacts == {}
 
 
 @pytest.mark.django_db
 def test_runworker_critique_snapshot_makes_modifications_visible(checkout, monkeypatch):
-    """⁂ Critics are told not to write, but when one does, the turn snapshot
+    """Critics are told not to write, but when one does, the turn snapshot
     records the change directory as it stands — the resulting transcript
     diff is the tamper evidence, never a silent edit."""
     session = SpecSessionFactory(stage=SpecStage.PROPOSE)
@@ -760,7 +760,7 @@ def test_runworker_warns_on_missing_or_invalid_settings_file(
         if record.levelno >= logging.WARNING
     ]
     assert any(str(settings_file) in message for message in warnings)
-    # ⁂ The flag is still passed: claude ignoring the file is claude's problem.
+    # The flag is still passed: claude ignoring the file is claude's problem.
     assert "--settings" in calls[0]["cmd"]
 
 
@@ -768,7 +768,7 @@ def test_runworker_warns_on_missing_or_invalid_settings_file(
 def test_runworker_warns_when_no_settings_file_configured(
     checkout, monkeypatch, caplog
 ):
-    """⁂ An empty [spec] settings-file key means the agent runs with no
+    """An empty [spec] settings-file key means the agent runs with no
     deployment guardrails at all — the worker keeps going but must say so."""
     _propagate_pxtx_logs(monkeypatch)
     session = SpecSessionFactory()

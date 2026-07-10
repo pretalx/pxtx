@@ -90,7 +90,7 @@ class SpecSessionFactory(factory.django.DjangoModelFactory):
 
 
 class SpecTurnFactory(factory.django.DjangoModelFactory):
-    """⁂ Snapshots the session's current stage onto the turn, matching how
+    """Snapshots the session's current stage onto the turn, matching how
     turns are queued in production code."""
 
     class Meta:

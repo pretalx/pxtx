@@ -1,8 +1,8 @@
 <div id="spec-session"{% if has_active_turn %} hx-get="{% url 'core:spec-session-fragment' number=issue.number %}" hx-trigger="every 10s" hx-swap="outerHTML"{% endif %}>
     <div class="card spec-status">
         <span class="badge spec-stage spec-stage-{{ session.stage }}">{{ session.get_stage_display }}</span>
-        {% if total_cost %}<span class="meta spec-cost" title="⁂ Total cost of this session">${{ total_cost|floatformat:2 }}</span>{% endif %}
-        {% if has_active_turn %}<span class="meta spec-working">⁂ working…</span>{% endif %}
+        {% if total_cost %}<span class="meta spec-cost" title="Total cost of this session">${{ total_cost|floatformat:2 }}</span>{% endif %}
+        {% if has_active_turn %}<span class="meta spec-working">working…</span>{% endif %}
         <div class="spec-stage-actions">
             {% if session.stage == "explore" %}
             <form method="post" action="{% url 'core:spec-stage' number=issue.number %}"
@@ -10,7 +10,7 @@
                   hx-target="#spec-session" hx-swap="outerHTML">
                 {% csrf_token %}
                 <input type="hidden" name="stage" value="propose">
-                <button type="submit">⁂ Propose</button>
+                <button type="submit">Propose</button>
             </form>
             {% elif session.stage == "propose" %}
             <form method="post" action="{% url 'core:spec-stage' number=issue.number %}"
@@ -18,14 +18,14 @@
                   hx-target="#spec-session" hx-swap="outerHTML">
                 {% csrf_token %}
                 <input type="hidden" name="stage" value="explore">
-                <button type="submit" class="secondary">⁂ Back to explore</button>
+                <button type="submit" class="secondary">Back to explore</button>
             </form>
             <form method="post" action="{% url 'core:spec-stage' number=issue.number %}"
                   hx-post="{% url 'core:spec-stage' number=issue.number %}"
                   hx-target="#spec-session" hx-swap="outerHTML">
                 {% csrf_token %}
                 <input type="hidden" name="stage" value="ready">
-                <button type="submit">⁂ Mark ready</button>
+                <button type="submit">Mark ready</button>
             </form>
             {% else %}
             <form method="post" action="{% url 'core:spec-stage' number=issue.number %}"
@@ -33,7 +33,7 @@
                   hx-target="#spec-session" hx-swap="outerHTML">
                 {% csrf_token %}
                 <input type="hidden" name="stage" value="propose">
-                <button type="submit" class="secondary">⁂ Reopen</button>
+                <button type="submit" class="secondary">Reopen</button>
             </form>
             {% endif %}
         </div>
@@ -47,29 +47,29 @@
 
     {% if can_critique %}
     <details class="card spec-critique-request" id="spec-critique-request"{% if preserve_inputs %} hx-preserve{% endif %}>
-        <summary>⁂ Request critique</summary>
+        <summary>Request critique</summary>
         <form method="post" action="{% url 'core:spec-critique' number=issue.number %}"
               hx-post="{% url 'core:spec-critique' number=issue.number %}"
               hx-target="#spec-session" hx-swap="outerHTML">
             {% csrf_token %}
-            <textarea name="focus" rows="2" placeholder="⁂ Optional focus, e.g. poke holes in the migration plan"></textarea>
+            <textarea name="focus" rows="2" placeholder="Optional focus, e.g. poke holes in the migration plan"></textarea>
             <div class="form-actions">
-                <button type="submit" class="secondary">⁂ Run critique</button>
+                <button type="submit" class="secondary">Run critique</button>
             </div>
         </form>
     </details>
     {% endif %}
 
     {% if session.stage == "ready" %}
-    <p class="meta spec-ready-note">⁂ This spec is marked ready. Reopen it to keep iterating.</p>
+    <p class="meta spec-ready-note">This spec is marked ready. Reopen it to keep iterating.</p>
     {% else %}
     <form class="card spec-composer" method="post" action="{% url 'core:spec-turn-queue' number=issue.number %}"
           hx-post="{% url 'core:spec-turn-queue' number=issue.number %}"
           hx-target="#spec-session" hx-swap="outerHTML">
         {% csrf_token %}
-        <textarea name="message" id="spec-composer-message" rows="3" required placeholder="⁂ Message the spec agent…"{% if preserve_inputs %} hx-preserve{% endif %}>{{ composer_prefill }}</textarea>
+        <textarea name="message" id="spec-composer-message" rows="3" required placeholder="Message the spec agent…"{% if preserve_inputs %} hx-preserve{% endif %}>{{ composer_prefill }}</textarea>
         <div class="form-actions">
-            <button type="submit">⁂ Send</button>
+            <button type="submit">Send</button>
         </div>
     </form>
     {% endif %}

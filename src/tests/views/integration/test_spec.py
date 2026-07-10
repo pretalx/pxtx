@@ -52,7 +52,7 @@ def test_spec_page_without_session_offers_bootstrap(auth_client):
     body = response.content.decode()
     assert "Start spec session" in body
     assert f"/issues/{issue.number}/spec/start/" in body
-    # ⁂ No session means no composer and no transcript machinery.
+    # No session means no composer and no transcript machinery.
     assert 'name="message"' not in body
 
 
@@ -116,7 +116,7 @@ def test_spec_page_renders_transcript_bubbles(auth_client):
     assert response.context["session"] == session
     body = response.content.decode()
     assert "Please explore PX auth" in body
-    # ⁂ The response runs through the markdown pipeline.
+    # The response runs through the markdown pipeline.
     assert "<strong>auth</strong>" in body
     assert 'name="message"' in body
 
@@ -258,7 +258,7 @@ def test_session_fragment_endpoint_renders_fragment(auth_client):
 
 @pytest.mark.django_db
 def test_session_fragment_marks_user_inputs_preserved(auth_client):
-    """⁂ Timed poll responses swap the whole fragment, so they mark the
+    """Timed poll responses swap the whole fragment, so they mark the
     composer and the critique panel hx-preserve — a draft being typed
     survives the background swap."""
     session = SpecSessionFactory(stage=SpecStage.PROPOSE)
@@ -279,7 +279,7 @@ def test_session_fragment_marks_user_inputs_preserved(auth_client):
 
 @pytest.mark.django_db
 def test_user_action_swap_does_not_preserve_inputs(auth_client):
-    """⁂ Responses to user actions omit hx-preserve, so queueing a message
+    """Responses to user actions omit hx-preserve, so queueing a message
     replaces (and thereby clears) the composer."""
     session = SpecSessionFactory()
 
@@ -357,11 +357,11 @@ def test_changed_files_summarized_and_expandable(auth_client):
     assert "2 files changed" in body
     assert "-old text" in body
     assert "+new text" in body
-    # ⁂ The deleted file shows up in the diff too.
+    # The deleted file shows up in the diff too.
     assert "-a" in body
     entries = response.context["entries"]
     assert [d["path"] for d in entries[1]["diffs"]] == ["proposal.md", "tasks.md"]
-    # ⁂ The unchanged file produces no diff entry.
+    # The unchanged file produces no diff entry.
     assert entries[1]["diffs"][0]["path"] != "design.md"
 
 
@@ -385,14 +385,14 @@ def test_unchanged_snapshot_shows_no_diff_summary(auth_client):
 
     entries = response.context["entries"]
     assert entries[1]["diffs"] == []
-    # ⁂ Only the first turn (diffed against empty) shows a summary.
+    # Only the first turn (diffed against empty) shows a summary.
     assert entries[0]["diffs"] != []
     assert response.content.decode().count("file changed") == 1
 
 
 @pytest.mark.django_db
 def test_error_turn_snapshot_advances_diff_baseline(auth_client):
-    """⁂ An error turn still snapshots artifacts; the next completed turn
+    """An error turn still snapshots artifacts; the next completed turn
     diffs against that, not against the last completed one."""
     session = SpecSessionFactory()
     SpecTurnFactory(
@@ -410,7 +410,7 @@ def test_error_turn_snapshot_advances_diff_baseline(auth_client):
     response = auth_client.get(_spec_url(session))
 
     entries = response.context["entries"]
-    assert entries[0]["diffs"] == []  # ⁂ error turns render no diff summary
+    assert entries[0]["diffs"] == []  # error turns render no diff summary
     assert entries[1]["diffs"] == []
 
 
@@ -478,7 +478,7 @@ def test_current_spec_without_artifacts_shows_empty_state(auth_client):
 
 @pytest.mark.django_db
 def test_current_spec_uses_latest_nonempty_snapshot(auth_client):
-    """⁂ A later empty snapshot (deleted change dir) must not blank the view."""
+    """A later empty snapshot (deleted change dir) must not blank the view."""
     session = SpecSessionFactory()
     SpecTurnFactory(
         session=session,
@@ -636,7 +636,7 @@ def test_error_turn_marked_with_diagnostics(auth_client):
     assert "exceeding the 3600s timeout" in body
     assert "error_max_turns" in body
     assert "Retry" in body
-    # ⁂ A resumable error is not the session-gone class.
+    # A resumable error is not the session-gone class.
     assert "session was lost" not in body
 
 
@@ -693,7 +693,7 @@ def test_retry_of_failed_critique_queues_critique(auth_client):
 
 @pytest.mark.django_db
 def test_retry_of_chat_turn_rejected_on_ready_session(auth_client):
-    """⁂ Ready is read-only for the chat: retrying a failed chat turn is
+    """Ready is read-only for the chat: retrying a failed chat turn is
     gated exactly like the composer, and needs a reopen first."""
     session = SpecSessionFactory(stage=SpecStage.READY)
     failed = SpecTurnFactory(
@@ -708,7 +708,7 @@ def test_retry_of_chat_turn_rejected_on_ready_session(auth_client):
 
 @pytest.mark.django_db
 def test_retry_of_failed_critique_allowed_on_ready_session(auth_client):
-    """⁂ Critiques are explicitly offered in ready, so retrying a failed one
+    """Critiques are explicitly offered in ready, so retrying a failed one
     stays allowed there."""
     session = SpecSessionFactory(stage=SpecStage.READY)
     failed = SpecTurnFactory(
@@ -942,7 +942,7 @@ def test_forward_from_ready_reopens_to_propose(auth_client):
     session.refresh_from_db()
     assert session.stage == SpecStage.PROPOSE
     assert response.context["composer_prefill"] == "Needs work."
-    # ⁂ No turn was queued by forwarding itself.
+    # No turn was queued by forwarding itself.
     assert session.turns.count() == 2
 
 
@@ -1049,7 +1049,7 @@ def test_spec_list_state_badges(auth_client, stage, turn_kwargs, expected):
 
 @pytest.mark.django_db
 def test_spec_list_error_beats_ready_stage(auth_client):
-    """⁂ A failed critique on a ready session must scream, not show ready."""
+    """A failed critique on a ready session must scream, not show ready."""
     session = SpecSessionFactory(stage=SpecStage.READY)
     SpecTurnFactory(
         session=session, kind=SpecTurnKind.CRITIQUE, status=SpecTurnStatus.ERROR

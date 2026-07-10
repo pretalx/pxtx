@@ -167,7 +167,7 @@ def test_queueing_a_new_turn_clears_waiting_on_user():
 
 @pytest.mark.django_db
 def test_waiting_on_user_requires_no_earlier_active_turn():
-    """⁂ A queued turn behind a completed one (e.g. after a startup requeue)
+    """A queued turn behind a completed one (e.g. after a startup requeue)
     means the worker still has work — the session is not waiting."""
     session = SpecSessionFactory()
     SpecTurnFactory(session=session, status=SpecTurnStatus.QUEUED)
@@ -318,7 +318,7 @@ def test_turn_non_status_update_logs_plain_update():
 
 @pytest.mark.django_db
 def test_session_fresh_claude_session_id_logs_plain_update():
-    """⁂ Fresh-session recovery swaps the session-level claude id; that is an
+    """Fresh-session recovery swaps the session-level claude id; that is an
     update entry, not a stage entry."""
     session = SpecSessionFactory()
     old_id = session.claude_session_id
@@ -395,7 +395,7 @@ def test_queue_turn_rotates_session_id_after_session_gone():
 @pytest.mark.parametrize(
     "raw_result",
     (
-        {},  # ⁂ timeout class: session still resumable
+        {},  # timeout class: session still resumable
         {"type": "result", "is_error": True, "errors": ["max turns"]},
     ),
 )
@@ -439,7 +439,7 @@ def test_queue_turn_critique_never_rotates_session_id():
 
 @pytest.mark.django_db
 def test_queue_turn_rotation_keys_on_latest_chat_turn_only():
-    """⁂ A critique failing after a healthy chat turn says nothing about the
+    """A critique failing after a healthy chat turn says nothing about the
     chat session — no rotation."""
     session = SpecSessionFactory()
     original = session.claude_session_id
@@ -499,7 +499,7 @@ def test_latest_snapshot_empty_without_finished_turns():
 
 @pytest.mark.django_db
 def test_latest_snapshot_skips_active_turns():
-    """⁂ A freshly queued turn (empty snapshot by definition) must not hide
+    """A freshly queued turn (empty snapshot by definition) must not hide
     the last finished turn's snapshot."""
     session = SpecSessionFactory()
     SpecTurnFactory(
@@ -514,7 +514,7 @@ def test_latest_snapshot_skips_active_turns():
 
 @pytest.mark.django_db
 def test_latest_snapshot_reflects_latest_finished_turn_even_when_empty():
-    """⁂ An error turn whose snapshot came back empty (change dir deleted) is
+    """An error turn whose snapshot came back empty (change dir deleted) is
     the truth about the disk — latest_snapshot must not fall back."""
     session = SpecSessionFactory()
     SpecTurnFactory(

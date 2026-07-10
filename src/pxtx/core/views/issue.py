@@ -163,7 +163,7 @@ def _sort_headers(params, sort, direction):
 
 
 def _filtered_issues(params):
-    # ⁂ spec_session rides along on the same query so the spec pill on each
+    # spec_session rides along on the same query so the spec pill on each
     # row costs no extra queries; missing sessions render as empty (reverse
     # one-to-one DoesNotExist is template-silent).
     qs = Issue.objects.select_related("milestone", "spec_session").annotate(

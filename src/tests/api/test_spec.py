@@ -48,7 +48,7 @@ def test_spec_session_detail_returns_stage_cost_and_turns(token_client):
     }
     assert data["issue"] == session.issue.number
     assert data["stage"] == "propose"
-    # ⁂ The latest turn is an error, so the session is not waiting on user.
+    # The latest turn is an error, so the session is not waiting on user.
     assert data["waiting_on_user"] is False
     assert data["total_cost_usd"] == "0.300000"
     assert [t["id"] for t in data["turns"]] == [completed.pk, errored.pk]
@@ -107,7 +107,7 @@ def test_spec_artifacts_returns_latest_finished_snapshot(token_client):
         status=SpecTurnStatus.COMPLETED,
         artifacts={"proposal.md": "# New", "specs/api/spec.md": "# API"},
     )
-    # ⁂ A queued turn has no snapshot yet and must not shadow the latest
+    # A queued turn has no snapshot yet and must not shadow the latest
     # finished one.
     SpecTurnFactory(session=session)
 
@@ -125,7 +125,7 @@ def test_spec_artifacts_returns_latest_finished_snapshot(token_client):
 
 @pytest.mark.django_db
 def test_spec_artifacts_survive_later_blank_snapshot(token_client):
-    """⁂ A crashed turn snapshotting an empty change dir after a completed
+    """A crashed turn snapshotting an empty change dir after a completed
     turn with artifacts must not make `pxtx spec pull` come up empty — the
     endpoint mirrors the UI's current-spec view, not the raw latest
     snapshot."""

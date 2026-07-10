@@ -21,7 +21,7 @@ from pxtx.core.models.spec import ACTIVE_TURN_STATUSES, FINISHED_TURN_STATUSES
 from pxtx.core.text import render_markdown
 from pxtx.core.views._helpers import is_htmx, request_actor
 
-# ⁂ Stage transitions that involve claude queue a turn with the matching
+# Stage transitions that involve claude queue a turn with the matching
 # /opsx: command. Marking ready and reopening are pxtx-only state flips and
 # queue nothing.
 STAGE_COMMANDS = {
@@ -30,12 +30,12 @@ STAGE_COMMANDS = {
 }
 
 STATE_LABELS = {
-    "waiting": "⁂ waiting on you",
-    "error": "⁂ error",
-    "running": "⁂ running",
-    "queued": "⁂ queued",
-    "ready": "⁂ ready",
-    "new": "⁂ new",
+    "waiting": "waiting on you",
+    "error": "error",
+    "running": "running",
+    "queued": "queued",
+    "ready": "ready",
+    "new": "new",
 }
 
 
@@ -46,7 +46,7 @@ def _get_session(number):
 
 
 def _artifact_diffs(previous, current):
-    """⁂ Unified diffs between two snapshots, one entry per changed file."""
+    """Unified diffs between two snapshots, one entry per changed file."""
     diffs = []
     for path in sorted(set(previous) | set(current)):
         old, new = previous.get(path, ""), current.get(path, "")
@@ -64,7 +64,7 @@ def _artifact_diffs(previous, current):
 
 
 def _transcript_entries(session):
-    """⁂ Turns paired with render metadata: per-file diffs against the
+    """Turns paired with render metadata: per-file diffs against the
     previous finished turn's snapshot (the first diffs against empty), and
     pretty-printed raw results for failed turns."""
     entries = []
@@ -76,7 +76,7 @@ def _transcript_entries(session):
         if turn.status == SpecTurnStatus.ERROR and turn.raw_result:
             entry["raw_json"] = json.dumps(turn.raw_result, indent=2)
         if turn.status in FINISHED_TURN_STATUSES:
-            # ⁂ Error turns snapshot too; they advance the diff baseline so
+            # Error turns snapshot too; they advance the diff baseline so
             # the next completed turn only shows what it actually changed.
             previous = turn.artifacts
         entries.append(entry)
@@ -95,7 +95,7 @@ def _session_context(session, *, composer_prefill="", preserve_inputs=False):
         and bool(session.latest_snapshot),
         "total_cost": session.turns.aggregate(total=Sum("cost_usd"))["total"],
         "composer_prefill": composer_prefill,
-        # ⁂ True only for timed poll responses: it stamps hx-preserve on the
+        # True only for timed poll responses: it stamps hx-preserve on the
         # user-input elements so a background swap cannot wipe a draft, while
         # user-action swaps still replace (and thus clear) them.
         "preserve_inputs": preserve_inputs,
@@ -103,7 +103,7 @@ def _session_context(session, *, composer_prefill="", preserve_inputs=False):
 
 
 def _session_response(request, session):
-    """⁂ htmx requests get the updated session fragment swapped in place;
+    """htmx requests get the updated session fragment swapped in place;
     plain form posts fall back to a full-page redirect."""
     if is_htmx(request):
         return render(request, "core/_spec_session.html", _session_context(session))
@@ -111,7 +111,7 @@ def _session_response(request, session):
 
 
 class SpecPageView(LoginRequiredMixin, View):
-    """⁂ The per-issue spec page: transcript, composer, stage buttons. Without
+    """The per-issue spec page: transcript, composer, stage buttons. Without
     a session it offers the bootstrap affordance instead. ``?forward=<pk>``
     (set by SpecForwardView's redirect) pre-fills the composer with that
     completed critique's text."""
@@ -141,7 +141,7 @@ class SpecPageView(LoginRequiredMixin, View):
 
 
 class SpecSessionFragmentView(LoginRequiredMixin, View):
-    """⁂ Polling endpoint: the transcript/composer fragment re-requests itself
+    """Polling endpoint: the transcript/composer fragment re-requests itself
     every few seconds, but only while a turn is queued or running — the
     rendered fragment carries no polling trigger otherwise. Poll responses
     mark the composer and critique-focus inputs ``hx-preserve`` so a timed
@@ -158,7 +158,7 @@ class SpecSessionFragmentView(LoginRequiredMixin, View):
 
 
 class SpecStartView(LoginRequiredMixin, View):
-    """⁂ Bootstrap: create the session (stage explore) and queue the first
+    """Bootstrap: create the session (stage explore) and queue the first
     explore turn. A second start on an existing session is a no-op."""
 
     def post(self, request, number):
@@ -176,11 +176,11 @@ class SpecTurnQueueView(LoginRequiredMixin, View):
         session = _get_session(number)
         if session.stage == SpecStage.READY:
             return HttpResponseBadRequest(
-                "⁂ This spec is marked ready; reopen it to keep chatting."
+                "This spec is marked ready; reopen it to keep chatting."
             )
         message = request.POST.get("message", "").strip()
         if not message:
-            return HttpResponseBadRequest("⁂ The message must not be empty.")
+            return HttpResponseBadRequest("The message must not be empty.")
         session.queue_turn(message, actor=request_actor(request))
         return _session_response(request, session)
 
@@ -190,7 +190,7 @@ class SpecStageView(LoginRequiredMixin, View):
         session = _get_session(number)
         target = request.POST.get("stage", "")
         if target not in SpecStage.values:
-            return HttpResponseBadRequest("⁂ Unknown stage.")
+            return HttpResponseBadRequest("Unknown stage.")
         old_stage = session.stage
         actor = request_actor(request)
         try:
@@ -204,7 +204,7 @@ class SpecStageView(LoginRequiredMixin, View):
 
 
 class SpecRetryView(LoginRequiredMixin, View):
-    """⁂ Queue a new turn with a failed turn's message. The worker recomposes
+    """Queue a new turn with a failed turn's message. The worker recomposes
     the sent prompt as the situation calls for, including fresh-session
     recovery after the session-gone failure class. Chat retries respect the
     ready read-only gate, mirroring the composer; critique retries stay
@@ -215,7 +215,7 @@ class SpecRetryView(LoginRequiredMixin, View):
         failed = get_object_or_404(session.turns, pk=pk, status=SpecTurnStatus.ERROR)
         if failed.kind == SpecTurnKind.CHAT and session.stage == SpecStage.READY:
             return HttpResponseBadRequest(
-                "⁂ This spec is marked ready; reopen it to retry this turn."
+                "This spec is marked ready; reopen it to retry this turn."
             )
         session.queue_turn(
             failed.message, kind=failed.kind, actor=request_actor(request)
@@ -224,7 +224,7 @@ class SpecRetryView(LoginRequiredMixin, View):
 
 
 class SpecCritiqueView(LoginRequiredMixin, View):
-    """⁂ Queue a one-shot critique turn, gated on propose/ready and a spec
+    """Queue a one-shot critique turn, gated on propose/ready and a spec
     actually existing in the latest snapshot."""
 
     def post(self, request, number):
@@ -234,7 +234,7 @@ class SpecCritiqueView(LoginRequiredMixin, View):
             or not session.latest_snapshot
         ):
             return HttpResponseBadRequest(
-                "⁂ Critiques need a written spec: reach propose with artifacts first."
+                "Critiques need a written spec: reach propose with artifacts first."
             )
         focus = request.POST.get("focus", "").strip()
         session.queue_turn(
@@ -244,7 +244,7 @@ class SpecCritiqueView(LoginRequiredMixin, View):
 
 
 class SpecForwardView(LoginRequiredMixin, View):
-    """⁂ Hand a completed critique to the spec agent: reopen the session first
+    """Hand a completed critique to the spec agent: reopen the session first
     when it is ready, then land on the spec page with the composer pre-filled
     with the critique text (via the ``?forward=`` query parameter)."""
 
@@ -263,7 +263,7 @@ class SpecForwardView(LoginRequiredMixin, View):
 
 
 class SpecCurrentView(LoginRequiredMixin, View):
-    """⁂ The current-spec tab: the latest non-empty snapshot's files rendered
+    """The current-spec tab: the latest non-empty snapshot's files rendered
     as markdown, one file at a time, navigable via ``?file=``."""
 
     def get(self, request, number):
@@ -287,7 +287,7 @@ class SpecCurrentView(LoginRequiredMixin, View):
 
 
 def _session_state(session):
-    """⁂ One badge per session, most urgent signal wins: an active turn
+    """One badge per session, most urgent signal wins: an active turn
     beats a stale error (a retry is already queued), errors beat everything
     else, then the waiting-on-you highlight, then ready. Only turn-less
     sessions fall through to new."""
@@ -303,7 +303,7 @@ def _session_state(session):
 
 
 class SpecListView(LoginRequiredMixin, View):
-    """⁂ The travel inbox: every spec session with stage, state badge, and
+    """The travel inbox: every spec session with stage, state badge, and
     cost, waiting-on-you sessions first."""
 
     def get(self, request):

@@ -293,7 +293,7 @@ class IssueReferenceDeleteView(APIView):
 
 
 class IssueSpecView(APIView):
-    """⁂ Read-only spec session detail, keyed by issue number.
+    """Read-only spec session detail, keyed by issue number.
 
     Spec sessions are driven exclusively through the UI; agents read specs
     out, they never drive sessions — so there is no write surface at all
@@ -315,7 +315,7 @@ class IssueSpecView(APIView):
 
 
 class IssueSpecArtifactsView(APIView):
-    """⁂ The latest non-empty artifact snapshot as a relative-path → content
+    """The latest non-empty artifact snapshot as a relative-path → content
     mapping.
 
     This is what ``pxtx spec pull`` materializes under

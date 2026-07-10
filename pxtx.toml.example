@@ -20,24 +20,24 @@ repos = [
   # "pretalx/pretalx-downstream",
 ]
 
-# ⁂ Spec-session worker (`manage.py runworker`). The worker refuses to
+# Spec-session worker (`manage.py runworker`). The worker refuses to
 # start without a checkout path; the feature stays inert until this
 # section is filled in.
 #[spec]
-# ⁂ pretalx checkout the worker runs `claude -p` in. Must have openspec
+# pretalx checkout the worker runs `claude -p` in. Must have openspec
 # initialized; claude sessions are bound to this path.
 #checkout_path = "/home/pxtx/pretalx"
-# ⁂ Claude binary to invoke. Defaults to `claude` on PATH.
+# Claude binary to invoke. Defaults to `claude` on PATH.
 #claude_binary = "claude"
-# ⁂ Model passed via --model. No fallback model on purpose: spec quality
+# Model passed via --model. No fallback model on purpose: spec quality
 # is the point.
 #model = "fable"
-# ⁂ Deployed agent settings file, passed via --settings. Note that claude
+# Deployed agent settings file, passed via --settings. Note that claude
 # silently ignores files that fail validation; the worker logs a warning
 # when the file is missing or not valid JSON.
 #settings_file = "/etc/pxtx-claude-settings.json"
-# ⁂ Per-turn cost cap, passed via --max-budget-usd. Default: 5.0.
+# Per-turn cost cap, passed via --max-budget-usd. Default: 5.0.
 #max_budget_usd = 5.0
-# ⁂ Subprocess timeout in seconds before the worker kills a claude run.
+# Subprocess timeout in seconds before the worker kills a claude run.
 # Default: 3600 (spec turns can legitimately run 10-30 minutes).
 #timeout_seconds = 3600

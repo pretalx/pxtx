@@ -23,7 +23,7 @@
                 <td>
                     {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span> {% endif %}
                     <a class="row-link" href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.title }}</a>
-                    {% if issue.spec_session %}<a class="spec-pill spec-pill-{% if issue.spec_session.stage == 'ready' %}ready{% else %}progress{% endif %}" href="{% url 'core:spec-page' number=issue.number %}" title="⁂ Spec session: {{ issue.spec_session.get_stage_display }}">{% if issue.spec_session.stage == 'ready' %}⁂ spec ✓{% else %}⁂ spec …{% endif %}</a>{% endif %}
+                    {% if issue.spec_session %}<a class="spec-pill spec-pill-{% if issue.spec_session.stage == 'ready' %}ready{% else %}progress{% endif %}" href="{% url 'core:spec-page' number=issue.number %}" title="Spec session: {{ issue.spec_session.get_stage_display }}">{% if issue.spec_session.stage == 'ready' %}spec ✓{% else %}spec …{% endif %}</a>{% endif %}
                 </td>
                 {% include "core/_issue_cell.html" with issue=issue field="status" editing=False %}
                 {% include "core/_issue_cell.html" with issue=issue field="priority" editing=False %}

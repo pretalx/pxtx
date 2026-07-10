@@ -3,17 +3,17 @@
 {% block title %}Specs – pxtx{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'core/spec.css' %}">{% endblock %}
 {% block content %}
-<h1>⁂ Specs</h1>
+<h1>Specs</h1>
 <div class="card">
     {% if sessions %}
     <table class="spec-list">
         <thead>
             <tr>
-                <th>⁂ Issue</th>
-                <th>⁂ Title</th>
-                <th>⁂ Stage</th>
-                <th>⁂ State</th>
-                <th>⁂ Cost</th>
+                <th>Issue</th>
+                <th>Title</th>
+                <th>Stage</th>
+                <th>State</th>
+                <th>Cost</th>
             </tr>
         </thead>
         <tbody>
@@ -30,7 +30,7 @@
     </table>
     {% else %}
     <div class="empty">
-        <p>⁂ No spec sessions yet. Start one from an issue's spec page.</p>
+        <p>No spec sessions yet. Start one from an issue's spec page.</p>
     </div>
     {% endif %}
 </div>

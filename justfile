@@ -1,42 +1,29 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set quiet
+set fallback
+set default-list
 
-_ := require("uv")
 python := "uv run python"
 uv_dev := "uv run --extra=dev"
-src_dir := "src"
 
-[private]
-default:
-    just --list
-
-# Install dependencies
-[group('development')]
+# Install dependencies (use --extras to include dev)
+[group('dependencies')]
 install *args:
-    uv lock --upgrade
     uv sync {{ args }}
 
 # Install all dependencies
-[group('development')]
+[group('dependencies')]
 install-all:
+    uv sync --all-extras
+
+# Upgrade locked dependencies to their latest compatible versions
+[group('dependencies')]
+deps-upgrade:
     uv lock --upgrade
     uv sync --all-extras
 
-# Run the development server or other commands, e.g. `just run makemigrations`
-[group('development')]
-[working-directory("src")]
-run *args="runserver --skip-checks":
-    {{ python }} manage.py {{ args }}
-
-# Open Django shell
-[group('development')]
-[no-exit-message]
-[working-directory("src")]
-python *args:
-    {{ python }} manage.py shell "$@"
-
 # Check for outdated dependencies
-[group('development')]
+[group('dependencies')]
 [script('python3')]
 deps-outdated:
     import json, subprocess, tomllib
@@ -52,7 +39,7 @@ deps-outdated:
         print(f"{p['name']}: {p['version']} → {p['latest_version']}")
 
 # Bump a dependency version
-[group('development')]
+[group('dependencies')]
 [script('python3')]
 deps-bump package version:
     import subprocess, tomllib
@@ -63,8 +50,26 @@ deps-bump package version:
     deps = tomllib.load(open('pyproject.toml', 'rb')).get('project', {}).get('dependencies', [])
     old = next((d for d in deps if Requirement(d).name.lower() == '{{ package }}'.lower()), None)
     if old:
-        p.write_text(p.read_text().replace(old, f'{Requirement(old).name}~={{ version }}'))
+        req = Requirement(old)
+        extras = f"[{','.join(sorted(req.extras))}]" if req.extras else ""
+        p.write_text(p.read_text().replace(old, f'{req.name}{extras}~={{ version }}'))
+    else:
+        print("{{ package }} is not a direct dependency; updating the lock only.")
     subprocess.run(['uv', 'lock', '--upgrade-package', '{{ package }}'])
+
+# Run the development server or other commands, e.g. `just run makemigrations`
+[group('development')]
+[working-directory("src")]
+run *args="runserver --skip-checks":
+    {{ python }} manage.py {{ args }}
+
+# Open Django shell
+[group('development')]
+[no-exit-message]
+[positional-arguments]
+[working-directory("src")]
+python *args:
+    {{ python }} manage.py shell "$@"
 
 # Remove Python caches, build artifacts, and coverage reports
 [group('development')]
@@ -86,11 +91,19 @@ check *args="":
 
 # Run all formatters and linters
 [group('linting')]
-fmt: format (check "--fix")
+fmt: format (check "--fix") && fmt-done
+
+[private]
+fmt-done:
+    echo '{{ GREEN }}Formatting complete{{ NORMAL }}'
 
 # Run all code quality checks (no fix)
 [group('linting')]
-fmt-check: (format "--check") check
+fmt-check: (format "--check") check && check-done
+
+[private]
+check-done:
+    echo '{{ GREEN }}All checks passed{{ NORMAL }}'
 
 # Collect static files for production
 [group('operations')]
@@ -110,7 +123,7 @@ serve *args="--bind 0.0.0.0:8000 --workers 2":
 runperiodic:
     {{ python }} manage.py runperiodic
 
-# ⁂ Spec worker: process queued spec turns via claude -p (needs [spec] config)
+# Spec worker: process queued spec turns via claude -p (needs [spec] config)
 [group('operations')]
 [working-directory("src")]
 runworker *args:
@@ -120,41 +133,66 @@ runworker *args:
 [group('tests')]
 [positional-arguments]
 test *args:
-    {{ uv_dev }} pytest --cov=src --cov-report=term-missing:skip-covered --cov-config=pyproject.toml "$@"
+    {{ uv_dev }} pytest "$@"
 
 # Run tests in parallel (requires pytest-xdist)
 [group('tests')]
 [positional-arguments]
-test-parallel n="auto" *args:
-    shift; just test -n {{ n }} "$@"
+test-parallel *args:
+    just test -n auto "$@"
+
+# Run tests with coverage report
+[group('tests')]
+[positional-arguments]
+test-coverage *args:
+    just test --cov=src --cov-report=term-missing:skip-covered --cov-config=pyproject.toml "$@"
+
+# Show test coverage report in browser
+[group('tests')]
+[script('bash')]
+test-coverage-report: test-coverage
+    set -euo pipefail
+    if [ -f "htmlcov/index.html" ]; then
+        open htmlcov/index.html 2>/dev/null || \
+        xdg-open htmlcov/index.html 2>/dev/null || \
+        echo "Coverage report: htmlcov/index.html"
+    else
+        echo "No coverage report found. Run just test-coverage first."
+    fi
 
 # Install the CLI package's dev environment
 [group('cli')]
 [working-directory("cli")]
 cli-install:
+    uv sync --all-extras
+
+# Upgrade the CLI's locked dependencies
+[group('cli')]
+[working-directory("cli")]
+cli-deps-upgrade:
     uv lock --upgrade
     uv sync --all-extras
 
 # Run the CLI test suite (with coverage)
 [group('cli')]
-[working-directory("cli")]
 [positional-arguments]
+[working-directory("cli")]
 cli-test *args:
-    uv run --extra=dev pytest --cov=src --cov-report=term-missing:skip-covered --cov-config=pyproject.toml "$@"
+    {{ uv_dev }} pytest --cov=src --cov-report=term-missing:skip-covered --cov-config=pyproject.toml "$@"
 
 # Run ruff format + check --fix on the CLI
 [group('cli')]
 [working-directory("cli")]
 cli-fmt:
-    uv run --extra=dev ruff format
-    uv run --extra=dev ruff check --fix
+    {{ uv_dev }} ruff format
+    {{ uv_dev }} ruff check --fix
 
 # Ruff check the CLI without applying fixes
 [group('cli')]
 [working-directory("cli")]
 cli-fmt-check:
-    uv run --extra=dev ruff format --check
-    uv run --extra=dev ruff check
+    {{ uv_dev }} ruff format --check
+    {{ uv_dev }} ruff check
 
 # Build the CLI sdist + wheel into cli/dist/
 [group('cli')]

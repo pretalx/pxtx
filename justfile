@@ -60,8 +60,9 @@ deps-bump package version:
 # Run the development server or other commands, e.g. `just run makemigrations`
 [group('development')]
 [working-directory("src")]
-run *args="runserver --skip-checks":
-    {{ python }} manage.py {{ args }}
+[positional-arguments]
+run *args:
+    @if [ "$#" -eq 0 ]; then set -- runserver --skip-checks; fi; {{ python }} manage.py "$@"
 
 # Open Django shell
 [group('development')]

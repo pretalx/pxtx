@@ -393,6 +393,28 @@ def test_issue_show_prints_detail(cli_config, mocked_responses, capsys):
     assert "PX-47: x" in capsys.readouterr().out
 
 
+def test_show_alias_prints_detail(cli_config, mocked_responses, capsys):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/",
+        json={
+            "slug": "PX-47",
+            "title": "x",
+            "status": "open",
+            "priority": 3,
+            "effort_minutes": None,
+            "assignee": "",
+            "milestone": None,
+            "created_at": "2026-04-22T10:00:00+00:00",
+            "updated_at": "2026-04-22T10:00:00+00:00",
+        },
+    )
+
+    code = cli.main(["show", "PX-47"])
+
+    assert code == 0
+    assert "PX-47: x" in capsys.readouterr().out
+
+
 def test_issue_show_with_comments(cli_config, mocked_responses, capsys):
     mocked_responses.get(
         f"{URL}/api/v1/issues/7/",

@@ -37,7 +37,7 @@ pxtx issue list [--status open,wip,blocked]
                 [--priority will,sollte] [--milestone 25.1]
                 [--mine] [--assignee name]
                 [--highlighted] [--search "term"]
-pxtx issue show PX-47 [--comments]
+pxtx issue show PX-47 [--comments]        # or: pxtx show PX-47
 pxtx issue set PX-47 [--priority will] [--effort 2-6h]   # narrow edit
 pxtx issue close PX-47 [--wontfix]
 pxtx issue comment PX-47 "message"        # or: --stdin

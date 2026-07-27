@@ -582,6 +582,11 @@ def build_parser():
     take.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
     take.set_defaults(func=cmd_issue_take)
 
+    show_alias = sub.add_parser("show", help="alias for 'issue show'")
+    show_alias.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
+    show_alias.add_argument("--comments", action="store_true")
+    show_alias.set_defaults(func=cmd_issue_show)
+
     pr = sub.add_parser("pr", help="link a github PR to an issue")
     pr.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
     pr.add_argument(

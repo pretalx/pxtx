@@ -101,6 +101,7 @@ ignore = [
   "BLE001",  # Blind exceptions are fine in error-handling code
   "C901",    # We do do complexity
   "COM812",  # Trailing commas are formatter territory
+  "CPY001",  # No copyright headers here
   "D",       # We do not enforce docstyles
   "DJ001",   # We live in a state of sin
   "E501",    # Long lines are formatter territory

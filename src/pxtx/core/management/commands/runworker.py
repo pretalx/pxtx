@@ -95,10 +95,12 @@ def compose_push_note(turn, push_turn):
     agent must re-read before continuing."""
     issue = turn.session.issue
     parts = [
-        f"Note: `openspec/changes/pxtx-{issue.number}/` was replaced "
-        f"with files pushed by {push_turn.actor}. Any version of these "
-        "files you remember is stale — re-read the change directory "
-        "before continuing."
+        (
+            f"Note: `openspec/changes/pxtx-{issue.number}/` was replaced "
+            f"with files pushed by {push_turn.actor}. Any version of these "
+            "files you remember is stale — re-read the change directory "
+            "before continuing."
+        )
     ]
     if description := describe_push(push_turn):
         parts.append(description)
@@ -112,11 +114,13 @@ def compose_push_framing(turn, push_turn):
     directly around the existing change instead."""
     issue = turn.session.issue
     parts = [
-        f"An OpenSpec change for this issue already exists at "
-        f"`openspec/changes/pxtx-{issue.number}/`, materialized from files "
-        f"pushed by {push_turn.actor}. Read those files first, then work "
-        f"on that existing change — keep the name `pxtx-{issue.number}`, "
-        "never create a differently named change."
+        (
+            f"An OpenSpec change for this issue already exists at "
+            f"`openspec/changes/pxtx-{issue.number}/`, materialized from files "
+            f"pushed by {push_turn.actor}. Read those files first, then work "
+            f"on that existing change — keep the name `pxtx-{issue.number}`, "
+            "never create a differently named change."
+        )
     ]
     if description := describe_push(push_turn):
         parts.append(description)
@@ -164,8 +168,10 @@ def compose_first_prompt(turn, push_turn=None):
     if push_turn is None:
         parts = [
             f"{OPSX_COMMANDS[turn.stage]} pxtx-{issue.number}",
-            f"Name the OpenSpec change exactly `pxtx-{issue.number}` — never "
-            "pick a different change name.",
+            (
+                f"Name the OpenSpec change exactly `pxtx-{issue.number}` — "
+                "never pick a different change name."
+            ),
         ]
     else:
         parts = [compose_push_framing(turn, push_turn)]
@@ -197,13 +203,15 @@ def compose_first_prompt(turn, push_turn=None):
 def compose_critique_prompt(turn):
     issue = turn.session.issue
     parts = [
-        "You are an adversarial spec reviewer with fresh eyes. Read the "
-        f"OpenSpec change in `openspec/changes/pxtx-{issue.number}/` and "
-        "critique it against this codebase: hunt for requirements that "
-        "contradict existing behaviour, missing or underspecified scenarios, "
-        "hidden complexity, and anything that will not survive "
-        "implementation. Be specific and cite files. Do not modify any "
-        "files — reply with your findings only.",
+        (
+            "You are an adversarial spec reviewer with fresh eyes. Read the "
+            f"OpenSpec change in `openspec/changes/pxtx-{issue.number}/` and "
+            "critique it against this codebase: hunt for requirements that "
+            "contradict existing behaviour, missing or underspecified scenarios, "
+            "hidden complexity, and anything that will not survive "
+            "implementation. Be specific and cite files. Do not modify any "
+            "files — reply with your findings only."
+        ),
         f"# Issue {issue.slug}: {issue.title}",
     ]
     if issue.description:

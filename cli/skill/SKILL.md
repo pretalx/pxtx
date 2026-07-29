@@ -176,6 +176,11 @@ uvx pxtx issue-ref PX-47 pretalx/pretalx#9912
 Like `pxtx pr`, the call is idempotent on `(kind, repo, number)` — a
 re-run with the same ref is a no-op rather than a duplicate row.
 
+Both `--github-issue` and `issue-ref` also take unambiguous PR refs
+(`github.com/.../pull/N`, `owner/repo!N`) and link them as PR refs, so you
+don't need to know which kind a URL is before you paste it. `owner/repo#N`
+is always read as an issue — use `!` or the full URL when you mean a PR.
+
 **"Record who cares / what to read."** Append to an issue's side metadata
 without a full edit — both commands are idempotent on `(label, url)`, so
 re-running is a no-op:

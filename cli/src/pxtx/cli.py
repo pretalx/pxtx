@@ -116,10 +116,10 @@ def cmd_issue_new(args, client, config):
     # user-facing error that looks like the create failed.
     github_ref_payload = None
     if args.github_issue:
-        repo, number = parse_issue_ref(
+        kind, repo, number = parse_issue_ref(
             args.github_issue, default_repo=config.default_repo
         )
-        github_ref_payload = {"kind": "issue", "repo": repo, "number": number}
+        github_ref_payload = {"kind": kind, "repo": repo, "number": number}
     payload = {"title": args.title}
     if args.priority:
         payload["priority"] = PRIORITY_MAP[args.priority]
@@ -255,25 +255,36 @@ def parse_pr_ref(value, *, default_repo):
 
 
 def parse_issue_ref(value, *, default_repo):
-    """Parse a GitHub issue reference into ``(repo, number)``.
+    """Parse a GitHub issue reference into ``(kind, repo, number)``.
 
     Accepted forms:
     - ``42`` (bare number, uses ``default_repo``)
     - ``owner/repo#42``
     - ``https://github.com/owner/repo/issues/42``
+
+    Unambiguous PR forms (``.../pull/42``, ``owner/repo!42``) are accepted
+    too and come back as ``kind="pr"``: the caller wanted that link, and
+    refusing it only costs a retry. ``owner/repo#42`` stays an issue ref
+    because GitHub's own numbering makes it indistinguishable.
     """
     value = value.strip()
     match = ISSUE_URL_PATTERN.match(value)
     if match:
-        return match.group(1), int(match.group(2))
+        return "issue", match.group(1), int(match.group(2))
+    match = PR_URL_PATTERN.match(value)
+    if match:
+        return "pr", match.group(1), int(match.group(2))
     match = ISSUE_SHORT_PATTERN.match(value)
     if match:
-        return match.group(1), int(match.group(2))
+        return "issue", match.group(1), int(match.group(2))
+    match = PR_SHORT_PATTERN.match(value)
+    if match:
+        return "pr", match.group(1), int(match.group(2))
     if value.isdigit():
         if not default_repo:
             raise CliError("bare issue number needs 'default_repo' in config")
-        return default_repo, int(value)
-    raise CliError(f"not an issue reference: {value}")
+        return "issue", default_repo, int(value)
+    raise CliError(f"not an issue or PR reference: {value}")
 
 
 def cmd_pr_link(args, client, config):
@@ -288,9 +299,9 @@ def cmd_pr_link(args, client, config):
 
 
 def cmd_issue_ref_link(args, client, config):
-    repo, number = parse_issue_ref(args.ref, default_repo=config.default_repo)
+    kind, repo, number = parse_issue_ref(args.ref, default_repo=config.default_repo)
     ref = client.add_github_ref(
-        args.number, {"kind": "issue", "repo": repo, "number": number}
+        args.number, {"kind": kind, "repo": repo, "number": number}
     )
     if args.json:
         print_json(ref)
@@ -537,7 +548,7 @@ def build_parser():
         metavar="REF",
         help=(
             "link a GitHub issue after creation: bare number, owner/repo#N, "
-            "or github.com/.../issues/N URL"
+            "or github.com/.../issues/N URL; PR refs are linked as PRs"
         ),
     )
     new.set_defaults(func=cmd_issue_new)
@@ -599,7 +610,10 @@ def build_parser():
     issue_ref.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
     issue_ref.add_argument(
         "ref",
-        help="GH issue: bare number, owner/repo#N, or github.com/.../issues/N URL",
+        help=(
+            "GH issue: bare number, owner/repo#N, or github.com/.../issues/N URL; "
+            "PR refs are linked as PRs"
+        ),
     )
     issue_ref.set_defaults(func=cmd_issue_ref_link)
 

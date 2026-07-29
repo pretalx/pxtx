@@ -696,11 +696,17 @@ def test_pr_link_json_output(cli_config, mocked_responses, capsys):
 @pytest.mark.parametrize(
     ("value", "expected"),
     (
-        ("42", ("pretalx/pretalx", 42)),
-        ("owner/repo#7", ("owner/repo", 7)),
-        ("https://github.com/owner/repo/issues/99", ("owner/repo", 99)),
-        ("https://github.com/owner/repo/issues/99#comment-1", ("owner/repo", 99)),
-        ("HTTPS://GitHub.com/Owner/Repo/issues/3", ("Owner/Repo", 3)),
+        ("42", ("issue", "pretalx/pretalx", 42)),
+        ("owner/repo#7", ("issue", "owner/repo", 7)),
+        ("https://github.com/owner/repo/issues/99", ("issue", "owner/repo", 99)),
+        (
+            "https://github.com/owner/repo/issues/99#comment-1",
+            ("issue", "owner/repo", 99),
+        ),
+        ("HTTPS://GitHub.com/Owner/Repo/issues/3", ("issue", "Owner/Repo", 3)),
+        ("https://github.com/owner/repo/pull/99", ("pr", "owner/repo", 99)),
+        ("https://github.com/owner/repo/pull/99/files", ("pr", "owner/repo", 99)),
+        ("owner/repo!7", ("pr", "owner/repo", 7)),
     ),
 )
 def test_parse_issue_ref_accepts_known_forms(value, expected):
@@ -713,7 +719,7 @@ def test_parse_issue_ref_bare_number_requires_default_repo():
 
 
 def test_parse_issue_ref_rejects_garbage():
-    with pytest.raises(cli.CliError, match="not an issue reference"):
+    with pytest.raises(cli.CliError, match="not an issue or PR reference"):
         cli.parse_issue_ref("not-a-ref", default_repo="pretalx/pretalx")
 
 
@@ -838,8 +844,62 @@ def test_issue_new_with_bad_github_issue_fails_before_create(
     code = cli.main(["issue", "new", "--title", "x", "--github-issue", "not-a-ref"])
 
     assert code == 2
-    assert "not an issue reference" in capsys.readouterr().err
+    assert "not an issue or PR reference" in capsys.readouterr().err
     assert len(mocked_responses.calls) == 0
+
+
+def test_issue_new_with_pr_url_links_it_as_a_pr(cli_config, mocked_responses, capsys):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/",
+        json={"slug": "PX-9", "number": 9, "title": "from pr"},
+        status=201,
+    )
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/9/github-refs/",
+        json={
+            "id": 11,
+            "kind": "pr",
+            "repo": "acme/widget",
+            "number": 42,
+            "display": "acme/widget!42",
+        },
+        status=201,
+    )
+
+    code = cli.main(
+        [
+            "issue",
+            "new",
+            "--title",
+            "from pr",
+            "--github-issue",
+            "https://github.com/acme/widget/pull/42",
+        ]
+    )
+
+    assert code == 0
+    assert "↔ acme/widget!42" in capsys.readouterr().out
+    attach_body = json.loads(mocked_responses.calls[1].request.body)
+    assert attach_body == {"kind": "pr", "repo": "acme/widget", "number": 42}
+
+
+def test_issue_ref_link_with_pr_url_links_it_as_a_pr(cli_config, mocked_responses):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/github-refs/",
+        json={
+            "id": 12,
+            "kind": "pr",
+            "repo": "acme/widget",
+            "number": 7,
+            "display": "acme/widget!7",
+        },
+        status=201,
+    )
+
+    cli.main(["issue-ref", "47", "https://github.com/acme/widget/pull/7"])
+
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body == {"kind": "pr", "repo": "acme/widget", "number": 7}
 
 
 def test_issue_comment_with_body(cli_config, mocked_responses, capsys):

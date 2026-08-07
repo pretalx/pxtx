@@ -1,8 +1,8 @@
 import pytest
 from django.utils import timezone
 
-from pxtx.core.models import ActivityLog, Issue, Status
-from tests.factories import IssueFactory, MilestoneFactory
+from pxtx.core.models import ActivityLog, Effort, Issue, Priority, SpecStage, Status
+from tests.factories import IssueFactory, MilestoneFactory, SpecSessionFactory
 
 pytestmark = pytest.mark.integration
 
@@ -305,6 +305,62 @@ def test_milestone_detail_orders_cards_within_column_by_order_in_milestone(auth_
         "cards"
     ]
     assert cards == [first, second, third]
+
+
+@pytest.mark.django_db
+def test_milestone_detail_cards_render_priority_and_effort_as_pills(auth_client):
+    milestone = MilestoneFactory()
+    IssueFactory(
+        milestone=milestone,
+        status=Status.OPEN,
+        priority=Priority.JETZT,
+        effort_minutes=Effort.SMALL,
+    )
+
+    body = auth_client.get(f"/milestones/{milestone.slug}/").content.decode()
+
+    assert 'class="prio prio-0"' in body
+    assert 'class="badge effort-90"' in body
+
+
+@pytest.mark.django_db
+def test_milestone_detail_cards_omit_effort_pill_when_unset(auth_client):
+    milestone = MilestoneFactory()
+    IssueFactory(milestone=milestone, status=Status.OPEN, effort_minutes=None)
+
+    body = auth_client.get(f"/milestones/{milestone.slug}/").content.decode()
+
+    assert "badge effort-" not in body
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("stage", "expected", "absent"),
+    (
+        (SpecStage.PROPOSE, "spec-pill-progress", "spec-pill-ready"),
+        (SpecStage.READY, "spec-pill-ready", "spec-pill-progress"),
+    ),
+)
+def test_milestone_detail_cards_show_spec_pill(auth_client, stage, expected, absent):
+    milestone = MilestoneFactory()
+    issue = IssueFactory(milestone=milestone, status=Status.OPEN)
+    SpecSessionFactory(issue=issue, stage=stage)
+
+    body = auth_client.get(f"/milestones/{milestone.slug}/").content.decode()
+
+    assert expected in body
+    assert absent not in body
+    assert f"/issues/{issue.number}/spec/" in body
+
+
+@pytest.mark.django_db
+def test_milestone_detail_cards_omit_spec_pill_without_session(auth_client):
+    milestone = MilestoneFactory()
+    IssueFactory(milestone=milestone, status=Status.OPEN)
+
+    body = auth_client.get(f"/milestones/{milestone.slug}/").content.decode()
+
+    assert "spec-pill" not in body
 
 
 # ---- kanban move endpoint ---------------------------------------------------

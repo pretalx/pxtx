@@ -31,7 +31,12 @@ KANBAN_VISIBLE_STATUSES = {
 
 
 def _build_columns(milestone):
-    issues = list(milestone.issues.order_by("order_in_milestone", "-created_at").all())
+    # select_related keeps the per-card spec pill off the N+1 path.
+    issues = list(
+        milestone.issues.select_related("spec_session").order_by(
+            "order_in_milestone", "-created_at"
+        )
+    )
     columns = []
     for key, label, statuses in KANBAN_COLUMNS:
         values = {status.value for status in statuses}

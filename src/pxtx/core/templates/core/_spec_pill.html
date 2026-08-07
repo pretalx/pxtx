@@ -1,0 +1,3 @@
+{% comment %}Spec session indicator. Expects ``issue`` with ``spec_session``
+prefetched — callers that render this in a loop must select_related it.{% endcomment %}
+{% if issue.spec_session %}<a class="spec-pill spec-pill-{% if issue.spec_session.stage == 'ready' %}ready{% else %}progress{% endif %}" href="{% url 'core:spec-page' number=issue.number %}" title="Spec session: {{ issue.spec_session.get_stage_display }}">{% if issue.spec_session.stage == 'ready' %}spec ✓{% else %}spec …{% endif %}</a>{% endif %}

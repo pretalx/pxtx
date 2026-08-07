@@ -498,7 +498,8 @@ button.secondary {
 .kanban-card .head { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
 .kanban-card .head a { font-weight: 500; }
 .kanban-card .px { color: var(--text-muted); font-size: 0.75rem; font-family: ui-monospace, Menlo, monospace; }
-.kanban-card .card-meta { color: var(--text-muted); font-size: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.kanban-card .card-meta { color: var(--text-muted); font-size: 0.75rem; display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+.kanban-card .card-meta .prio { font-size: 0.75rem; color: var(--text); }
 .kanban-card.sortable-ghost { opacity: 0.35; }
 .kanban-card.sortable-chosen { box-shadow: 0 0 0 2px var(--accent); }
 .kanban-card.wontfix { opacity: 0.6; }
@@ -530,7 +531,7 @@ button.secondary {
 
 .chip { font-size: 0.7rem; padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); }
 
-/* Spec session indicator on issue table rows: in progress vs ready. */
+/* Spec session indicator on issue rows and kanban cards: in progress vs ready. */
 .spec-pill {
     display: inline-block;
     font-size: 0.7rem;
@@ -538,8 +539,8 @@ button.secondary {
     border-radius: 999px;
     border: 1px solid var(--border);
     white-space: nowrap;
-    margin-left: 0.3rem;
 }
+.issue-table .spec-pill { margin-left: 0.3rem; }
 .spec-pill:hover { text-decoration: none; border-color: var(--accent); }
 .spec-pill-progress { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
 .spec-pill-ready { background: #dcfce7; border-color: #86efac; color: #166534; }

@@ -16,7 +16,7 @@ dependencies = [
   "markdown~=3.10",
   "bleach~=6.4",
   "pygments~=2.19",
-  "gunicorn~=25.3.0",
+  "gunicorn~=26.0.0",
   "whitenoise~=6.12.0",
 ]
 

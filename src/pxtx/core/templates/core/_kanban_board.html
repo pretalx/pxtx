@@ -16,11 +16,11 @@
                     <a href="{% url 'core:issue-detail' number=issue.number %}"
                        hx-get="{% url 'core:issue-modal-edit' number=issue.number %}"
                        hx-target="#issue-modal" hx-swap="innerHTML">{{ issue.title }}</a>
-                    {% spec_pill issue %}
                 </div>
                 <div class="card-meta">
                     {% priority_badge issue %}
                     {% effort_badge issue fallback="" %}
+                    {% spec_pill issue %}
                     {% if issue.assignee %}<span>{{ issue.assignee }}</span>{% endif %}
                 </div>
             </article>

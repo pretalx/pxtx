@@ -10,7 +10,12 @@ from pxtx.core.models import (
     SpecTurnStatus,
     Status,
 )
-from tests.factories import IssueFactory, SpecSessionFactory, SpecTurnFactory
+from tests.factories import (
+    IssueFactory,
+    MilestoneFactory,
+    SpecSessionFactory,
+    SpecTurnFactory,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -556,7 +561,7 @@ def test_spec_list_shows_waiting_after_push(auth_client):
 
     (listed,) = response.context["sessions"]
     assert listed.state == "waiting"
-    assert "waiting on you" in response.content.decode()
+    assert "Waiting on you" in response.content.decode()
 
 
 # --- Current spec view (3.4) ---
@@ -1231,7 +1236,7 @@ def test_spec_list_highlights_waiting_and_shows_running(auth_client):
     states = {s.pk: s.state for s in response.context["sessions"]}
     assert states == {waiting.pk: "waiting", running.pk: "running"}
     body = response.content.decode()
-    assert "waiting on you" in body
+    assert "Waiting on you" in body
     assert "spec-state-waiting" in body
     assert "spec-state-running" in body
 
@@ -1342,6 +1347,56 @@ def test_spec_list_shows_issue_status_badge(auth_client):
 
     body = response.content.decode()
     assert f'<span class="badge status-{Status.BLOCKED}">Blocked</span>' in body
+
+
+@pytest.mark.django_db
+def test_spec_list_hides_completed_issues(auth_client):
+    SpecSessionFactory(issue=IssueFactory(status=Status.COMPLETED))
+    open_session = SpecSessionFactory(issue=IssueFactory(status=Status.BLOCKED))
+
+    response = auth_client.get("/specs/")
+
+    assert [s.pk for s in response.context["sessions"]] == [open_session.pk]
+
+
+@pytest.mark.django_db
+def test_spec_list_parks_ready_sessions_at_the_bottom(auth_client):
+    ready = SpecSessionFactory(stage=SpecStage.READY)
+    SpecTurnFactory(session=ready, status=SpecTurnStatus.COMPLETED)
+    waiting = SpecSessionFactory()
+    SpecTurnFactory(session=waiting, status=SpecTurnStatus.COMPLETED)
+    new = SpecSessionFactory()
+
+    response = auth_client.get("/specs/")
+
+    assert [s.pk for s in response.context["sessions"]] == [
+        waiting.pk,
+        new.pk,
+        ready.pk,
+    ]
+
+
+@pytest.mark.django_db
+def test_spec_list_shows_release(auth_client):
+    milestone = MilestoneFactory(name="v2.0")
+    SpecSessionFactory(issue=IssueFactory(milestone=milestone))
+    SpecSessionFactory(issue=IssueFactory(milestone=None))
+
+    response = auth_client.get("/specs/")
+
+    body = response.content.decode()
+    assert f'<a href="{milestone.get_absolute_url()}">v2.0</a>' in body
+    assert "<td>—</td>" in body
+
+
+@pytest.mark.django_db
+def test_spec_list_capitalizes_state_labels(auth_client):
+    SpecSessionFactory(stage=SpecStage.EXPLORE)
+
+    response = auth_client.get("/specs/")
+
+    body = response.content.decode()
+    assert '<span class="badge spec-state spec-state-new">New</span>' in body
 
 
 @pytest.mark.django_db

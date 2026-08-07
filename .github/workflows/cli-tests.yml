@@ -21,15 +21,11 @@ jobs:
   test:
     name: pytest (cli)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.14"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version-file: .github/python-version.txt
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:

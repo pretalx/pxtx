@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 
 from pxtx.core.models import ActivityLog, Issue, Priority, Source, Status
 from tests.factories import IssueFactory, MilestoneFactory
@@ -253,3 +254,42 @@ def test_edit_form_effort_select_has_enhanced_markers(auth_client):
     # want to know — the JS fix hinges on this shape.
     assert "&lt;1h" in body
     assert "&gt;1d" in body
+
+
+@pytest.mark.django_db
+def test_create_form_omits_released_milestones(auth_client):
+    open_milestone = MilestoneFactory(slug="25-2")
+    released = MilestoneFactory(slug="25-1", released_at=timezone.now())
+
+    response = auth_client.get("/issues/new/")
+
+    choices = set(response.context["form"].fields["milestone"].queryset)
+    assert choices == {open_milestone}
+    assert released not in choices
+
+
+@pytest.mark.django_db
+def test_edit_form_keeps_released_milestone_when_already_set(auth_client):
+    open_milestone = MilestoneFactory(slug="25-2")
+    released = MilestoneFactory(slug="25-1", released_at=timezone.now())
+    other_released = MilestoneFactory(slug="24-9", released_at=timezone.now())
+    issue = IssueFactory(milestone=released)
+
+    response = auth_client.get(f"/issues/{issue.number}/edit/")
+
+    choices = set(response.context["form"].fields["milestone"].queryset)
+    assert choices == {open_milestone, released}
+    assert other_released not in choices
+
+
+@pytest.mark.django_db
+def test_edit_form_omits_released_milestones_when_unset(auth_client):
+    open_milestone = MilestoneFactory(slug="25-2")
+    released = MilestoneFactory(slug="25-1", released_at=timezone.now())
+    issue = IssueFactory(milestone=None)
+
+    response = auth_client.get(f"/issues/{issue.number}/edit/")
+
+    choices = set(response.context["form"].fields["milestone"].queryset)
+    assert choices == {open_milestone}
+    assert released not in choices

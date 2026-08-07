@@ -1,4 +1,5 @@
 from django import forms
+from django.db import models
 from django.urls import reverse_lazy
 from django.utils.text import slugify
 
@@ -42,9 +43,12 @@ class IssueForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["milestone"].queryset = Milestone.objects.order_by(
-            "-target_date", "name"
-        )
+        unreleased = models.Q(released_at__isnull=True)
+        if self.instance.milestone_id:
+            unreleased |= models.Q(pk=self.instance.milestone_id)
+        self.fields["milestone"].queryset = Milestone.objects.filter(
+            unreleased
+        ).order_by("-target_date", "name")
         self.fields["milestone"].required = False
         self.fields["milestone"].empty_label = "— none —"
         self.fields["blocked_reason"].required = False

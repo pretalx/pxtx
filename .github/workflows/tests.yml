@@ -11,12 +11,6 @@ on:
       - "PLAN.md"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "cli/**"
-      - "doc/**"
-      - "deploy/**"
-      - "README.md"
-      - "PLAN.md"
   workflow_dispatch:
 
 concurrency:

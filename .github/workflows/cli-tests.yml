@@ -8,9 +8,6 @@ on:
       - ".github/workflows/cli-tests.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "cli/**"
-      - ".github/workflows/cli-tests.yml"
   workflow_dispatch:
 
 concurrency:

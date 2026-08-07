@@ -15,7 +15,7 @@ dependencies = [
   "django-filter~=25.1",
   "markdown~=3.10",
   "bleach~=6.4",
-  "pygments~=2.19",
+  "pygments~=2.20",
   "gunicorn~=25.3.0",
   "whitenoise~=6.12.0",
 ]

@@ -1,11 +1,11 @@
-{% load rich_text %}
+{% load indicators rich_text %}
 <div class="modal-shell">
     <header class="modal-head">
         <div class="modal-title">
             {% if issue %}
             <span class="px">{{ issue.slug }}</span>
-            <span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
-            <span class="prio prio-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
+            {% status_badge issue %}
+            {% priority_badge issue %}
             {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span>{% endif %}
             {% if issue.milestone %}<a class="chip" href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% endif %}
             {% else %}

@@ -1,4 +1,4 @@
-<div id="issue-table" class="card"{% if can_reorder %} data-reorder-url-template="{% url 'core:issue-reorder' number=0 %}" data-csrf-token="{{ csrf_token }}"{% endif %}>
+{% load indicators %}<div id="issue-table" class="card"{% if can_reorder %} data-reorder-url-template="{% url 'core:issue-reorder' number=0 %}" data-csrf-token="{{ csrf_token }}"{% endif %}>
     {% if issues %}
     <table class="issue-table{% if can_reorder %} reorderable{% endif %}">
         <thead>
@@ -23,7 +23,7 @@
                 <td>
                     {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span> {% endif %}
                     <a class="row-link" href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.title }}</a>
-                    {% include "core/_spec_pill.html" with issue=issue %}
+                    {% spec_pill issue %}
                 </td>
                 {% include "core/_issue_cell.html" with issue=issue field="status" editing=False %}
                 {% include "core/_issue_cell.html" with issue=issue field="priority" editing=False %}

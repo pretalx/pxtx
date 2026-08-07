@@ -1,5 +1,5 @@
 {% extends "core/base.html" %}
-{% load static %}
+{% load indicators static %}
 {% block title %}Specs – pxtx{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'core/spec.css' %}">{% endblock %}
 {% block content %}
@@ -23,7 +23,7 @@
             <tr class="spec-row spec-row-{{ session.state }}">
                 <td><a href="{% url 'core:spec-page' number=session.issue.number %}">{{ session.issue.slug }}</a></td>
                 <td><a href="{% url 'core:spec-page' number=session.issue.number %}">{{ session.issue.title }}</a></td>
-                <td><span class="badge status-{{ session.issue.status }}">{{ session.issue.get_status_display }}</span></td>
+                <td>{% status_badge session.issue %}</td>
                 <td>{% if session.issue.milestone %}<a href="{% url 'core:milestone-detail' slug=session.issue.milestone.slug %}">{{ session.issue.milestone.name }}</a>{% else %}—{% endif %}</td>
                 <td><span class="badge spec-stage-{{ session.stage }}">{{ session.get_stage_display }}</span></td>
                 <td><span class="badge spec-state spec-state-{{ session.state }}">{{ session.state_label }}</span></td>

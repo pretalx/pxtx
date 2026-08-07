@@ -1,4 +1,4 @@
-{% comment %}Inline-editable status / priority / effort cell.
+{% load indicators %}{% comment %}Inline-editable status / priority / effort cell.
 
 ``editing`` flips the cell between a clickable badge (display) and a
 <select> whose change event POSTs the new value back. The select itself
@@ -13,8 +13,8 @@ any future ``choices-init.js`` change applies here without template churn.{% end
     hx-trigger="click"
     hx-swap="outerHTML"
     title="Click to edit {{ field }}">
-    {% if field == "status" %}<span class="badge status-{{ issue.status }}">{{ issue.get_status_display }}</span>
-    {% elif field == "priority" %}<span class="prio prio-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
-    {% elif field == "effort" %}{% if issue.effort_minutes %}<span class="badge effort-{{ issue.effort_minutes }}">{{ issue.get_effort_minutes_display }}</span>{% else %}—{% endif %}{% endif %}
+    {% if field == "status" %}{% status_badge issue %}
+    {% elif field == "priority" %}{% priority_badge issue %}
+    {% elif field == "effort" %}{% effort_badge issue %}{% endif %}
 </td>
 {% endif %}

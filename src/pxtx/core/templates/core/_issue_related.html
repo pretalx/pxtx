@@ -1,4 +1,5 @@
 {% extends "core/_issue_sidebar_section.html" %}
+{% load indicators %}
 
 {% block title %}Linked issues{% endblock %}
 {% block body %}
@@ -7,7 +8,7 @@
     {% for other in related_issues %}
     <li>
         <a href="{% url 'core:issue-detail' number=other.number %}">{{ other.slug }}</a>
-        <span class="badge status-{{ other.status }}">{{ other.get_status_display }}</span>
+        {% status_badge other %}
         {{ other.title }}
         <button type="button" class="row-delete" title="Unlink"
                 hx-post="{% url 'core:issue-related-delete' number=issue.number pk=other.ref_id %}"

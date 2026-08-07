@@ -1,4 +1,4 @@
-<div class="kanban"
+{% load indicators %}<div class="kanban"
      data-move-url="{% url 'core:milestone-kanban-move' slug=milestone.slug %}"
      data-csrf-token="{{ csrf_token }}">
     {% for column in columns %}
@@ -16,11 +16,11 @@
                     <a href="{% url 'core:issue-detail' number=issue.number %}"
                        hx-get="{% url 'core:issue-modal-edit' number=issue.number %}"
                        hx-target="#issue-modal" hx-swap="innerHTML">{{ issue.title }}</a>
-                    {% include "core/_spec_pill.html" with issue=issue %}
+                    {% spec_pill issue %}
                 </div>
                 <div class="card-meta">
-                    <span class="prio prio-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
-                    {% if issue.effort_minutes %}<span class="badge effort-{{ issue.effort_minutes }}">{{ issue.get_effort_minutes_display }}</span>{% endif %}
+                    {% priority_badge issue %}
+                    {% effort_badge issue fallback="" %}
                     {% if issue.assignee %}<span>{{ issue.assignee }}</span>{% endif %}
                 </div>
             </article>

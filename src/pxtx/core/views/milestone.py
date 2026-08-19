@@ -30,6 +30,18 @@ KANBAN_VISIBLE_STATUSES = {
 }
 
 
+def _done_sort_key(issue):
+    """Sort key for the Done column.
+
+    Issues land there without an explicit position — auto-filing on
+    completion leaves ``order_in_milestone`` at its default — so cards
+    sharing a position fall back to effort, largest first. Unestimated
+    issues sort last. Dragging a card writes dense positions and takes
+    over from there.
+    """
+    return (issue.order_in_milestone, -(issue.effort_minutes or 0))
+
+
 def _build_columns(milestone):
     # select_related keeps the per-card spec pill off the N+1 path.
     issues = list(
@@ -41,6 +53,8 @@ def _build_columns(milestone):
     for key, label, statuses in KANBAN_COLUMNS:
         values = {status.value for status in statuses}
         cards = [issue for issue in issues if issue.status in values]
+        if key == "done":
+            cards.sort(key=_done_sort_key)
         columns.append(
             {"key": key, "label": label, "cards": cards, "count": len(cards)}
         )
@@ -176,6 +190,8 @@ class MilestoneKanbanMoveView(LoginRequiredMixin, View):
                 .exclude(pk=issue.pk)
                 .order_by("order_in_milestone", "-created_at")
             )
+            if column == "done":
+                column_issues.sort(key=_done_sort_key)
             index = max(0, min(index, len(column_issues)))
             column_issues.insert(index, issue)
             updates = []

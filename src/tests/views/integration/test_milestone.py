@@ -753,3 +753,75 @@ def test_kanban_move_reorder_does_not_bump_updated_at_on_shuffled_siblings(auth_
     b.refresh_from_db()
     assert a.updated_at == a_before
     assert b.updated_at == b_before
+
+
+@pytest.mark.django_db
+def test_kanban_done_column_falls_back_to_effort_largest_first(auth_client):
+    """Auto-filed and never-dragged done cards all share order 0, so the
+    column sorts them by effort, biggest first, with unestimated last."""
+    milestone = MilestoneFactory()
+    small = IssueFactory(
+        milestone=milestone, status=Status.COMPLETED, effort_minutes=Effort.SMALL
+    )
+    unestimated = IssueFactory(
+        milestone=milestone, status=Status.WONTFIX, effort_minutes=None
+    )
+    huge = IssueFactory(
+        milestone=milestone, status=Status.COMPLETED, effort_minutes=Effort.HUGE
+    )
+
+    response = auth_client.get(f"/milestones/{milestone.slug}/")
+
+    columns = {col["key"]: col for col in response.context["columns"]}
+    assert columns["done"]["cards"] == [huge, small, unestimated]
+
+
+@pytest.mark.django_db
+def test_kanban_done_column_keeps_explicit_order_over_effort(auth_client):
+    milestone = MilestoneFactory()
+    small = IssueFactory(
+        milestone=milestone,
+        status=Status.COMPLETED,
+        effort_minutes=Effort.SMALL,
+        order_in_milestone=0,
+    )
+    huge = IssueFactory(
+        milestone=milestone,
+        status=Status.COMPLETED,
+        effort_minutes=Effort.HUGE,
+        order_in_milestone=1,
+    )
+
+    response = auth_client.get(f"/milestones/{milestone.slug}/")
+
+    columns = {col["key"]: col for col in response.context["columns"]}
+    assert columns["done"]["cards"] == [small, huge]
+
+
+@pytest.mark.django_db
+def test_kanban_move_within_done_drops_against_effort_order(auth_client):
+    """The drop index counts positions as displayed, so the dense rewrite
+    has to start from the effort-sorted order, not the raw DB order."""
+    milestone = MilestoneFactory()
+    small = IssueFactory(
+        milestone=milestone, status=Status.COMPLETED, effort_minutes=Effort.SMALL
+    )
+    huge = IssueFactory(
+        milestone=milestone, status=Status.COMPLETED, effort_minutes=Effort.HUGE
+    )
+    dragged = IssueFactory(
+        milestone=milestone, status=Status.COMPLETED, effort_minutes=Effort.MEDIUM
+    )
+
+    # Displayed order is huge, dragged, small; drop dragged to the bottom.
+    response = auth_client.post(
+        f"/milestones/{milestone.slug}/move/",
+        data={"issue": dragged.number, "column": "done", "index": 2},
+    )
+
+    assert response.status_code == 200
+    for issue in (huge, small, dragged):
+        issue.refresh_from_db()
+    assert huge.order_in_milestone == 0
+    assert small.order_in_milestone == 1
+    assert dragged.order_in_milestone == 2

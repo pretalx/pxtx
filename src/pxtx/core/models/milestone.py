@@ -23,3 +23,16 @@ class Milestone(BaseModel):
     @property
     def is_released(self):
         return self.released_at is not None
+
+    @classmethod
+    def next_upcoming(cls):
+        """Unreleased milestone with the soonest target date, if any.
+
+        Overdue milestones sort first: an unreleased release whose date has
+        passed is still the next one to ship.
+        """
+        return (
+            cls.objects.filter(released_at__isnull=True, target_date__isnull=False)
+            .order_by("target_date")
+            .first()
+        )

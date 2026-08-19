@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 from django.db import IntegrityError
 from django.utils import timezone
@@ -183,3 +185,77 @@ def test_issue_milestone_relation_exposes_issues():
     issue = IssueFactory(milestone=milestone)
 
     assert list(milestone.issues.all()) == [issue]
+
+
+@pytest.mark.django_db
+def test_issue_completion_files_into_nearest_unreleased_milestone():
+    MilestoneFactory(target_date=datetime.date(2026, 12, 1))
+    soonest = MilestoneFactory(target_date=datetime.date(2026, 9, 1))
+    MilestoneFactory(target_date=None)
+    MilestoneFactory(target_date=datetime.date(2026, 8, 1), released_at=timezone.now())
+    issue = IssueFactory()
+
+    issue.status = Status.COMPLETED
+    issue.save()
+
+    assert issue.milestone == soonest
+
+
+@pytest.mark.django_db
+def test_issue_completion_keeps_existing_milestone():
+    assigned = MilestoneFactory(target_date=datetime.date(2026, 12, 1))
+    MilestoneFactory(target_date=datetime.date(2026, 9, 1))
+    issue = IssueFactory(milestone=assigned)
+
+    issue.status = Status.COMPLETED
+    issue.save()
+
+    assert issue.milestone == assigned
+
+
+@pytest.mark.django_db
+def test_issue_completion_without_candidate_milestone_stays_orphan():
+    MilestoneFactory(target_date=None)
+    MilestoneFactory(target_date=datetime.date(2026, 9, 1), released_at=timezone.now())
+    issue = IssueFactory()
+
+    issue.status = Status.COMPLETED
+    issue.save()
+
+    assert issue.milestone is None
+
+
+@pytest.mark.django_db
+def test_issue_wontfix_does_not_file_into_a_milestone():
+    MilestoneFactory(target_date=datetime.date(2026, 9, 1))
+    issue = IssueFactory()
+
+    issue.status = Status.WONTFIX
+    issue.save()
+
+    assert issue.milestone is None
+
+
+@pytest.mark.django_db
+def test_issue_resaving_completed_issue_does_not_refile_it():
+    MilestoneFactory(target_date=datetime.date(2026, 9, 1))
+    issue = IssueFactory(status=Status.COMPLETED)
+    issue.milestone = None
+    issue.save()
+
+    issue.title = "updated"
+    issue.save()
+
+    assert issue.milestone is None
+
+
+@pytest.mark.django_db
+def test_issue_completion_logs_the_milestone_it_was_filed_into():
+    milestone = MilestoneFactory(target_date=datetime.date(2026, 9, 1))
+    issue = IssueFactory()
+
+    issue.status = Status.COMPLETED
+    issue.save()
+
+    entry = issue.logged_actions().get(action_type="pxtx.issue.update")
+    assert entry.data["after"]["milestone"] == milestone.pk

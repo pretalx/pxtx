@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from pxtx.core.models.base import BaseModel
+from pxtx.core.models.milestone import Milestone
 
 
 class Effort(models.IntegerChoices):
@@ -138,10 +139,16 @@ class Issue(BaseModel):
         return actions
 
     def save(self, *args, **kwargs):
+        newly_completed = self.closed_at is None and self.status == Status.COMPLETED
         if self.is_closed and self.closed_at is None:
             self.closed_at = timezone.now()
         elif not self.is_closed and self.closed_at is not None:
             self.closed_at = None
+
+        # Completing an unassigned issue files it under the release it most
+        # likely shipped in, so a release page shows its actual contents.
+        if newly_completed and self.milestone_id is None:
+            self.milestone = Milestone.next_upcoming()
 
         if self.number is not None:
             super().save(*args, **kwargs)

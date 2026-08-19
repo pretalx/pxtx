@@ -1,6 +1,6 @@
 """Issue indicator chips — status, priority, effort, spec session.
 
-⁂ These render in the table, the kanban, the modal, the sidebar and the
+These render in the table, the kanban, the modal, the sidebar and the
 detail page. Keeping the markup in one place is the only way the colour
 classes stay in sync with the CSS; hand-copied spans drifted before.
 """

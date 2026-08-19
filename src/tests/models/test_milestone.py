@@ -47,3 +47,10 @@ def test_milestone_issue_becomes_orphan_when_milestone_deleted():
     issue.refresh_from_db()
 
     assert issue.milestone is None
+
+
+@pytest.mark.django_db
+def test_milestone_next_upcoming_is_none_without_candidates():
+    MilestoneFactory(target_date=None)
+
+    assert Milestone.next_upcoming() is None

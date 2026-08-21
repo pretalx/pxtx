@@ -44,8 +44,15 @@ QUICK_FILTERS = [
     },
     {
         "label": "🍒 easy pickings",
-        "query": [("effort", str(Effort.TINY)), ("effort", str(Effort.SMALL))],
-        "filter": {"effort_minutes__in": [Effort.TINY, Effort.SMALL]},
+        "query": [
+            ("status", Status.OPEN.value),
+            ("effort", str(Effort.TINY)),
+            ("effort", str(Effort.SMALL)),
+        ],
+        "filter": {
+            "status": Status.OPEN,
+            "effort_minutes__in": [Effort.TINY, Effort.SMALL],
+        },
     },
     {
         "label": "📥 draft",
@@ -218,6 +225,24 @@ def _quick_filter_active(spec, params):
     return all(value in params.getlist(key) for key, value in spec["query"])
 
 
+def _quick_filter_specs():
+    """QUICK_FILTERS plus a pill for the next unreleased release that has a
+    target date. Built per request because which release is next moves as
+    releases ship."""
+    specs = list(QUICK_FILTERS)
+    milestone = Milestone.next_upcoming()
+    if milestone:
+        specs.insert(
+            -1,
+            {
+                "label": f"🚀 {milestone.name}",
+                "query": [("milestone", milestone.slug)],
+                "filter": {"milestone": milestone},
+            },
+        )
+    return specs
+
+
 def _quick_filter_count(spec):
     """Count issues a pill click would surface. Pills whose own filter doesn't
     pin a status inherit the default status filter (open/wip/blocked) — same
@@ -233,7 +258,7 @@ def _issue_list_context(params):
     sort, direction = _resolve_sort(params)
     any_issues = Issue.objects.exists()
     quick_filters = []
-    for spec in QUICK_FILTERS:
+    for spec in _quick_filter_specs():
         if spec.get("is_default"):
             if not any_issues:
                 continue

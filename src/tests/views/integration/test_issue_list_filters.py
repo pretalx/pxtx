@@ -1,4 +1,7 @@
+from datetime import date
+
 import pytest
+from django.utils import timezone
 
 from pxtx.core.models import Effort, Priority, Status
 from tests.factories import IssueFactory, MilestoneFactory
@@ -280,12 +283,13 @@ def test_quick_filter_counts_match_the_issues_their_click_returns(auth_client):
 @pytest.mark.django_db
 def test_easy_pickings_pill_filters_to_low_effort_open_work(auth_client):
     tiny = IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
-    small = IssueFactory(effort_minutes=Effort.SMALL, status=Status.WIP)
+    small = IssueFactory(effort_minutes=Effort.SMALL, status=Status.OPEN)
     IssueFactory(effort_minutes=Effort.MEDIUM, status=Status.OPEN)
-    # Closed issues with low effort should still be excluded by default statuses.
+    # Work already in progress or closed is not a pick-up-now candidate.
+    IssueFactory(effort_minutes=Effort.SMALL, status=Status.WIP)
     IssueFactory(effort_minutes=Effort.TINY, status=Status.COMPLETED)
 
-    response = auth_client.get("/issues/?effort=30&effort=90")
+    response = auth_client.get("/issues/?status=open&effort=30&effort=90")
 
     assert {i.pk for i in response.context["issues"]} == {tiny.pk, small.pk}
     by_label = {qf["label"]: qf for qf in response.context["quick_filters"]}
@@ -324,3 +328,37 @@ def test_full_request_includes_filter_form(auth_client):
     body = response.content.decode()
     assert 'class="issue-filters"' in body
     assert 'name="search"' in body
+
+
+@pytest.mark.django_db
+def test_next_release_pill_uses_release_name_and_filters_to_it(auth_client):
+    soon = MilestoneFactory(name="25.2", slug="25-2", target_date=date(2026, 1, 1))
+    later = MilestoneFactory(name="25.3", slug="25-3", target_date=date(2026, 6, 1))
+    mine = IssueFactory(status=Status.OPEN, milestone=soon)
+    IssueFactory(status=Status.OPEN, milestone=later)
+
+    response = auth_client.get("/issues/?milestone=25-2")
+    by_label = {qf["label"]: qf for qf in response.context["quick_filters"]}
+
+    assert {i.pk for i in response.context["issues"]} == {mine.pk}
+    assert "🚀 25.3" not in by_label
+    assert by_label["🚀 25.2"]["querystring"] == [("milestone", "25-2")]
+    assert by_label["🚀 25.2"]["count"] == 1
+    assert by_label["🚀 25.2"]["active"] is True
+
+
+@pytest.mark.django_db
+def test_no_next_release_pill_without_dated_unreleased_release(auth_client):
+    MilestoneFactory(name="25.1", slug="25-1")
+    MilestoneFactory(
+        name="25.0",
+        slug="25-0",
+        target_date=date(2026, 1, 1),
+        released_at=timezone.now(),
+    )
+    IssueFactory(status=Status.OPEN)
+
+    response = auth_client.get("/issues/")
+
+    labels = {qf["label"] for qf in response.context["quick_filters"]}
+    assert not any(label.startswith("🚀") for label in labels)

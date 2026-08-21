@@ -65,6 +65,14 @@ def latest_finished_push(session):
     return None
 
 
+def is_first_run(session):
+    """True while the session has no finished turn: nothing it produced
+    has been snapshotted yet, so whatever sits in the change directory
+    belongs to something else — a deleted session, a reset, an abandoned
+    checkout — and must not be inherited."""
+    return not session.turns.filter(status__in=FINISHED_TURN_STATUSES).exists()
+
+
 def materialize_snapshot(change_dir, artifacts):
     """Wholesale-replace the change directory with a pushed snapshot:
     files on disk but absent from the snapshot are removed — the push
@@ -332,6 +340,13 @@ class Command(BaseCommand):
             # holds makes interrupted runs self-healing.
             materialize_snapshot(
                 change_dir_for(self.checkout, session.issue.number), push_turn.artifacts
+            )
+        elif is_first_run(session):
+            # Nothing of this session's is on disk yet, so a change
+            # directory present here is a leftover — most likely from the
+            # session a reset threw out. Start from an empty one.
+            materialize_snapshot(
+                change_dir_for(self.checkout, session.issue.number), {}
             )
         if turn.kind == SpecTurnKind.CRITIQUE:
             # Critiques are sessionless one-shots: fresh context is the

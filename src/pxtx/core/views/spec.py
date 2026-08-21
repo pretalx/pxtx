@@ -160,6 +160,13 @@ class SpecSessionFragmentView(LoginRequiredMixin, View):
         )
 
 
+def _start_session(issue, actor):
+    session = SpecSession(issue=issue)
+    session.save(actor=actor)
+    session.queue_turn("/opsx:explore", actor=actor)
+    return session
+
+
 class SpecStartView(LoginRequiredMixin, View):
     """Bootstrap: create the session (stage explore) and queue the first
     explore turn. A second start on an existing session is a no-op."""
@@ -167,10 +174,28 @@ class SpecStartView(LoginRequiredMixin, View):
     def post(self, request, number):
         issue = get_object_or_404(Issue, number=number)
         if not SpecSession.objects.filter(issue=issue).exists():
-            actor = request_actor(request)
-            session = SpecSession(issue=issue)
-            session.save(actor=actor)
-            session.queue_turn("/opsx:explore", actor=actor)
+            _start_session(issue, request_actor(request))
+        return redirect("core:spec-page", number=number)
+
+
+class SpecResetView(LoginRequiredMixin, View):
+    """Throw the spec out and start over: delete the session — transcript,
+    artifacts and claude session id go with it — then bootstrap a fresh one
+    in explore. Refused while a turn is queued or running, because the
+    worker holds the running turn and would resurrect it on write. The
+    worker wipes the change directory before a session's first run, so the
+    new session does not inherit the discarded spec from disk."""
+
+    def post(self, request, number):
+        session = _get_session(number)
+        if session.turns.filter(status__in=ACTIVE_TURN_STATUSES).exists():
+            return HttpResponseBadRequest(
+                "A spec turn is queued or running; reset once it finishes."
+            )
+        actor = request_actor(request)
+        issue = session.issue
+        session.delete(actor=actor)
+        _start_session(issue, actor)
         return redirect("core:spec-page", number=number)
 
 

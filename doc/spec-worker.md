@@ -14,14 +14,16 @@ has to provide. The feature is inert until the `[spec]` section of
   every `claude -p` turn with this directory as cwd; claude sessions are
   bound to the cwd they were created in, so moving the checkout makes all
   existing sessions unresumable.
-- The worker writes into the checkout in exactly two ways outside
+- The worker writes into the checkout in exactly three ways outside
   claude runs. First, an idle `git pull --ff-only` keeps tracked files
   fresh; it never touches the untracked `openspec/changes/` directories.
   Second, when a session's latest finished turn is an API push, the
   worker replaces that issue's `openspec/changes/pxtx-<n>/` wholesale
   with the pushed snapshot before invoking claude, so the run sees the
-  pushed files. The agent itself is denied git writes (see the settings
-  file below).
+  pushed files. Third, before a session's first run — no finished turn
+  yet — it deletes that directory: whatever is in it belongs to something
+  else, in practice the session a reset threw out. The agent itself is
+  denied git writes (see the settings file below).
 
 ## Claude
 

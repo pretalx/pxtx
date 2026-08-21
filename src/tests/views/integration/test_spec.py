@@ -4,6 +4,7 @@ import pytest
 from freezegun import freeze_time
 
 from pxtx.core.models import (
+    ActivityLog,
     SpecSession,
     SpecStage,
     SpecTurnKind,
@@ -156,6 +157,78 @@ def test_issue_detail_links_to_spec_page(auth_client):
     response = auth_client.get(f"/issues/{issue.number}/")
 
     assert _spec_url(issue) in response.content.decode()
+
+
+# --- Reset ---
+
+
+@pytest.mark.django_db
+def test_spec_reset_replaces_session_with_fresh_explore_one(auth_client):
+    session = SpecSessionFactory(stage=SpecStage.READY)
+    issue = session.issue
+    SpecTurnFactory(
+        session=session,
+        status=SpecTurnStatus.COMPLETED,
+        artifacts={"proposal.md": "# Thrown out"},
+    )
+
+    response = auth_client.post(_spec_url(issue, "reset/"))
+
+    assert response.status_code == 302
+    assert response.url == _spec_url(issue)
+    fresh = SpecSession.objects.get(issue=issue)
+    assert SpecSession.objects.count() == 1
+    assert fresh.pk != session.pk
+    assert fresh.stage == SpecStage.EXPLORE
+    assert fresh.claude_session_id != session.claude_session_id
+    assert fresh.latest_snapshot == {}
+    turns = list(fresh.turns.all())
+    assert [t.message for t in turns] == ["/opsx:explore"]
+    assert turns[0].status == SpecTurnStatus.QUEUED
+
+
+@pytest.mark.django_db
+def test_spec_reset_logs_delete_and_create_with_user_actor(auth_client):
+    session = SpecSessionFactory()
+
+    auth_client.post(_spec_url(session, "reset/"))
+
+    deleted = ActivityLog.objects.get(action_type="pxtx.spec.session.delete")
+    assert deleted.object_id == session.pk
+    assert deleted.actor.startswith("user/")
+    assert deleted.data["before"]["stage"] == SpecStage.EXPLORE
+    fresh = SpecSession.objects.get(issue=session.issue)
+    assert [e.action_type for e in fresh.logged_actions()] == [
+        "pxtx.spec.session.create"
+    ]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("status", (SpecTurnStatus.QUEUED, SpecTurnStatus.RUNNING))
+def test_spec_reset_refused_while_a_turn_is_active(auth_client, status):
+    session = SpecSessionFactory()
+    SpecTurnFactory(session=session, status=status)
+
+    response = auth_client.post(_spec_url(session, "reset/"))
+
+    assert response.status_code == 400
+    assert b"queued or running" in response.content
+    assert SpecSession.objects.get() == session
+
+
+@pytest.mark.django_db
+def test_spec_page_offers_reset_only_without_an_active_turn(auth_client):
+    session = SpecSessionFactory()
+    turn = SpecTurnFactory(session=session, status=SpecTurnStatus.QUEUED)
+
+    body = auth_client.get(_spec_url(session)).content.decode()
+    assert _spec_url(session, "reset/") not in body
+
+    turn.status = SpecTurnStatus.COMPLETED
+    turn.save()
+
+    body = auth_client.get(_spec_url(session)).content.decode()
+    assert _spec_url(session, "reset/") in body
 
 
 # --- Turn queueing + polling (3.2) ---

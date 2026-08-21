@@ -131,6 +131,18 @@ def _started_turn(session, **kwargs):
 PUSHED = {"proposal.md": "# Pushed proposal", "specs/feature/spec.md": "# Pushed delta"}
 
 
+def _writing(checkout, number, files):
+    """An on_call hook that lands `files` in the change directory while the
+    invocation is in flight — where claude writes them, and hence after any
+    materialization or first-run wipe the worker did."""
+
+    def write():
+        for relpath, content in files.items():
+            _write_change_file(checkout, number, relpath, content)
+
+    return write
+
+
 def _capture_dir(monkeypatch, outcomes, change_dir):
     """Like _patch_run, but additionally record the change directory's
     contents at every claude invocation: materialization must be complete
@@ -516,11 +528,17 @@ def test_runworker_success_populates_turn(checkout, monkeypatch):
     session = SpecSessionFactory(stage=SpecStage.PROPOSE)
     number = session.issue.number
     turn = session.queue_turn("Write it up")
-    _write_change_file(checkout, number, "proposal.md", "# Proposal")
-    _write_change_file(checkout, number, "specs/feature/spec.md", "# Spec delta")
     claude_session_id = str(session.claude_session_id)
     payload = _success_payload(session_id=claude_session_id, cost=0.123456)
-    _patch_run(monkeypatch, [_proc(stdout=json.dumps(payload))])
+    _patch_run(
+        monkeypatch,
+        [_proc(stdout=json.dumps(payload))],
+        on_call=_writing(
+            checkout,
+            number,
+            {"proposal.md": "# Proposal", "specs/feature/spec.md": "# Spec delta"},
+        ),
+    )
 
     _run_worker()
 
@@ -552,9 +570,12 @@ def test_runworker_error_json_keeps_session_resumable(checkout, monkeypatch):
     number = session.issue.number
     original_session_id = session.claude_session_id
     turn = session.queue_turn("Explore")
-    _write_change_file(checkout, number, "proposal.md", "half-finished")
     payload = _error_payload(cost=0.05)
-    _patch_run(monkeypatch, [_proc(returncode=1, stdout=json.dumps(payload))])
+    _patch_run(
+        monkeypatch,
+        [_proc(returncode=1, stdout=json.dumps(payload))],
+        on_call=_writing(checkout, number, {"proposal.md": "half-finished"}),
+    )
 
     _run_worker()
 
@@ -583,8 +604,11 @@ def test_runworker_timeout_marks_error_with_snapshot(checkout, monkeypatch):
     number = session.issue.number
     original_session_id = session.claude_session_id
     turn = session.queue_turn("Explore")
-    _write_change_file(checkout, number, "proposal.md", "written before the kill")
-    _patch_run(monkeypatch, [subprocess.TimeoutExpired(cmd=["claude"], timeout=3600)])
+    _patch_run(
+        monkeypatch,
+        [subprocess.TimeoutExpired(cmd=["claude"], timeout=3600)],
+        on_call=_writing(checkout, number, {"proposal.md": "written before the kill"}),
+    )
 
     _run_worker()
 
@@ -603,7 +627,6 @@ def test_runworker_no_json_exit_is_session_gone(checkout, monkeypatch):
     session = SpecSessionFactory()
     number = session.issue.number
     turn = session.queue_turn("Explore")
-    _write_change_file(checkout, number, "proposal.md", "leftovers")
     _patch_run(
         monkeypatch,
         [
@@ -611,6 +634,7 @@ def test_runworker_no_json_exit_is_session_gone(checkout, monkeypatch):
                 returncode=1, stdout="", stderr="No conversation found with session ID"
             )
         ],
+        on_call=_writing(checkout, number, {"proposal.md": "leftovers"}),
     )
 
     _run_worker()
@@ -736,9 +760,15 @@ def test_runworker_critique_snapshot_makes_modifications_visible(checkout, monke
     session = SpecSessionFactory(stage=SpecStage.PROPOSE)
     number = session.issue.number
     turn = session.queue_turn("", kind=SpecTurnKind.CRITIQUE)
-    _write_change_file(checkout, number, "proposal.md", "# Tampered by critic")
-    _write_change_file(checkout, number, "design.md", "# Also touched")
-    _patch_run(monkeypatch, [_success_proc()])
+    _patch_run(
+        monkeypatch,
+        [_success_proc()],
+        on_call=_writing(
+            checkout,
+            number,
+            {"proposal.md": "# Tampered by critic", "design.md": "# Also touched"},
+        ),
+    )
 
     _run_worker()
 
@@ -894,6 +924,40 @@ def test_runworker_stage_command_after_push_keeps_command_first(checkout, monkey
     assert "re-read" in prompt
     turn.refresh_from_db()
     assert turn.prompt_sent == prompt
+
+
+@pytest.mark.django_db
+def test_runworker_first_run_wipes_a_leftover_change_dir(checkout, monkeypatch):
+    # The session a reset threw out leaves its change directory behind; the
+    # fresh session's first run must not inherit it.
+    session = SpecSessionFactory()
+    number = session.issue.number
+    _write_change_file(checkout, number, "proposal.md", "# From the reset session")
+    turn = session.queue_turn("/opsx:explore")
+    change_dir = runworker_module.change_dir_for(checkout, number)
+    calls, seen = _capture_dir(monkeypatch, [_success_proc()], change_dir)
+
+    _run_worker()
+
+    assert seen == [{}]
+    assert calls[0]["cmd"][2].startswith(f"/opsx:explore pxtx-{number}")
+    turn.refresh_from_db()
+    assert turn.artifacts == {}
+
+
+@pytest.mark.django_db
+def test_runworker_second_run_keeps_the_change_dir(checkout, monkeypatch):
+    session = SpecSessionFactory(stage=SpecStage.PROPOSE)
+    number = session.issue.number
+    _started_turn(session, message="draft it", response="drafted")
+    _write_change_file(checkout, number, "proposal.md", "# Written by the first run")
+    session.queue_turn("keep going")
+    change_dir = runworker_module.change_dir_for(checkout, number)
+    _, seen = _capture_dir(monkeypatch, [_success_proc()], change_dir)
+
+    _run_worker()
+
+    assert seen == [{"proposal.md": "# Written by the first run"}]
 
 
 @pytest.mark.django_db

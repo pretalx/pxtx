@@ -86,4 +86,15 @@
         </div>
     </form>
     {% endif %}
+
+    {% if not has_active_turn %}
+    <details class="card spec-reset">
+        <summary>Reset spec</summary>
+        <p>Deletes this session — transcript, artifacts and the claude session — and starts a fresh explore turn. The change directory in the checkout is wiped before that turn runs.</p>
+        <form method="post" action="{% url 'core:spec-reset' number=issue.number %}">
+            {% csrf_token %}
+            <button type="submit" class="spec-reset-button">Throw it out and restart in explore</button>
+        </form>
+    </details>
+    {% endif %}
 </div>

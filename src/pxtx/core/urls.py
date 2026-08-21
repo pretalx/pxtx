@@ -98,6 +98,11 @@ urlpatterns = [
         name="spec-start",
     ),
     path(
+        "issues/<int:number>/spec/reset/",
+        views.SpecResetView.as_view(),
+        name="spec-reset",
+    ),
+    path(
         "issues/<int:number>/spec/session/",
         views.SpecSessionFragmentView.as_view(),
         name="spec-session-fragment",

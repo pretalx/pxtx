@@ -360,10 +360,18 @@ nav.site a.new-issue { color: var(--accent); }
     width: 1.5rem;
     padding: 0.25rem 0.4rem;
     color: var(--text-muted);
-    font-family: ui-monospace, Menlo, monospace;
     user-select: none;
     cursor: grab;
     text-align: center;
+}
+.issue-table .drag-col .drag-dots {
+    display: inline-block;
+    width: 6px;
+    height: 10px;
+    background-image: radial-gradient(currentColor 1px, transparent 1.5px);
+    background-size: 4px 4px;
+    background-position: -1px 0;
+    vertical-align: middle;
 }
 .issue-table .drag-col:active { cursor: grabbing; }
 .issue-table.reorderable tr.sortable-ghost { opacity: 0.35; }

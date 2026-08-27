@@ -386,6 +386,9 @@ def test_issue_show_prints_detail(cli_config, mocked_responses, capsys):
             "updated_at": "2026-04-22T10:00:00+00:00",
         },
     )
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/comments/", json={"results": [], "next": None}
+    )
 
     code = cli.main(["issue", "show", "PX-47"])
 
@@ -407,6 +410,9 @@ def test_show_alias_prints_detail(cli_config, mocked_responses, capsys):
             "created_at": "2026-04-22T10:00:00+00:00",
             "updated_at": "2026-04-22T10:00:00+00:00",
         },
+    )
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/47/comments/", json={"results": [], "next": None}
     )
 
     code = cli.main(["show", "PX-47"])
@@ -445,7 +451,7 @@ def test_issue_show_with_comments(cli_config, mocked_responses, capsys):
         },
     )
 
-    code = cli.main(["issue", "show", "7", "--comments"])
+    code = cli.main(["issue", "show", "7"])
 
     assert code == 0
     out = capsys.readouterr().out
@@ -459,20 +465,23 @@ def test_issue_show_json_with_comments(cli_config, mocked_responses, capsys):
         f"{URL}/api/v1/issues/7/comments/", json={"results": [{"id": 1}], "next": None}
     )
 
-    cli.main(["--json", "issue", "show", "7", "--comments"])
+    cli.main(["--json", "issue", "show", "7"])
 
     out = capsys.readouterr().out
     assert '"issue"' in out
     assert '"comments"' in out
 
 
-def test_issue_show_json_without_comments(cli_config, mocked_responses, capsys):
+def test_issue_show_json_empty_comments(cli_config, mocked_responses, capsys):
     mocked_responses.get(f"{URL}/api/v1/issues/7/", json={"slug": "PX-7", "title": "x"})
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/7/comments/", json={"results": [], "next": None}
+    )
 
     cli.main(["--json", "issue", "show", "7"])
 
     out = capsys.readouterr().out
-    assert '"comments"' not in out
+    assert '"comments": []' in out
 
 
 def test_issue_set_priority_only(cli_config, mocked_responses, capsys):

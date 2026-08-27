@@ -37,7 +37,7 @@ pxtx issue list [--status open,wip,blocked]
                 [--priority will,sollte] [--milestone 25.1]
                 [--mine] [--assignee name]
                 [--highlighted] [--search "term"]
-pxtx issue show PX-47 [--comments]        # or: pxtx show PX-47
+pxtx issue show PX-47                     # or: pxtx show PX-47; includes comments
 pxtx issue set PX-47 [--priority will] [--effort 2-6h]   # narrow edit
 pxtx issue close PX-47 [--wontfix]
 pxtx issue comment PX-47 "message"        # or: --stdin
@@ -248,7 +248,7 @@ offending file or field.
 **"What happened on PX-47 recently?"**
 
 ```
-uvx pxtx --json issue show PX-47 --comments
+uvx pxtx --json issue show PX-47
 uvx pxtx activity log PX-47 --since 7d
 ```
 

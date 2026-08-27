@@ -173,12 +173,9 @@ def cmd_issue_list(args, client, config):
 
 def cmd_issue_show(args, client, config):
     issue = client.get_issue(args.number)
-    comments = client.list_comments(args.number) if args.comments else None
+    comments = client.list_comments(args.number)
     if args.json:
-        payload = {"issue": issue}
-        if comments is not None:
-            payload["comments"] = comments
-        print_json(payload)
+        print_json({"issue": issue, "comments": comments})
         return
     print(format_issue_detail(issue, comments))
 
@@ -569,7 +566,6 @@ def build_parser():
 
     show = issue_sub.add_parser("show", help="show an issue")
     show.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
-    show.add_argument("--comments", action="store_true")
     show.set_defaults(func=cmd_issue_show)
 
     set_ = issue_sub.add_parser("set", help="set priority/effort on an issue")
@@ -595,7 +591,6 @@ def build_parser():
 
     show_alias = sub.add_parser("show", help="alias for 'issue show'")
     show_alias.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
-    show_alias.add_argument("--comments", action="store_true")
     show_alias.set_defaults(func=cmd_issue_show)
 
     pr = sub.add_parser("pr", help="link a github PR to an issue")

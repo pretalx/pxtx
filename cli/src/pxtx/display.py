@@ -63,7 +63,7 @@ def format_issue_detail(issue, comments=None):
         lines.append(f"blocked reason: {issue['blocked_reason']}")
     if issue.get("description"):
         lines += ["", issue["description"]]
-    if comments is not None:
+    if comments:
         lines += ["", f"=== comments ({len(comments)}) ==="]
         for c in comments:
             lines.append(f"[{c['author']} · {fmt_time(c['created_at'])}]")

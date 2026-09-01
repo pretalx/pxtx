@@ -1,0 +1,3 @@
+{% comment %}Issue number as a click-to-copy chip: yields the `,pxtx <number>` command.{% endcomment %}
+<button type="button" class="px px-copy" data-copy=",pxtx {{ issue.number }}"
+        title="Copy “,pxtx {{ issue.number }}” to the clipboard">{{ issue.slug }}</button>

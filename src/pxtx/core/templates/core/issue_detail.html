@@ -4,7 +4,7 @@
 {% block content %}
 <header class="issue-header">
     <div class="issue-header-top">
-        <span class="px">{{ issue.slug }}</span>
+        {% include "core/_issue_slug.html" %}
         {% status_badge issue %}
         {% priority_badge issue %}
         {% if issue.milestone %}<a class="chip" href="{% url 'core:milestone-detail' slug=issue.milestone.slug %}">{{ issue.milestone.name }}</a>{% endif %}

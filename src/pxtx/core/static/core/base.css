@@ -752,3 +752,23 @@ body[data-g-prefix]::after {
 .sidebar-section .add-field .meta { font-size: 0.75rem; color: var(--text-muted); }
 .sidebar-section .add-actions { display: flex; gap: 0.5rem; }
 .sidebar-section .add-actions button { font-size: 0.85rem; padding: 0.3rem 0.6rem; }
+
+.px-copy {
+    all: unset;
+    cursor: pointer;
+    position: relative;
+}
+.px-copy:hover, .px-copy:focus-visible { text-decoration: underline dotted; }
+.px-copy.copied::after {
+    content: "copied";
+    position: absolute;
+    left: 0;
+    top: 100%;
+    z-index: 2;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    background: var(--text-muted);
+    color: var(--bg);
+    font-size: 0.7rem;
+    white-space: nowrap;
+}

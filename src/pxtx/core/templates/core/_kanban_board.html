@@ -12,7 +12,7 @@
             <article class="kanban-card{% if issue.status == 'wontfix' %} wontfix{% endif %}" data-issue-number="{{ issue.number }}">
                 <div class="head">
                     {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span>{% endif %}
-                    <span class="px">{{ issue.slug }}</span>
+                    {% include "core/_issue_slug.html" %}
                     <a href="{% url 'core:issue-detail' number=issue.number %}"
                        hx-get="{% url 'core:issue-modal-edit' number=issue.number %}"
                        hx-target="#issue-modal" hx-swap="innerHTML">{{ issue.title }}</a>

@@ -3,7 +3,7 @@
     <header class="modal-head">
         <div class="modal-title">
             {% if issue %}
-            <span class="px">{{ issue.slug }}</span>
+            {% include "core/_issue_slug.html" %}
             {% status_badge issue %}
             {% priority_badge issue %}
             {% if issue.is_highlighted %}<span class="star" title="highlighted">★</span>{% endif %}

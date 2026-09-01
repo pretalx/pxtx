@@ -322,3 +322,19 @@ document.addEventListener("focusout", (event) => {
         window.htmx.ajax("GET", url, { target: cell, swap: "outerHTML" });
     }, 150);
 });
+
+// Click-to-copy chips (`[data-copy]`), e.g. the PX-### issue number, which
+// yields the `,pxtx <number>` command. Delegated so htmx-swapped fragments
+// work without re-binding. navigator.clipboard needs a secure context; the
+// catch keeps a failure silent instead of throwing on http://.
+document.addEventListener("click", (event) => {
+    const btn = event.target.closest && event.target.closest("[data-copy]");
+    if (!btn) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!navigator.clipboard) return;
+    navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+        btn.classList.add("copied");
+        setTimeout(() => btn.classList.remove("copied"), 1200);
+    }, () => {});
+});

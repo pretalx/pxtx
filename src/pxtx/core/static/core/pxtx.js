@@ -325,16 +325,28 @@ document.addEventListener("focusout", (event) => {
 
 // Click-to-copy chips (`[data-copy]`), e.g. the PX-### issue number, which
 // yields the `,pxtx <number>` command. Delegated so htmx-swapped fragments
-// work without re-binding. navigator.clipboard needs a secure context; the
-// catch keeps a failure silent instead of throwing on http://.
+// work without re-binding.
+//
+// `navigator.clipboard` is `[SecureContext]`, so it is *undefined* — not
+// merely failing — over plain http to a non-localhost host, e.g. the dev
+// server reached from a phone on the LAN. That path reports "copy failed"
+// rather than doing nothing, so a dead button never looks like a hit one.
+function flashCopyState(btn, klass) {
+    btn.classList.add(klass);
+    setTimeout(() => btn.classList.remove(klass), 1200);
+}
+
 document.addEventListener("click", (event) => {
     const btn = event.target.closest && event.target.closest("[data-copy]");
     if (!btn) return;
     event.preventDefault();
     event.stopPropagation();
-    if (!navigator.clipboard) return;
-    navigator.clipboard.writeText(btn.dataset.copy).then(() => {
-        btn.classList.add("copied");
-        setTimeout(() => btn.classList.remove("copied"), 1200);
-    }, () => {});
+    if (!navigator.clipboard) {
+        flashCopyState(btn, "copy-failed");
+        return;
+    }
+    navigator.clipboard.writeText(btn.dataset.copy).then(
+        () => flashCopyState(btn, "copied"),
+        () => flashCopyState(btn, "copy-failed"),
+    );
 });

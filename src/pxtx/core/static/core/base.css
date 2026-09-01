@@ -759,8 +759,7 @@ body[data-g-prefix]::after {
     position: relative;
 }
 .px-copy:hover, .px-copy:focus-visible { text-decoration: underline dotted; }
-.px-copy.copied::after {
-    content: "copied";
+.px-copy.copied::after, .px-copy.copy-failed::after {
     position: absolute;
     left: 0;
     top: 100%;
@@ -772,3 +771,5 @@ body[data-g-prefix]::after {
     font-size: 0.7rem;
     white-space: nowrap;
 }
+.px-copy.copied::after { content: "copied"; }
+.px-copy.copy-failed::after { content: "copy failed"; background: var(--danger); }

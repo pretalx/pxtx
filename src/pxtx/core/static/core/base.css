@@ -333,6 +333,16 @@ nav.site a.new-issue { color: var(--accent); }
 /* Row whose issue is open in the sidebar, so it stays findable in a long list. */
 .issue-table tr.row-open td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .issue-table tr.row-open td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+/* ⁂ Marker left behind when a save re-sorts the open issue away from the
+   spot the user was reading. Cleared on the next click. */
+.issue-table tr.row-ghost td {
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    border-bottom: 1px dashed var(--accent);
+}
+.row-ghost-mark { color: var(--accent); font-weight: 600; }
 /* The whole row is the click target; the title/number anchors are there for
    middle-click and copy-link, so don't render them as visible links. */
 .issue-table .row-link { color: inherit; }

@@ -185,9 +185,13 @@ function syncOpenRow() {
     });
 }
 
+function findRow(number) {
+    if (!number) return null;
+    return document.querySelector(`tr[data-issue-number="${CSS.escape(number)}"]`);
+}
+
 function openRow() {
-    if (!openIssueNumber) return null;
-    return document.querySelector(`tr[data-issue-number="${CSS.escape(openIssueNumber)}"]`);
+    return findRow(openIssueNumber);
 }
 
 // Opening or closing the sidebar narrows or widens the issue table, so rows
@@ -264,15 +268,80 @@ document.addEventListener("close", (event) => {
     }
 }, true);
 
+// Triage aid: saving from the sidebar re-sorts the list, so the open issue
+// can jump to a different place or drop out of the active filters, and the
+// row the user was reading disappears from under them. Leave a marker where
+// it used to be so the scan can continue from that spot. Any click clears
+// it, and so does the next table swap.
+function rowSlug(row) {
+    const link = row.querySelector(".row-link");
+    return link ? link.textContent.trim() : "";
+}
+
+function captureGhostSource() {
+    const row = openRow();
+    const tbody = row && row.parentElement;
+    if (!tbody || !tbody.rows) return null;
+    const prev = row.previousElementSibling;
+    return {
+        number: openIssueNumber,
+        slug: rowSlug(row),
+        index: Array.prototype.indexOf.call(tbody.rows, row),
+        prev: prev ? prev.dataset.issueNumber : null,
+    };
+}
+
+// Only the saved issue can change place, so every other row keeps its
+// relative order and an unchanged index means it did not move.
+function ghostLabel(before) {
+    const row = findRow(before.number);
+    if (!row) return { mark: "✕", text: `⁂ ${before.slug} no longer matches the filters` };
+    const moved = Array.prototype.indexOf.call(row.parentElement.rows, row) - before.index;
+    if (!moved) return null;
+    if (moved > 0) return { mark: "↓", text: `⁂ ${before.slug} moved down` };
+    return { mark: "↑", text: `⁂ ${before.slug} moved up` };
+}
+
+function insertGhost(before) {
+    if (!before) return;
+    const label = ghostLabel(before);
+    if (!label) return;
+    const tbody = document.querySelector("#issue-table tbody");
+    if (!tbody || !tbody.rows.length) return;
+    const anchor = before.prev ? findRow(before.prev) : null;
+    if (before.prev && !anchor) return;
+    const mark = document.createElement("span");
+    mark.className = "row-ghost-mark";
+    mark.textContent = label.mark;
+    const cell = document.createElement("td");
+    cell.colSpan = tbody.rows[0].cells.length;
+    cell.append(mark, ` ${label.text}`);
+    const ghost = document.createElement("tr");
+    ghost.className = "row-ghost";
+    ghost.append(cell);
+    if (anchor) anchor.after(ghost);
+    else tbody.prepend(ghost);
+}
+
+function clearGhosts() {
+    document.querySelectorAll("tr.row-ghost").forEach((row) => row.remove());
+}
+
+document.addEventListener("click", clearGhosts, true);
+
 function refreshListContainer() {
     if (!window.htmx) return;
     const table = document.getElementById("issue-table");
     if (table) {
-        window.htmx.ajax("GET", window.location.href, {
+        const before = captureGhostSource();
+        const request = window.htmx.ajax("GET", window.location.href, {
             target: "#issue-table",
             swap: "outerHTML",
             select: "#issue-table",
         });
+        if (request && typeof request.then === "function") {
+            request.then(() => insertGhost(before));
+        }
         return;
     }
     const board = document.querySelector(".kanban");

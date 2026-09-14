@@ -295,11 +295,11 @@ function captureGhostSource() {
 // relative order and an unchanged index means it did not move.
 function ghostLabel(before) {
     const row = findRow(before.number);
-    if (!row) return { mark: "✕", text: `⁂ ${before.slug} no longer matches the filters` };
+    if (!row) return { mark: "✕", text: `${before.slug} no longer matches the filters` };
     const moved = Array.prototype.indexOf.call(row.parentElement.rows, row) - before.index;
     if (!moved) return null;
-    if (moved > 0) return { mark: "↓", text: `⁂ ${before.slug} moved down` };
-    return { mark: "↑", text: `⁂ ${before.slug} moved up` };
+    if (moved > 0) return { mark: "↓", text: `${before.slug} moved down` };
+    return { mark: "↑", text: `${before.slug} moved up` };
 }
 
 function insertGhost(before) {

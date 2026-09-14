@@ -675,7 +675,10 @@ kbd {
 .issue-sidebar:empty { display: none; }
 .issue-sidebar .modal-shell { min-height: 100%; }
 .issue-sidebar .modal-head { position: sticky; top: 0; z-index: 1; }
-.issue-sidebar .modal-form { padding: 1rem 1.25rem; }
+/* The sidebar scrolls as a whole, so the form needs no scroller of its
+   own — and `overflow-y: auto` would clip the select dropdowns to the form
+   box, hiding the status options behind the cards below it. */
+.issue-sidebar .modal-form { padding: 1rem 1.25rem; overflow: visible; }
 .issue-sidebar .modal-meta { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
 .issue-sidebar .modal-sections { padding: 0 1.25rem 1rem; }
 .issue-sidebar .modal-sections .card { background: var(--bg); }

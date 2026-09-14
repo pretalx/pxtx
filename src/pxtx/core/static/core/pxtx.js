@@ -174,10 +174,25 @@ function getIssueModal(id = "issue-modal") {
     return document.getElementById(id);
 }
 
+// The list row whose issue is open in the sidebar stays highlighted. The
+// table is re-fetched wholesale on every autosave, so the open issue lives in
+// a variable and is re-applied after each swap instead of on the row itself.
+let openIssueNumber = null;
+
+function syncOpenRow() {
+    document.querySelectorAll("tr[data-issue-number]").forEach((row) => {
+        row.classList.toggle("row-open", row.dataset.issueNumber === openIssueNumber);
+    });
+}
+
 function closeModalElement(modal) {
     if (!modal) return;
     if (typeof modal.close === "function" && modal.open) modal.close();
     modal.innerHTML = "";
+    if (modal.id === "issue-modal") {
+        openIssueNumber = null;
+        syncOpenRow();
+    }
 }
 
 function isIssueModal(el) {
@@ -293,11 +308,15 @@ document.addEventListener("click", (event) => {
     const row = target.closest("tr[data-issue-href]");
     if (!row || !window.htmx) return;
     event.preventDefault();
+    openIssueNumber = row.dataset.issueNumber || null;
+    syncOpenRow();
     window.htmx.ajax("GET", row.dataset.issueHref, {
         target: "#issue-modal",
         swap: "innerHTML",
     });
 });
+
+document.addEventListener("htmx:afterSwap", syncOpenRow);
 
 // Inline-editable list cells: once a <select> is in the DOM, a change event
 // POSTs the new value (htmx handles that). If the user opens the widget and

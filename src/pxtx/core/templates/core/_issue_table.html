@@ -17,7 +17,7 @@
         </thead>
         <tbody>
             {% for issue in issues %}
-            <tr data-issue-href="{% url 'core:issue-modal-edit' number=issue.number %}?mode=sidebar"{% if can_reorder %} data-issue-number="{{ issue.number }}" data-priority="{{ issue.priority }}"{% endif %}>
+            <tr data-issue-href="{% url 'core:issue-modal-edit' number=issue.number %}?mode=sidebar" data-issue-number="{{ issue.number }}"{% if can_reorder %} data-priority="{{ issue.priority }}"{% endif %}>
                 {% if can_reorder %}<td class="drag-col" aria-label="Drag to reorder"><span class="drag-dots"></span></td>{% endif %}
                 <td><a class="row-link" href="{% url 'core:issue-detail' number=issue.number %}">{{ issue.slug }}</a></td>
                 <td>

@@ -123,24 +123,27 @@ nav.site form.deploy-form button.btn-deploy:hover { filter: brightness(1.05); }
     50%      { opacity: 0.55; }
 }
 main { max-width: none; margin: 0; padding: 1.25rem 1.5rem; min-width: 0; }
+/* <main> is the scroll container in both states. Handing the scrollbar
+   over to .app-body when the sidebar is closed would reset the scroll
+   position every time the sidebar opens or closes. */
 .app-body {
-    display: block;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 100%;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
+}
+.app-body > main {
     overflow-y: auto;
     overscroll-behavior: contain;
+    min-height: 0;
 }
 .app-body:has(.issue-sidebar:not(:empty)) {
-    display: grid;
     grid-template-columns: minmax(0, 1fr) min(40rem, 42vw);
-    grid-template-rows: 100%;
-    overflow: hidden;
 }
 .app-body:has(.issue-sidebar:not(:empty)) > main {
     padding-right: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    min-height: 0;
 }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
 h1 { font-size: 1.4rem; margin-bottom: 0.75rem; }

@@ -185,14 +185,45 @@ function syncOpenRow() {
     });
 }
 
+function openRow() {
+    if (!openIssueNumber) return null;
+    return document.querySelector(`tr[data-issue-number="${CSS.escape(openIssueNumber)}"]`);
+}
+
+// Opening or closing the sidebar narrows or widens the issue table, so rows
+// re-wrap and every row below the fold shifts. Pin the row the user acted on
+// to the viewport position it had before the reflow, so the sidebar opens
+// next to the row that was clicked instead of scrolling it away.
+function scrollingAncestor(el) {
+    for (let node = el.parentElement; node; node = node.parentElement) {
+        const overflow = getComputedStyle(node).overflowY;
+        if (overflow === "auto" || overflow === "scroll") return node;
+    }
+    return null;
+}
+
+function rowAnchor(row) {
+    if (!row) return null;
+    const scroller = scrollingAncestor(row);
+    if (!scroller) return null;
+    return { row, scroller, top: row.getBoundingClientRect().top };
+}
+
+function restoreRowAnchor(anchor) {
+    if (!anchor || !anchor.row.isConnected) return;
+    anchor.scroller.scrollTop += anchor.row.getBoundingClientRect().top - anchor.top;
+}
+
 function closeModalElement(modal) {
     if (!modal) return;
+    const anchor = modal.id === "issue-modal" ? rowAnchor(openRow()) : null;
     if (typeof modal.close === "function" && modal.open) modal.close();
     modal.innerHTML = "";
     if (modal.id === "issue-modal") {
         openIssueNumber = null;
         syncOpenRow();
     }
+    restoreRowAnchor(anchor);
 }
 
 function isIssueModal(el) {
@@ -310,10 +341,14 @@ document.addEventListener("click", (event) => {
     event.preventDefault();
     openIssueNumber = row.dataset.issueNumber || null;
     syncOpenRow();
-    window.htmx.ajax("GET", row.dataset.issueHref, {
+    const anchor = rowAnchor(row);
+    const request = window.htmx.ajax("GET", row.dataset.issueHref, {
         target: "#issue-modal",
         swap: "innerHTML",
     });
+    if (request && typeof request.then === "function") {
+        request.then(() => restoreRowAnchor(anchor));
+    }
 });
 
 document.addEventListener("htmx:afterSwap", syncOpenRow);

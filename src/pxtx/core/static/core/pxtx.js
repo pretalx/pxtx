@@ -278,27 +278,34 @@ function rowSlug(row) {
     return link ? link.textContent.trim() : "";
 }
 
+// A marker left over from an earlier save is itself a <tr> in the tbody, so
+// it has to be skipped everywhere a position is read off the table.
+function issueRows(tbody) {
+    return Array.prototype.filter.call(tbody.rows, (row) => row.dataset.issueNumber);
+}
+
+function rowPlace(row) {
+    const rows = issueRows(row.parentElement);
+    const index = rows.indexOf(row);
+    return { index, prev: index > 0 ? rows[index - 1].dataset.issueNumber : null };
+}
+
 function captureGhostSource() {
     const row = openRow();
-    const tbody = row && row.parentElement;
-    if (!tbody || !tbody.rows) return null;
-    const prev = row.previousElementSibling;
-    return {
-        number: openIssueNumber,
-        slug: rowSlug(row),
-        index: Array.prototype.indexOf.call(tbody.rows, row),
-        prev: prev ? prev.dataset.issueNumber : null,
-    };
+    if (!row || !row.parentElement || !row.parentElement.rows) return null;
+    return { number: openIssueNumber, slug: rowSlug(row), ...rowPlace(row) };
 }
 
 // Only the saved issue can change place, so every other row keeps its
-// relative order and an unchanged index means it did not move.
+// relative order: landing behind the same issue means it did not move. The
+// index says which way it went, but is not trusted on its own — a stale
+// marker row or a concurrent API write shifts it without the row moving.
 function ghostLabel(before) {
     const row = findRow(before.number);
     if (!row) return { mark: "✕", text: `${before.slug} no longer matches the filters` };
-    const moved = Array.prototype.indexOf.call(row.parentElement.rows, row) - before.index;
-    if (!moved) return null;
-    if (moved > 0) return { mark: "↓", text: `${before.slug} moved down` };
+    const place = rowPlace(row);
+    if (place.prev === before.prev) return null;
+    if (place.index > before.index) return { mark: "↓", text: `${before.slug} moved down` };
     return { mark: "↑", text: `${before.slug} moved up` };
 }
 

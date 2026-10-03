@@ -524,6 +524,7 @@ button.secondary {
 .kanban-card .px { color: var(--text-muted); font-size: 0.75rem; font-family: ui-monospace, Menlo, monospace; }
 .kanban-card .card-meta { color: var(--text-muted); font-size: 0.75rem; display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
 .kanban-card .card-meta .prio { font-size: 0.75rem; color: var(--text); }
+.kanban-card .card-meta .parties { display: inline-flex; align-items: center; gap: 0.15rem; }
 .kanban-card.sortable-ghost { opacity: 0.35; }
 .kanban-card.sortable-chosen { box-shadow: 0 0 0 2px var(--accent); }
 .kanban-card.wontfix { opacity: 0.6; }

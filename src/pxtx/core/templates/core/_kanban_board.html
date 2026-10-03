@@ -22,6 +22,7 @@
                     {% effort_badge issue fallback="" %}
                     {% spec_pill issue %}
                     {% if issue.assignee %}<span>{{ issue.assignee }}</span>{% endif %}
+                    {% with parties=issue.interested_parties %}{% if parties %}<span class="parties" title="{% for party in parties %}{{ party.label }}{% if not forloop.last %}, {% endif %}{% endfor %}" aria-label="{{ parties|length }} interested part{{ parties|length|pluralize:'y,ies' }}">{% include "core/_people_icon.html" %}{% if parties|length > 1 %} {{ parties|length }}{% endif %}</span>{% endif %}{% endwith %}
                 </div>
             </article>
             {% endfor %}

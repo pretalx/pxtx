@@ -269,6 +269,24 @@ def test_milestone_detail_groups_issues_into_kanban_columns(auth_client):
 
 
 @pytest.mark.django_db
+def test_milestone_detail_kanban_card_shows_interested_parties(auth_client):
+    milestone = MilestoneFactory()
+    IssueFactory(
+        milestone=milestone,
+        interested_parties=[{"label": "Alice"}, {"label": "Bob", "note": "x"}],
+    )
+    IssueFactory(milestone=milestone, interested_parties=[{"label": "Carol"}])
+    IssueFactory(milestone=milestone)
+
+    response = auth_client.get(f"/milestones/{milestone.slug}/")
+
+    body = response.content.decode()
+    assert body.count('class="parties"') == 2
+    assert 'title="Alice, Bob" aria-label="2 interested parties"' in body
+    assert 'title="Carol" aria-label="1 interested party"' in body
+
+
+@pytest.mark.django_db
 def test_milestone_detail_kanban_is_empty_when_milestone_has_no_issues(auth_client):
     milestone = MilestoneFactory()
 

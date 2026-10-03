@@ -284,6 +284,17 @@ def test_issue_list_formats_rows(cli_config, mocked_responses, capsys):
     assert "PX-1" in capsys.readouterr().out
 
 
+def test_issue_list_says_so_when_nothing_matches(cli_config, mocked_responses, capsys):
+    mocked_responses.get(f"{URL}/api/v1/issues/", json={"results": [], "next": None})
+
+    code = cli.main(["issue", "list", "--search", "nothing-matches-this"])
+
+    assert code == 0
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "no issues match" in captured.err
+
+
 def test_issue_list_applies_filters(cli_config, mocked_responses, capsys):
     mocked_responses.get(f"{URL}/api/v1/issues/", json={"results": [], "next": None})
 
@@ -369,6 +380,30 @@ def test_issue_list_json_output(cli_config, mocked_responses, capsys):
 
     assert code == 0
     assert '"slug": "PX-1"' in capsys.readouterr().out
+
+
+def test_top_level_list_alias(cli_config, mocked_responses, capsys):
+    mocked_responses.get(
+        f"{URL}/api/v1/issues/", json={"results": [{"slug": "PX-1"}], "next": None}
+    )
+
+    code = cli.main(["--json", "list", "--search", "x"])
+
+    assert code == 0
+    assert "search=x" in mocked_responses.calls[0].request.url
+    assert '"slug": "PX-1"' in capsys.readouterr().out
+
+
+def test_issue_new_body_alias(cli_config, mocked_responses):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/", json={"slug": "PX-1", "title": "hello"}, status=201
+    )
+
+    code = cli.main(["issue", "new", "--title", "hello", "--body", "text"])
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body["description"] == "text"
 
 
 def test_issue_show_prints_detail(cli_config, mocked_responses, capsys):
@@ -917,6 +952,17 @@ def test_issue_comment_with_body(cli_config, mocked_responses, capsys):
     )
 
     code = cli.main(["issue", "comment", "5", "hello"])
+
+    assert code == 0
+    assert "added comment #99 to PX-5" in capsys.readouterr().out
+
+
+def test_issue_comment_with_body_flag(cli_config, mocked_responses, capsys):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/5/comments/", json={"id": 99, "body": "hello"}, status=201
+    )
+
+    code = cli.main(["issue", "comment", "5", "--body", "hello"])
 
     assert code == 0
     assert "added comment #99 to PX-5" in capsys.readouterr().out

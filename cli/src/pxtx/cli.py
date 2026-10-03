@@ -167,6 +167,9 @@ def cmd_issue_list(args, client, config):
     if args.json:
         print_json(issues)
         return
+    if not issues:
+        print("no issues match", file=sys.stderr)
+        return
     for issue in issues:
         print(format_issue_row(issue))
 
@@ -340,7 +343,7 @@ def cmd_issue_close(args, client, config):
 
 
 def cmd_issue_comment(args, client, config):
-    body = args.body
+    body = args.body if args.body is not None else args.body_flag
     if args.stdin or body is None:
         body = sys.stdin.read()
     if not body.strip():
@@ -537,7 +540,7 @@ def build_parser():
     new.add_argument("--priority", choices=list(PRIORITY_MAP))
     new.add_argument("--effort", choices=list(EFFORT_MAP))
     new.add_argument("--milestone", help="milestone slug")
-    new.add_argument("--description")
+    new.add_argument("--description", "--body", dest="description")
     new.add_argument("--assignee")
     new.add_argument(
         "--github-issue",
@@ -550,19 +553,7 @@ def build_parser():
     )
     new.set_defaults(func=cmd_issue_new)
 
-    lst = issue_sub.add_parser("list", help="list issues")
-    lst.add_argument("--status", help="comma-separated statuses")
-    lst.add_argument(
-        "--priority",
-        type=parse_priority_csv,
-        help="comma-separated priority labels (jetzt,will,sollte,...)",
-    )
-    lst.add_argument("--milestone")
-    lst.add_argument("--mine", action="store_true", help="filter by current actor")
-    lst.add_argument("--assignee")
-    lst.add_argument("--highlighted", action="store_true")
-    lst.add_argument("--search")
-    lst.set_defaults(func=cmd_issue_list)
+    add_issue_list_arguments(issue_sub.add_parser("list", help="list issues"))
 
     show = issue_sub.add_parser("show", help="show an issue")
     show.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
@@ -582,12 +573,15 @@ def build_parser():
     comment = issue_sub.add_parser("comment", help="comment on an issue")
     comment.add_argument("number", type=parse_issue_id)
     comment.add_argument("body", nargs="?")
+    comment.add_argument("--body", dest="body_flag", metavar="BODY")
     comment.add_argument("--stdin", action="store_true")
     comment.set_defaults(func=cmd_issue_comment)
 
     take = sub.add_parser("take", help="claim an issue (assignee=you, status=wip)")
     take.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
     take.set_defaults(func=cmd_issue_take)
+
+    add_issue_list_arguments(sub.add_parser("list", help="alias for 'issue list'"))
 
     show_alias = sub.add_parser("show", help="alias for 'issue show'")
     show_alias.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
@@ -668,6 +662,21 @@ def build_parser():
     act_log.set_defaults(func=cmd_activity_log)
 
     return parser
+
+
+def add_issue_list_arguments(lst):
+    lst.add_argument("--status", help="comma-separated statuses")
+    lst.add_argument(
+        "--priority",
+        type=parse_priority_csv,
+        help="comma-separated priority labels (jetzt,will,sollte,...)",
+    )
+    lst.add_argument("--milestone")
+    lst.add_argument("--mine", action="store_true", help="filter by current actor")
+    lst.add_argument("--assignee")
+    lst.add_argument("--highlighted", action="store_true")
+    lst.add_argument("--search")
+    lst.set_defaults(func=cmd_issue_list)
 
 
 def main(argv=None):

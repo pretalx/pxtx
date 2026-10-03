@@ -30,17 +30,17 @@ uvx pxtx <subcommand>
 ```
 pxtx issue new --title "..." [--priority jetzt|will|sollte|könnte|egal|lol]
                              [--effort <1h|1-2h|2-6h|1d|>1d]
-                             [--milestone 25.1] [--description "..."]
+                             [--milestone 25.1] [--description "..."]   # --body is an alias
                              [--assignee name]
                              [--github-issue <ref>]
-pxtx issue list [--status open,wip,blocked]
+pxtx issue list [--status open,wip,blocked]           # or: pxtx list ...
                 [--priority will,sollte] [--milestone 25.1]
                 [--mine] [--assignee name]
                 [--highlighted] [--search "term"]
 pxtx issue show PX-47                     # or: pxtx show PX-47; includes comments
 pxtx issue set PX-47 [--priority will] [--effort 2-6h]   # narrow edit
 pxtx issue close PX-47 [--wontfix]
-pxtx issue comment PX-47 "message"        # or: --stdin
+pxtx issue comment PX-47 "message"        # or: --body "message", --stdin
 pxtx take PX-47                           # assignee=you, status=wip
 pxtx pr PX-47 <ref>                       # link a GitHub PR
 pxtx issue-ref PX-47 <ref>                # link a GitHub issue

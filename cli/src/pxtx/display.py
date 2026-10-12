@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from datetime import datetime
 
-PRIORITY_LABELS = {0: "jetzt", 1: "will", 2: "sollte", 3: "könnte", 4: "egal", 5: "lol"}
+PRIORITY_LABELS = {
+    0: "jetzt",
+    1: "will",
+    2: "sollte",
+    3: "könnte",
+    4: "egal",
+    5: "lol",
+    6: "triage",
+}
 EFFORT_LABELS = {30: "<1h", 90: "1-2h", 240: "2-6h", 480: "1d", 960: ">1d"}
 
 

@@ -394,6 +394,33 @@ def test_top_level_list_alias(cli_config, mocked_responses, capsys):
     assert '"slug": "PX-1"' in capsys.readouterr().out
 
 
+def test_issue_new_without_priority_leaves_it_to_server_default(
+    cli_config, mocked_responses
+):
+    """No --priority means no priority key, so the server files it as triage."""
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/", json={"slug": "PX-1", "title": "hello"}, status=201
+    )
+
+    code = cli.main(["issue", "new", "--title", "hello"])
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body == {"title": "hello"}
+
+
+def test_issue_new_accepts_triage_priority(cli_config, mocked_responses):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/", json={"slug": "PX-1", "title": "hello"}, status=201
+    )
+
+    code = cli.main(["issue", "new", "--title", "hello", "--priority", "triage"])
+
+    assert code == 0
+    body = json.loads(mocked_responses.calls[0].request.body)
+    assert body == {"title": "hello", "priority": 6}
+
+
 def test_issue_new_body_alias(cli_config, mocked_responses):
     mocked_responses.post(
         f"{URL}/api/v1/issues/", json={"slug": "PX-1", "title": "hello"}, status=201

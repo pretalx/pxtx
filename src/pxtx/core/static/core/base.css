@@ -15,6 +15,7 @@
     --prio-3: #71717a;
     --prio-4: #a1a1aa;
     --prio-5: #d4d4d8;
+    --prio-6: #8b5cf6;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -578,6 +579,7 @@ button.secondary {
 .prio.prio-3::before { background: var(--prio-3); }
 .prio.prio-4::before { background: var(--prio-4); }
 .prio.prio-5::before { background: var(--prio-5); }
+.prio.prio-6::before { background: transparent; box-shadow: inset 0 0 0 2px var(--prio-6); }
 
 @keyframes prio-pulse {
     0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--prio-0); }

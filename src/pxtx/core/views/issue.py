@@ -43,6 +43,11 @@ QUICK_FILTERS = [
         "filter": {"priority": Priority.JETZT},
     },
     {
+        "label": "🩺 triage",
+        "query": [("priority", str(Priority.TRIAGE.value))],
+        "filter": {"priority": Priority.TRIAGE},
+    },
+    {
         "label": "🍒 easy pickings",
         "query": [
             ("status", Status.OPEN.value),

@@ -28,7 +28,7 @@ uvx pxtx <subcommand>
 ## Commands
 
 ```
-pxtx issue new --title "..." [--priority jetzt|will|sollte|könnte|egal|lol]
+pxtx issue new --title "..." [--priority jetzt|will|sollte|könnte|egal|lol|triage]   # omitted: triage
                              [--effort <1h|1-2h|2-6h|1d|>1d]
                              [--milestone 25.1] [--description "..."]   # --body is an alias
                              [--assignee name]
@@ -44,6 +44,7 @@ pxtx issue comment PX-47 "message"        # or: --body "message", --stdin
 pxtx take PX-47                           # assignee=you, status=wip
 pxtx pr PX-47 <ref>                       # link a GitHub PR
 pxtx issue-ref PX-47 <ref>                # link a GitHub issue
+pxtx relate PX-47 PX-12 [PX-13 ...]       # link related pxtx issues (metadata)
 pxtx add-interested PX-47 "Name" [--url URL] [--note "..."]
 pxtx add-link PX-47 "label" <url>
 pxtx milestone list
@@ -88,9 +89,25 @@ picking up work is one command.
 - **Check before creating.** Before filing a new issue, run
   `uvx pxtx issue list --search "<keywords>"` so you don't duplicate an
   existing one (including `draft` ghost issues pulled from GitHub).
+- **Do not pick a priority when creating an issue.** Omit
+  `--priority` on `issue new` unless the user explicitly named one for
+  this issue. The server files it as `triage` ("not prioritised yet"),
+  and the human ranks it from the triage pill in the UI. Guessing
+  `sollte` or `will` hides the issue from triage and puts your judgement
+  in place of his. Same for `issue set --priority`: only on explicit
+  request. Priorities, most urgent first: `jetzt`, `will`, `sollte`,
+  `könnte`, `egal`, `lol`; `triage` sorts after `lol`.
 - **`blocked` needs a reason.** If you move an issue to `blocked`, include
   a `--description`-style explanation in a comment — the UI requires it
   and humans rely on it.
+- **Mentioning another PX issue? Link it in metadata too.** Issues
+  have a related-issues field (symmetric, shown as "related:" in
+  `pxtx show` and in the UI sidebar). Whenever a description or comment
+  you write names another `PX-<n>` (follow-up, split from, depends on,
+  duplicate, see also), also run `uvx pxtx relate PX-47 PX-<n>`. Prose
+  mentions alone are invisible to the tracker. Idempotent in either
+  direction. Use `add-link` only for URLs outside pxtx, `issue-ref` /
+  `pr` for GitHub.
 - **Open a PR? Link it immediately.** The moment you push a branch and
   open a pull request for work tracked by a `PX-<n>` issue, run
   `uvx pxtx pr PX-<n> <pr>` so the tracker shows the PR alongside the
@@ -107,6 +124,7 @@ picking up work is one command.
 uvx pxtx issue list --mine --status open,wip
 uvx pxtx issue list --highlighted
 uvx pxtx issue list --priority jetzt,will,sollte --status open
+uvx pxtx issue list --priority triage    # filed but not ranked yet
 ```
 
 **"I'll take this one."** Claim it (assigns to you + moves to wip) in one shot:
@@ -125,7 +143,7 @@ uvx pxtx pr PX-47 https://github.com/pretalx/pretalx/pull/9912
 
 **"Bump priority / effort on a ticket."** `issue set` is the only edit
 path — title, description, assignee, and milestone are off-limits to the
-CLI by design:
+CLI by design. Set a priority only when the user names it:
 
 ```
 uvx pxtx issue set PX-47 --priority jetzt
@@ -147,7 +165,7 @@ silently; the comment is the audit trail.
 
 ```
 uvx pxtx issue list --search "rate limit"
-uvx pxtx issue new --title "..." --priority sollte --description "$(cat <<'EOF'
+uvx pxtx issue new --title "..." --description "$(cat <<'EOF'
 Steps to reproduce
 ...
 EOF
@@ -164,8 +182,7 @@ call — the `--github-issue` flag takes the same ref forms as `issue-ref`
 `github.com/.../issues/N` URL):
 
 ```
-uvx pxtx issue new --title "..." --priority sollte \
-    --github-issue pretalx/pretalx#9912
+uvx pxtx issue new --title "..." --github-issue pretalx/pretalx#9912
 ```
 
 If the ticket already exists, attach the GitHub issue after the fact:
@@ -253,6 +270,10 @@ offending file or field.
 uvx pxtx --json issue show PX-47
 uvx pxtx activity log PX-47 --since 7d
 ```
+
+`pxtx show` prints related issues, GitHub refs, links and interested
+parties above the description. Read the related issues before working
+on one: they often hold the context.
 
 ## When things fail
 

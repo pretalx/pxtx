@@ -199,6 +199,7 @@ def test_quick_filters_only_shown_when_matching_issues_exist(auth_client):
     IssueFactory(status=Status.WIP)
     IssueFactory(status=Status.DRAFT)
     IssueFactory(priority=Priority.JETZT, status=Status.OPEN)
+    IssueFactory(priority=Priority.TRIAGE, status=Status.OPEN)
     IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
 
     response = auth_client.get("/issues/")
@@ -206,6 +207,7 @@ def test_quick_filters_only_shown_when_matching_issues_exist(auth_client):
     assert labels == {
         "★ highlighted",
         "🔥 jetzt",
+        "🩺 triage",
         "🍒 easy pickings",
         "📋 open",
         "🔧 wip",
@@ -256,6 +258,7 @@ def test_quick_filter_counts_match_the_issues_their_click_returns(auth_client):
     # Active issues that should be counted by their respective pills.
     IssueFactory(is_highlighted=True, status=Status.OPEN)
     IssueFactory(priority=Priority.JETZT, status=Status.WIP)
+    IssueFactory(priority=Priority.TRIAGE, status=Status.OPEN)
     IssueFactory(effort_minutes=Effort.TINY, status=Status.OPEN)
     # Completed work matching the same pills — must NOT be counted, because
     # clicking the pill applies the default status filter and hides them.
@@ -362,3 +365,18 @@ def test_no_next_release_pill_without_dated_unreleased_release(auth_client):
 
     labels = {qf["label"] for qf in response.context["quick_filters"]}
     assert not any(label.startswith("🚀") for label in labels)
+
+
+@pytest.mark.django_db
+def test_triage_pill_filters_to_untriaged_active_issues(auth_client):
+    triage = IssueFactory(priority=Priority.TRIAGE, status=Status.OPEN)
+    IssueFactory(priority=Priority.LOL, status=Status.OPEN)
+    IssueFactory(priority=Priority.TRIAGE, status=Status.COMPLETED)
+
+    response = auth_client.get("/issues/?priority=6")
+
+    assert [i.pk for i in response.context["issues"]] == [triage.pk]
+    by_label = {qf["label"]: qf for qf in response.context["quick_filters"]}
+    assert by_label["🩺 triage"]["active"] is True
+    assert by_label["🩺 triage"]["count"] == 1
+    assert by_label["📋 open"]["active"] is False

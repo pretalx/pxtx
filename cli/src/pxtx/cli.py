@@ -18,7 +18,15 @@ from pxtx.display import (
     format_milestone_row,
 )
 
-PRIORITY_MAP = {"jetzt": 0, "will": 1, "sollte": 2, "könnte": 3, "egal": 4, "lol": 5}
+PRIORITY_MAP = {
+    "jetzt": 0,
+    "will": 1,
+    "sollte": 2,
+    "könnte": 3,
+    "egal": 4,
+    "lol": 5,
+    "triage": 6,
+}
 EFFORT_MAP = {"<1h": 30, "1-2h": 90, "2-6h": 240, "1d": 480, ">1d": 960}
 
 SINCE_UNITS = {"m": "minutes", "h": "hours", "d": "days", "w": "weeks"}
@@ -551,7 +559,11 @@ def build_parser():
 
     new = issue_sub.add_parser("new", help="create an issue")
     new.add_argument("--title", required=True)
-    new.add_argument("--priority", choices=list(PRIORITY_MAP))
+    new.add_argument(
+        "--priority",
+        choices=list(PRIORITY_MAP),
+        help="omit unless the priority is known; the server defaults to triage",
+    )
     new.add_argument("--effort", choices=list(EFFORT_MAP))
     new.add_argument("--milestone", help="milestone slug")
     new.add_argument("--description", "--body", dest="description")
@@ -692,7 +704,7 @@ def add_issue_list_arguments(lst):
     lst.add_argument(
         "--priority",
         type=parse_priority_csv,
-        help="comma-separated priority labels (jetzt,will,sollte,...)",
+        help="comma-separated priority labels (jetzt,will,sollte,...,triage)",
     )
     lst.add_argument("--milestone")
     lst.add_argument("--mine", action="store_true", help="filter by current actor")

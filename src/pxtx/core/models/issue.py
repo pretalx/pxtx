@@ -21,6 +21,7 @@ class Priority(models.IntegerChoices):
     KOENNTE = 3, "könnte"
     EGAL = 4, "egal"
     LOL = 5, "lol"
+    TRIAGE = 6, "triage"
 
 
 class Status(models.TextChoices):
@@ -67,7 +68,7 @@ class Issue(BaseModel):
         choices=Effort.choices, null=True, blank=True
     )
     priority = models.PositiveSmallIntegerField(
-        choices=Priority.choices, default=Priority.KOENNTE
+        choices=Priority.choices, default=Priority.TRIAGE
     )
     is_highlighted = models.BooleanField(default=False, db_index=True)
 

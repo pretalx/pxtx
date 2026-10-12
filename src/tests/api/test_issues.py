@@ -1,6 +1,6 @@
 import pytest
 
-from pxtx.core.models import ActivityLog, Issue
+from pxtx.core.models import ActivityLog, Issue, Priority
 from tests.factories import (
     CommentFactory,
     GithubIssueRefFactory,
@@ -168,6 +168,42 @@ def test_create_issue_logs_create_activity(token_client, api_token):
     entry = ActivityLog.objects.get(action_type="pxtx.issue.create")
     assert entry.actor == api_token.name
     assert entry.object_id == issue.pk
+
+
+@pytest.mark.django_db
+def test_create_issue_without_priority_defaults_to_triage(token_client):
+    """API/CLI callers that don't name a priority land in triage instead of
+    an arbitrary rank a human never chose."""
+    response = token_client.post("/api/v1/issues/", {"title": "x"}, format="json")
+
+    assert response.status_code == 201
+    assert response.json()["priority"] == 6
+    assert Issue.objects.get().priority == Priority.TRIAGE
+
+
+@pytest.mark.django_db
+def test_create_issue_keeps_explicit_priority(token_client):
+    response = token_client.post(
+        "/api/v1/issues/", {"title": "x", "priority": 0}, format="json"
+    )
+
+    assert response.status_code == 201
+    assert Issue.objects.get().priority == Priority.JETZT
+
+
+@pytest.mark.django_db
+def test_list_sorts_triage_after_lol(token_client):
+    triage = IssueFactory(priority=Priority.TRIAGE)
+    lol = IssueFactory(priority=Priority.LOL)
+    jetzt = IssueFactory(priority=Priority.JETZT)
+
+    response = token_client.get("/api/v1/issues/")
+
+    assert [r["number"] for r in response.json()["results"]] == [
+        jetzt.number,
+        lol.number,
+        triage.number,
+    ]
 
 
 @pytest.mark.django_db

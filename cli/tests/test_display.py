@@ -35,6 +35,7 @@ def test_fmt_time_none():
         (3, "könnte"),
         (4, "egal"),
         (5, "lol"),
+        (6, "triage"),
         (9, "9"),
     ),
 )

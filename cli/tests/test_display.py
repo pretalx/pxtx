@@ -178,3 +178,38 @@ def test_format_activity_row_no_actor():
     )
 
     assert " - " in row
+
+
+def test_format_issue_detail_metadata():
+    issue = {
+        "slug": "PX-7",
+        "title": "do a thing",
+        "status": "completed",
+        "priority": 1,
+        "created_at": "2026-04-22T10:00:00+00:00",
+        "updated_at": "2026-04-22T10:05:00+00:00",
+        "closed_at": "2026-04-23T09:00:00+00:00",
+        "source": "github",
+        "references_out": [
+            {"number": 9, "slug": "PX-9", "title": "later", "status": "open"}
+        ],
+        "references_in": [
+            {"number": 3, "slug": "PX-3", "title": "earlier", "status": "wip"},
+            {"number": 9, "slug": "PX-9", "title": "later", "status": "open"},
+        ],
+        "github_refs": [{"kind": "pr", "display": "pretalx/pretalx#12"}],
+        "links": [{"label": "spec", "url": "https://x/spec"}],
+        "interested_parties": [
+            {"label": "Alice", "url": "mailto:a@x", "note": "reported"},
+            {"label": "Bob"},
+        ],
+    }
+
+    text = format_issue_detail(issue)
+
+    assert "closed: 2026-04-23 09:00" in text
+    assert "source: github" in text
+    assert "related:\n  PX-3 [wip] earlier\n  PX-9 [open] later\n" in text
+    assert "github:\n  pr pretalx/pretalx#12" in text
+    assert "links:\n  spec: https://x/spec" in text
+    assert "interested:\n  Alice <mailto:a@x> — reported\n  Bob" in text

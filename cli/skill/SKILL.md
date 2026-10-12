@@ -154,7 +154,9 @@ EOF
 )"
 ```
 
-Report the resulting issue number to the user.
+Report the resulting issue number to the user. Cite code as
+repo-relative paths (`src/pretalx/frontend/schedule-editor/src/App.vue:14`,
+not `frontend/…`): the reader starts in a different worktree.
 
 **"Make a pxtx issue from this GitHub issue."** Create and link in one
 call — the `--github-issue` flag takes the same ref forms as `issue-ref`

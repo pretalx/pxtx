@@ -40,6 +40,38 @@ def format_issue_row(issue):
     )
 
 
+def related_issues(issue):
+    """Merge both reference directions; the server treats them as symmetric."""
+    seen = {}
+    for other in [*issue.get("references_out", []), *issue.get("references_in", [])]:
+        seen.setdefault(other["number"], other)
+    return [seen[number] for number in sorted(seen)]
+
+
+def format_issue_metadata(issue):
+    lines = []
+    related = related_issues(issue)
+    if related:
+        lines.append("related:")
+        lines += [f"  {r['slug']} [{r['status']}] {r['title']}" for r in related]
+    if issue.get("github_refs"):
+        lines.append("github:")
+        lines += [f"  {ref['kind']} {ref['display']}" for ref in issue["github_refs"]]
+    if issue.get("links"):
+        lines.append("links:")
+        lines += [f"  {link['label']}: {link['url']}" for link in issue["links"]]
+    if issue.get("interested_parties"):
+        lines.append("interested:")
+        for party in issue["interested_parties"]:
+            bits = [party["label"]]
+            if party.get("url"):
+                bits.append(f"<{party['url']}>")
+            if party.get("note"):
+                bits.append(f"— {party['note']}")
+            lines.append("  " + " ".join(bits))
+    return lines
+
+
 def format_issue_detail(issue, comments=None):
     lines = [
         f"{issue['slug']}: {issue['title']}",
@@ -57,10 +89,15 @@ def format_issue_detail(issue, comments=None):
             updated=fmt_time(issue.get("updated_at")),
         ),
     ]
+    if issue.get("closed_at"):
+        lines.append(f"closed: {fmt_time(issue['closed_at'])}")
+    if issue.get("source"):
+        lines.append(f"source: {issue['source']}")
     if issue.get("is_highlighted"):
         lines.append("*highlighted*")
     if issue.get("blocked_reason"):
         lines.append(f"blocked reason: {issue['blocked_reason']}")
+    lines += format_issue_metadata(issue)
     if issue.get("description"):
         lines += ["", issue["description"]]
     if comments:

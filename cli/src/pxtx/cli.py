@@ -114,12 +114,10 @@ def cmd_issue_new(args, client, config):
     # Parse the github ref up front so a bad value fails before we create
     # the issue — otherwise we'd end up with an orphaned PX ticket and a
     # user-facing error that looks like the create failed.
-    github_ref_payload = None
-    if args.github_issue:
-        kind, repo, number = parse_issue_ref(
-            args.github_issue, default_repo=config.default_repo
-        )
-        github_ref_payload = {"kind": kind, "repo": repo, "number": number}
+    github_ref_payloads = []
+    for raw_ref in args.github_issue or []:
+        kind, repo, number = parse_issue_ref(raw_ref, default_repo=config.default_repo)
+        github_ref_payloads.append({"kind": kind, "repo": repo, "number": number})
     payload = {"title": args.title}
     if args.priority:
         payload["priority"] = PRIORITY_MAP[args.priority]
@@ -132,14 +130,15 @@ def cmd_issue_new(args, client, config):
     if args.assignee:
         payload["assignee"] = args.assignee
     issue = client.create_issue(payload)
-    ref = None
-    if github_ref_payload:
-        ref = client.add_github_ref(issue["number"], github_ref_payload)
+    refs = [
+        client.add_github_ref(issue["number"], ref_payload)
+        for ref_payload in github_ref_payloads
+    ]
     if args.json:
-        print_json({"issue": issue, "github_ref": ref} if ref else issue)
+        print_json({**issue, "github_refs": refs} if refs else issue)
     else:
         print(f"created {issue['slug']}: {issue['title']}")
-        if ref:
+        for ref in refs:
             print(f"  ↔ {ref['display']}")
 
 
@@ -307,6 +306,21 @@ def cmd_issue_ref_link(args, client, config):
         print_json(ref)
     else:
         print(f"PX-{args.number} ↔ {ref['display']}")
+
+
+def cmd_relate(args, client, config):
+    """Link an issue to one or more other pxtx issues. The server treats
+    references as symmetric and dedupes either direction, so re-running is a
+    no-op."""
+    targets = [n for n in args.others if n != args.number]
+    if not targets:
+        raise CliError("relate needs at least one other issue")
+    results = [client.add_reference(args.number, other) for other in targets]
+    if args.json:
+        print_json(results)
+        return
+    for result in results:
+        print(f"PX-{args.number} ↔ PX-{result['to_issue']}")
 
 
 def cmd_add_interested(args, client, config):
@@ -546,9 +560,11 @@ def build_parser():
         "--github-issue",
         dest="github_issue",
         metavar="REF",
+        action="append",
         help=(
             "link a GitHub issue after creation: bare number, owner/repo#N, "
-            "or github.com/.../issues/N URL; PR refs are linked as PRs"
+            "or github.com/.../issues/N URL; PR refs are linked as PRs; "
+            "repeat to link several"
         ),
     )
     new.set_defaults(func=cmd_issue_new)
@@ -605,6 +621,13 @@ def build_parser():
         ),
     )
     issue_ref.set_defaults(func=cmd_issue_ref_link)
+
+    relate = sub.add_parser("relate", help="link related pxtx issues")
+    relate.add_argument("number", type=parse_issue_id, help="PX-47 or 47")
+    relate.add_argument(
+        "others", type=parse_issue_id, nargs="+", metavar="OTHER", help="PX-48 ..."
+    )
+    relate.set_defaults(func=cmd_relate)
 
     interested = sub.add_parser(
         "add-interested", help="add an interested party to an issue"

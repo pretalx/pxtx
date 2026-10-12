@@ -873,12 +873,40 @@ def test_issue_new_with_github_issue_json_output(cli_config, mocked_responses, c
         status=201,
     )
 
-    cli.main(["--json", "issue", "new", "--title", "from gh", "--github-issue", "42"])
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/9/github-refs/",
+        json={
+            "id": 11,
+            "kind": "issue",
+            "repo": "acme/widget",
+            "number": 7,
+            "display": "acme/widget#7",
+        },
+        status=201,
+    )
+
+    cli.main(
+        [
+            "--json",
+            "issue",
+            "new",
+            "--title",
+            "from gh",
+            "--github-issue",
+            "42",
+            "--github-issue",
+            "acme/widget#7",
+        ]
+    )
 
     out = capsys.readouterr().out
     payload = json.loads(out)
-    assert payload["issue"]["slug"] == "PX-9"
-    assert payload["github_ref"]["display"] == "pretalx/pretalx#42"
+    assert payload["number"] == 9
+    assert payload["slug"] == "PX-9"
+    assert [ref["display"] for ref in payload["github_refs"]] == [
+        "pretalx/pretalx#42",
+        "acme/widget#7",
+    ]
 
 
 def test_issue_new_with_bad_github_issue_fails_before_create(
@@ -1079,6 +1107,41 @@ def test_add_interested_json_output(cli_config, mocked_responses, capsys):
     out = capsys.readouterr().out
     assert '"slug": "PX-47"' in out
     assert '"label": "Alice"' in out
+
+
+def test_relate_links_each_other_issue(cli_config, mocked_responses, capsys):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/references/", json={"id": 1, "to_issue": 12}
+    )
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/references/", json={"id": 2, "to_issue": 13}
+    )
+
+    code = cli.main(["relate", "PX-47", "px-12", "13", "47"])
+
+    assert code == 0
+    bodies = [json.loads(call.request.body) for call in mocked_responses.calls]
+    assert bodies == [{"to_issue": 12}, {"to_issue": 13}]
+    out = capsys.readouterr().out
+    assert "PX-47 ↔ PX-12" in out
+    assert "PX-47 ↔ PX-13" in out
+
+
+def test_relate_json_output(cli_config, mocked_responses, capsys):
+    mocked_responses.post(
+        f"{URL}/api/v1/issues/47/references/", json={"id": 1, "to_issue": 12}
+    )
+
+    cli.main(["--json", "relate", "47", "12"])
+
+    assert json.loads(capsys.readouterr().out) == [{"id": 1, "to_issue": 12}]
+
+
+def test_relate_only_self_fails(cli_config, mocked_responses, capsys):
+    code = cli.main(["relate", "47", "PX-47"])
+
+    assert code == 2
+    assert "at least one other issue" in capsys.readouterr().err
 
 
 def test_add_link_appends(cli_config, mocked_responses, capsys):

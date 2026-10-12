@@ -109,6 +109,11 @@ class Client:
     def add_github_ref(self, number, payload):
         return self._request("POST", f"/issues/{number}/github-refs/", json=payload)
 
+    def add_reference(self, number, to_number):
+        return self._request(
+            "POST", f"/issues/{number}/references/", json={"to_issue": to_number}
+        )
+
     def _append_json_list(self, number, field, entry, dedupe_keys):
         # Read-modify-write on an Issue JSON list field. Idempotent on
         # ``dedupe_keys``: if an existing item matches every key, skip the PATCH

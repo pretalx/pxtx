@@ -1,8 +1,8 @@
 # pxtx
 
 Single-user issue tracker for [pretalx](https://pretalx.com) development
-with a web interface and a CLI, published as `pxtx` to PyPI to be run
-with `uvx`.
+with a web interface and a CLI, published as `pxtx` to PyPI. Install the CLI with
+`uv tool install pxtx`, update with `uv tool upgrade pxtx`.
 
 ## Server
 

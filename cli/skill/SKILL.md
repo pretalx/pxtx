@@ -19,11 +19,10 @@ the same tracker, so keep it tidy.
 
 ## Invocation
 
-Run via `uvx`, no local install needed:
-
-```
-uvx pxtx <subcommand>
-```
+`pxtx` is installed as a uv tool (`uv tool install pxtx`), and scripts
+such as `unworktree` call it bare. Call it bare too, not via `uvx`. If a
+subcommand from this skill is missing, the install is stale:
+`uv tool upgrade pxtx`.
 
 ## Commands
 
@@ -57,8 +56,8 @@ pxtx spec push PX-47 [--message "..."] [--ready] [--reopen]
 Top-level flags (before the subcommand):
 
 ```
-uvx pxtx --json issue show PX-47         # raw API JSON
-uvx pxtx --actor rixx issue list --mine  # override the actor
+pxtx --json issue show PX-47         # raw API JSON
+pxtx --actor rixx issue list --mine  # override the actor
 ```
 
 ## Actor — how the tracker knows which claude is talking
@@ -80,14 +79,14 @@ picking up work is one command.
 - **Ids are `PX-<number>`** everywhere in tickets and commit messages.
 - **Leave a comment when you do nontrivial work.** Closing a ticket is not
   a summary — add context to the ticket so the next person (human or
-  agent) sees what happened. `uvx pxtx issue comment PX-47 --stdin`
+  agent) sees what happened. `pxtx issue comment PX-47 --stdin`
   accepts multi-line markdown.
   Your comments should be terse – they will be read by domain experts,
   i.e. users who know the code base and issue very well, and other
   coding agents with the same knowledge base as you have. Do not state
   the obvious.
 - **Check before creating.** Before filing a new issue, run
-  `uvx pxtx issue list --search "<keywords>"` so you don't duplicate an
+  `pxtx issue list --search "<keywords>"` so you don't duplicate an
   existing one (including `draft` ghost issues pulled from GitHub).
 - **Do not pick a priority when creating an issue.** Omit
   `--priority` on `issue new` unless the user explicitly named one for
@@ -104,13 +103,13 @@ picking up work is one command.
   have a related-issues field (symmetric, shown as "related:" in
   `pxtx show` and in the UI sidebar). Whenever a description or comment
   you write names another `PX-<n>` (follow-up, split from, depends on,
-  duplicate, see also), also run `uvx pxtx relate PX-47 PX-<n>`. Prose
+  duplicate, see also), also run `pxtx relate PX-47 PX-<n>`. Prose
   mentions alone are invisible to the tracker. Idempotent in either
   direction. Use `add-link` only for URLs outside pxtx, `issue-ref` /
   `pr` for GitHub.
 - **Open a PR? Link it immediately.** The moment you push a branch and
   open a pull request for work tracked by a `PX-<n>` issue, run
-  `uvx pxtx pr PX-<n> <pr>` so the tracker shows the PR alongside the
+  `pxtx pr PX-<n> <pr>` so the tracker shows the PR alongside the
   issue. The call is idempotent — re-running it with the same PR is a
   no-op, so you can wire it into your PR-opening flow without worrying
   about duplicates. `<pr>` can be a bare number (uses `default_repo`),
@@ -121,24 +120,24 @@ picking up work is one command.
 **"What should I work on?"**
 
 ```
-uvx pxtx issue list --mine --status open,wip
-uvx pxtx issue list --highlighted
-uvx pxtx issue list --priority jetzt,will,sollte --status open
-uvx pxtx issue list --priority triage    # filed but not ranked yet
+pxtx issue list --mine --status open,wip
+pxtx issue list --highlighted
+pxtx issue list --priority jetzt,will,sollte --status open
+pxtx issue list --priority triage    # filed but not ranked yet
 ```
 
 **"I'll take this one."** Claim it (assigns to you + moves to wip) in one shot:
 
 ```
-uvx pxtx take PX-47
+pxtx take PX-47
 ```
 
 **"I opened a PR for this."** Link it right after `gh pr create`:
 
 ```
 gh pr create ...                          # whatever you'd run normally
-uvx pxtx pr PX-47 https://github.com/pretalx/pretalx/pull/9912
-# or: uvx pxtx pr PX-47 pretalx/pretalx#9912
+pxtx pr PX-47 https://github.com/pretalx/pretalx/pull/9912
+# or: pxtx pr PX-47 pretalx/pretalx#9912
 ```
 
 **"Bump priority / effort on a ticket."** `issue set` is the only edit
@@ -146,16 +145,16 @@ path — title, description, assignee, and milestone are off-limits to the
 CLI by design. Set a priority only when the user names it:
 
 ```
-uvx pxtx issue set PX-47 --priority jetzt
-uvx pxtx issue set PX-47 --effort 2-6h
-uvx pxtx issue set PX-47 --priority will --effort 1-2h
+pxtx issue set PX-47 --priority jetzt
+pxtx issue set PX-47 --effort 2-6h
+pxtx issue set PX-47 --priority will --effort 1-2h
 ```
 
 **"Close this one, I shipped it."** Add a closing comment, then close:
 
 ```
-uvx pxtx issue comment PX-47 "Shipped in pretalx/pretalx#9912."
-uvx pxtx issue close PX-47
+pxtx issue comment PX-47 "Shipped in pretalx/pretalx#9912."
+pxtx issue close PX-47
 ```
 
 For abandoned work use `--wontfix` instead of `close`. Do not close issues
@@ -164,8 +163,8 @@ silently; the comment is the audit trail.
 **"File a bug for this."** Search first, then create:
 
 ```
-uvx pxtx issue list --search "rate limit"
-uvx pxtx issue new --title "..." --description "$(cat <<'EOF'
+pxtx issue list --search "rate limit"
+pxtx issue new --title "..." --description "$(cat <<'EOF'
 Steps to reproduce
 ...
 EOF
@@ -182,14 +181,14 @@ call — the `--github-issue` flag takes the same ref forms as `issue-ref`
 `github.com/.../issues/N` URL):
 
 ```
-uvx pxtx issue new --title "..." --github-issue pretalx/pretalx#9912
+pxtx issue new --title "..." --github-issue pretalx/pretalx#9912
 ```
 
 If the ticket already exists, attach the GitHub issue after the fact:
 
 ```
-uvx pxtx issue-ref PX-47 pretalx/pretalx#9912
-# or: uvx pxtx issue-ref PX-47 https://github.com/pretalx/pretalx/issues/9912
+pxtx issue-ref PX-47 pretalx/pretalx#9912
+# or: pxtx issue-ref PX-47 https://github.com/pretalx/pretalx/issues/9912
 ```
 
 Like `pxtx pr`, the call is idempotent on `(kind, repo, number)` — a
@@ -205,9 +204,9 @@ without a full edit — both commands are idempotent on `(label, url)`, so
 re-running is a no-op:
 
 ```
-uvx pxtx add-interested PX-47 "Speaker X" --url mailto:x@example.com \
+pxtx add-interested PX-47 "Speaker X" --url mailto:x@example.com \
                                           --note "reported via email"
-uvx pxtx add-link PX-47 "RFC" https://example.com/rfc
+pxtx add-link PX-47 "RFC" https://example.com/rfc
 ```
 
 Use `add-interested` for humans/stakeholders (url + note are optional;
@@ -222,7 +221,7 @@ local checkout. Run it from the repo root — files land under
 `openspec/changes/pxtx-47/` relative to your current directory:
 
 ```
-uvx pxtx spec pull PX-47
+pxtx spec pull PX-47
 ```
 
 Files that already match the snapshot are skipped silently. If a
@@ -239,7 +238,7 @@ to cwd, dotfiles included, text files only) into PX-47's spec session as
 a new transcript entry. Run it from the repo root:
 
 ```
-uvx pxtx spec push PX-47 --message "first draft, focus on the API shape"
+pxtx spec push PX-47 --message "first draft, focus on the API shape"
 ```
 
 The issue does not need an existing spec session — pushing creates one
@@ -251,7 +250,7 @@ every edit is safe.
 
 The push-then-iterate loop: push a draft, then let the server-side
 session do the reviewing — in the pxtx UI, request a critique or chat
-with the spec agent about it, and `uvx pxtx spec pull PX-47 --force`
+with the spec agent about it, and `pxtx spec pull PX-47 --force`
 later to converge your checkout on the reviewed result. When the spec is
 actually finished, push with `--ready` to mark the session ready in the
 same call. A session already marked `ready` rejects pushes (409) unless
@@ -267,8 +266,8 @@ offending file or field.
 **"What happened on PX-47 recently?"**
 
 ```
-uvx pxtx --json issue show PX-47
-uvx pxtx activity log PX-47 --since 7d
+pxtx --json issue show PX-47
+pxtx activity log PX-47 --since 7d
 ```
 
 `pxtx show` prints related issues, GitHub refs, links and interested
@@ -280,6 +279,6 @@ on one: they often hold the context.
 - `error: config ...` — CLI can't find URL/token. Stop and ask the user.
 - `api error: 401` — token rejected. Do not retry. Stop and report.
 - `api error: 404` — wrong issue number or you mistyped the slug. Verify
-  with `uvx pxtx issue list --search "<title fragment>"`.
+  with `pxtx issue list --search "<title fragment>"`.
 - `api error: 400` with a field name — the API validated the payload and
   rejected it; read the message, fix the field, retry.
